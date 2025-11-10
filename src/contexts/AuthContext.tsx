@@ -1,0 +1,538 @@
+"use client";
+
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { onAuthStateChanged, User, signOut } from "firebase/auth";
+import { auth, db } from "@/lib/firebase";
+import {
+  doc,
+  getDoc,
+  getDocs,
+  collection,
+  setDoc,
+  updateDoc,
+  arrayUnion,
+} from "firebase/firestore";
+import {
+  fetchUserFromBatchesByUid,
+  addUserToBatch,
+} from "@/lib/userBatches";
+import { toast } from "sonner";
+
+/* ==========================================================
+   🔹 Contexto de Autenticación Global
+   ========================================================== */
+
+interface AuthContextType {
+  user: User | null;
+  role: "admin" | "profesor" | "alumno" | null;
+  authReady: boolean;
+  loading: boolean;
+  userProfile: any | null;
+
+  alumnos: any[];
+  misCursos: any[];
+  allCursos?: any[];
+
+  loadingCursos: boolean;
+  loadingAllCursos?: boolean;
+
+  reloadData?: () => Promise<void>;
+  loadMisCursos?: (uid: string) => Promise<void>;
+  loadAllCursos?: () => Promise<void>;
+  saveCourseProgress?: (uid: string, courseId: string, data: any) => Promise<void>;
+  logout?: () => Promise<void>;
+  firestore?: any;
+  storage?: any;
+
+  profesores?: any[];
+  loadingProfesores?: boolean;
+  loadProfesores?: () => Promise<void>;
+  
+}
+
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  role: null,
+  authReady: false,
+  loading: true,
+  alumnos: [],
+  misCursos: [],
+  loadingCursos: false,
+  userProfile: null,
+});
+
+/* ==========================================================
+   🔹 Proveedor del Contexto
+   ========================================================== */
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [role, setRole] = useState<"admin" | "profesor" | "alumno" | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const [alumnos, setAlumnos] = useState<any[]>([]);
+  const [misCursos, setMisCursos] = useState<any[]>([]);
+  const [allCursos, setAllCursos] = useState<any[]>([]);
+  const [loadingCursos, setLoadingCursos] = useState(false);
+  const [loadingAllCursos, setLoadingAllCursos] = useState(false);
+  const [userProfile, setUserProfile] = useState<any | null>(null);
+
+  const [profesores, setProfesores] = useState<any[]>([]);
+  const [loadingProfesores, setLoadingProfesores] = useState(false);
+
+
+  /* ==========================================================
+     🔹 Logout
+     ========================================================== */
+  const logout = async () => {
+    try {
+      await signOut(auth);
+      setUser(null);
+      setRole(null);
+      setMisCursos([]);
+      setUserProfile(null);
+    } catch (err) {
+      console.error("❌ Error al cerrar sesión:", err);
+      toast.error("Error al cerrar sesión");
+    }
+  };
+
+  /* ==========================================================
+     🔹 Cargar alumnos (para admin o profesor)
+     ========================================================== */
+  const loadAlumnos = async () => {
+    try {
+      const alumnosRef = collection(db, "alumnos");
+      const snap = await getDocs(alumnosRef);
+      const allUsers: any[] = [];
+
+      snap.forEach((batchDoc) => {
+        const data = batchDoc.data();
+        for (const key in data) {
+          if (key.startsWith("user_")) {
+            allUsers.push({
+              uid: data[key].uid,
+              email: data[key].email,
+              role: data[key].role,
+              batchId: batchDoc.id,
+            });
+          }
+        }
+      });
+      setAlumnos(allUsers);
+    } catch (err) {
+      console.error("❌ [AuthContext] Error cargando alumnos:", err);
+    }
+  };
+
+  /* ==========================================================
+     🔹 Cargar cursos del alumno logueado
+     ========================================================== */
+  /* ==========================================================
+   🔹 Cargar cursos + progreso real del alumno
+   ========================================================== */
+const loadMisCursos = async (uid: string) => {
+  setLoadingCursos(true);
+  try {
+    const profile = await fetchUserFromBatchesByUid(uid);
+    if (!profile) {
+      console.warn("⚠️ No se encontró perfil en batches");
+      setMisCursos([]);
+      return;
+    }
+
+    const batchRef = doc(db, "alumnos", profile.batchId);
+    const snap = await getDoc(batchRef);
+    if (!snap.exists()) {
+      setMisCursos([]);
+      return;
+    }
+
+    const data = snap.data();
+    const userKey = Object.keys(data).find(
+      (k) => k.startsWith("user_") && data[k]?.uid === uid
+    );
+    if (!userKey) return;
+
+    const alumno = data[userKey];
+    const cursosIds = alumno?.cursosAdquiridos || [];
+    const progreso = alumno?.progreso || {};
+
+    if (!Array.isArray(cursosIds) || cursosIds.length === 0) {
+      setMisCursos([]);
+      return;
+    }
+
+    const snapCursos = await getDocs(collection(db, "cursos"));
+    const allCursos = snapCursos.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+    // Calcular progreso real por curso usando helper global
+const cursosAlumno: any[] = [];
+
+for (const id of cursosIds) {
+  const cursoSnap = await getDoc(doc(db, "cursos", id));
+  if (!cursoSnap.exists()) continue;
+
+  const curso = { id, ...cursoSnap.data() };
+  const prog = progreso?.[id]?.byLesson || {};
+
+  const { totalLessons, completedCount, progressPercent } =
+    getCourseProgressStats(prog, curso.unidades || curso.lecciones || []);
+
+  cursosAlumno.push({
+    ...curso,
+    progreso: { byLesson: prog },
+    progressPercent,
+    completedCount,
+    totalLessons,
+  });
+}
+
+setMisCursos(cursosAlumno);
+
+
+    setMisCursos(cursosAlumno);
+  } catch (err) {
+    console.error("❌ Error cargando cursos del alumno:", err);
+    toast.error("Error cargando tus cursos");
+  } finally {
+    setLoadingCursos(false);
+  }
+};
+
+
+  /* ==========================================================
+     🔹 Cargar todos los cursos (admin/profesor)
+     ========================================================== */
+  const loadAllCursos = async () => {
+    setLoadingAllCursos(true);
+    try {
+      const snap = await getDocs(collection(db, "cursos"));
+      const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setAllCursos(all);
+    } catch (err) {
+      console.error("❌ Error cargando todos los cursos:", err);
+      toast.error("Error cargando lista de cursos");
+    } finally {
+      setLoadingAllCursos(false);
+    }
+  };
+
+  /* ==========================================================
+   🔹 Cargar profesores (para admin)
+   ========================================================== */
+const loadProfesores = async () => {
+  setLoadingProfesores(true);
+  try {
+    const profesoresRef = collection(db, "profesores");
+    const snap = await getDocs(profesoresRef);
+    const allProfes: any[] = [];
+
+    snap.forEach((batchDoc) => {
+      const data = batchDoc.data();
+      for (const key in data) {
+        if (key.startsWith("profesor_")) {
+          allProfes.push({
+            id: key,
+            batchId: batchDoc.id,
+            ...data[key],
+          });
+        }
+      }
+    });
+
+    setProfesores(allProfes);
+    console.log("✅ Profesores cargados:", allProfes.length);
+  } catch (err) {
+    console.error("❌ [AuthContext] Error cargando profesores:", err);
+    toast.error("Error cargando profesores");
+  } finally {
+    setLoadingProfesores(false);
+  }
+};
+
+
+
+
+
+  /* ==========================================================
+   🔹 Guardar progreso de curso (admin o alumno)
+   ========================================================== */
+const saveCourseProgress = async (
+  uid: string,
+  courseId: string,
+  data: Record<string, any>
+) => {
+  try {
+    const profile = await fetchUserFromBatchesByUid(uid);
+    if (!profile) throw new Error("Usuario no encontrado en batches");
+
+    const batchRef = doc(db, "alumnos", profile.batchId);
+    const snap = await getDoc(batchRef);
+    if (!snap.exists()) throw new Error("Batch no existe");
+
+    const batchData = snap.data();
+    const userKey = Object.keys(batchData).find(
+      (k) => k.startsWith("user_") && batchData[k]?.uid === uid
+    );
+    if (!userKey) throw new Error("No se encontró el user_X correspondiente");
+
+    const userData = batchData[userKey] || {};
+    const prevProgreso =
+      userData.progreso || userData.progress || {}; // compatibilidad
+    const prevByLesson = prevProgreso[courseId]?.byLesson || {};
+
+    // 🔹 Mergea datos a nivel byLesson
+    const updatedProgreso = {
+      ...prevProgreso,
+      [courseId]: {
+        ...(prevProgreso[courseId] || {}),
+        byLesson: {
+          ...prevByLesson,
+          ...data, // 👈 data = { [lessonKey]: {...} }
+        },
+      },
+    };
+
+    // 🔹 Update anidado completo
+    await setDoc(
+      batchRef,
+      {
+        [userKey]: {
+          ...userData,
+          progreso: updatedProgreso,
+        },
+      },
+      { merge: true }
+    );
+
+    console.log(
+      `✅ Progreso guardado correctamente en ${profile.batchId}/${userKey}`,
+      updatedProgreso
+    );
+  } catch (err: any) {
+    console.error("🔥 Error guardando progreso:", err);
+    toast.error("Error guardando progreso del curso");
+  }
+};
+
+
+
+/* ==========================================================
+   🔹 Leer progreso de curso (por UID)
+   ========================================================== */
+const getCourseProgress = async (uid: string, courseId: string) => {
+  try {
+    const profile = await fetchUserFromBatchesByUid(uid);
+    if (!profile) throw new Error("Usuario no encontrado en batches");
+
+    const batchRef = doc(db, "alumnos", profile.batchId);
+    const snap = await getDoc(batchRef);
+    if (!snap.exists()) throw new Error("Batch no existe");
+
+    const data = snap.data();
+    const userKey = Object.keys(data).find(
+      (k) => k.startsWith("user_") && data[k]?.uid === uid
+    );
+
+    if (!userKey) throw new Error("No se encontró user_X");
+
+    const progress = data[userKey]?.progreso?.[courseId] || {};
+    console.log(`📊 Progreso cargado (${uid} / ${courseId}):`, progress);
+    return progress;
+  } catch (err) {
+    console.error("❌ Error al leer progreso:", err);
+    return {};
+  }
+};
+
+  /* ==========================================================
+     🔹 Reload global (alumnos + cursos)
+     ========================================================== */
+  const reloadData = async () => {
+  if (!user) return;
+
+  if (role === "admin") {
+    await Promise.all([
+      loadAlumnos?.(),
+      loadAllCursos?.(),
+      loadProfesores?.(),
+    ]);
+  } else if (role === "alumno") {
+    await Promise.all([
+      loadAlumnos?.(),
+      loadMisCursos?.(user.uid),
+    ]);
+  } else {
+    // fallback (profesor u otros)
+    await loadAllCursos?.();
+  }
+};
+
+  /* ==========================================================
+     🔹 Listener de Auth
+     ========================================================== */
+  useEffect(() => {
+  console.log("[AuthContext] Montando listener...");
+  const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    setLoading(true);
+
+    if (firebaseUser) {
+      console.log("👤 Usuario detectado:", firebaseUser.email);
+      setUser(firebaseUser);
+
+      let profile = await fetchUserFromBatchesByUid(firebaseUser.uid);
+
+      if (!profile) {
+        console.warn("⚠️ Usuario no encontrado en batches, creando...");
+        await addUserToBatch(firebaseUser, "alumno");
+        profile = await fetchUserFromBatchesByUid(firebaseUser.uid);
+      }
+
+      const resolvedRole = profile?.role || "alumno";
+      setRole(resolvedRole);
+      setUserProfile(profile);
+
+      // 🔹 Carga base
+      await loadAlumnos();
+
+      if (resolvedRole === "alumno") {
+        await loadMisCursos(firebaseUser.uid);
+      } else {
+        // 🔹 Admin o profesor: cargamos cursos y profesores
+        await Promise.all([
+          loadAllCursos(),
+          loadProfesores(),
+        ]);
+      }
+    } else {
+      // 🔹 Logout
+      setUser(null);
+      setRole(null);
+      setMisCursos([]);
+      setUserProfile(null);
+    }
+
+    setLoading(false);
+    setAuthReady(true);
+  });
+
+  return () => unsubscribe();
+}, []);
+
+
+
+
+  /* ==========================================================
+     🔹 Valor del contexto
+     ========================================================== */
+  const value: AuthContextType = {
+    user,
+    role,
+    userProfile,
+    authReady,
+    loading,
+    alumnos,
+    misCursos,
+    allCursos,
+    loadingCursos,
+    loadingAllCursos,
+    reloadData,
+    loadMisCursos,
+    loadAllCursos,
+    saveCourseProgress,
+    getCourseProgress,
+    logout,
+    firestore: db,
+    profesores,
+    loadingProfesores,
+    loadProfesores,
+
+  };
+
+  return (
+    <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  );
+};
+
+/* ==========================================================
+   🔹 Hook personalizado
+   ========================================================== */
+export const useAuth = () => useContext(AuthContext);
+/* =========================================================
+   🔹 getCourseProgressStats — calcula progreso real del curso
+   ========================================================= */
+/* =========================================================
+   🔹 getCourseProgressStats — calcula progreso real del curso
+   ========================================================= */
+export function getCourseProgressStats(
+  progress: Record<string, any> = {},
+  units: any[] = []
+) {
+  /* =========================================================
+     1️⃣ Calcular total de lecciones reales del curso
+     ========================================================= */
+  let totalLessons = units.reduce((acc, u) => {
+    const list = u.lessons || u.lecciones || [];
+    return acc + (Array.isArray(list) ? list.length : 0);
+  }, 0);
+
+  // 🧩 Fallback: si las unidades están vacías (como en loadMisCursos)
+  if (!totalLessons && progress && typeof progress === "object") {
+    const lessonBases = new Set<string>();
+    Object.keys(progress).forEach((key) => {
+      if (!key || typeof key !== "string" || key === "[object Object]") return;
+      const parts = key.split("::");
+      if (parts.length >= 2) {
+        lessonBases.add(`${parts[0]}::${parts[1]}`);
+      }
+    });
+    totalLessons = lessonBases.size;
+  }
+
+  /* =========================================================
+     2️⃣ Crear mapa para evitar duplicados
+     ========================================================= */
+  const baseMap = new Map<string, boolean>();
+
+  Object.entries(progress).forEach(([key, value]: [string, any]) => {
+    // Evitar claves inválidas
+    if (!key || key === "[object Object]" || typeof key !== "string") return;
+
+    // Normalizar inconsistencias del cierre
+    let normalizedKey = key
+      .replace("closing-course", "closing")
+      .replace("closing::", "closing-course::");
+
+    // Dividir en partes (solo unidad + lección)
+    const parts = normalizedKey.split("::");
+    if (parts.length < 2) return;
+
+    const baseKey = `${parts[0]}::${parts[1]}`;
+
+    // Determinar si la lección se considera completada
+    const isCompleted =
+      value?.videoEnded === true ||
+      value?.exSubmitted === true ||
+      value?.completed === true;
+
+    const prev = baseMap.get(baseKey) || false;
+    baseMap.set(baseKey, prev || isCompleted);
+  });
+
+  /* =========================================================
+     3️⃣ Contar lecciones completadas únicas
+     ========================================================= */
+  const completedCount = Array.from(baseMap.values()).filter(Boolean).length;
+
+  /* =========================================================
+     4️⃣ Calcular porcentaje (limitado a 100)
+     ========================================================= */
+  const progressPercent =
+    totalLessons > 0
+      ? Math.min(100, Math.round((completedCount / totalLessons) * 100))
+      : 0;
+
+  return { totalLessons, completedCount, progressPercent };
+}
+
