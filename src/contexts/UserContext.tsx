@@ -1,9 +1,10 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { fetchAllUsers, updateUserRole } from '@/lib/userBatches';
+import { fetchAllUsers, updateUserRole, updateUserActive } from '@/lib/userBatches';
 import { UserProfile, Role } from '@/types/auth';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from "sonner";
 
 interface UsersContextType {
   users: UserProfile[];
@@ -11,6 +12,7 @@ interface UsersContextType {
   error: string;
   fetchUsers: () => Promise<void>;
   handleUpdateRole: (uid: string, newRole: Role) => Promise<void>;
+  toggleUserActive: (uid: string, state: boolean) => Promise<void>; // 👈 nuevo
 }
 
 const UsersContext = createContext<UsersContextType | undefined>(undefined);
@@ -44,6 +46,7 @@ export const UsersProvider = ({ children }: { children: ReactNode }) => {
     alert('Error al actualizar rol: ' + (err as Error).message);
   }
 };
+
 
   useEffect(() => {
     if (authReady && user?.role === 'admin') {

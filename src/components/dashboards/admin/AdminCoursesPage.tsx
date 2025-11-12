@@ -11,9 +11,9 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import CourseCard from "@/app/dashboard/cursos/CourseCard";
-import CreateCourse from "@/app/dashboard/cursos/crear/CreateCourse";
-import EditCourseForm from "@/app/dashboard/cursos/edit/EditCourseForm";
+import CourseCard from "@/components/cursos/CourseCard";
+import CreateCourse from "@/components/cursos/crear/CreateCourse";
+import EditCourseForm from "@/components/cursos/edit/EditCourseForm";
 import { deleteDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { FiBookOpen, FiPlus } from "react-icons/fi";
@@ -62,9 +62,11 @@ useEffect(() => {
           progress: averageProgress, // ✅ progreso real
           unidades: c.unidades?.length || 0,
           created:
-            c.creadoEn?.seconds
-              ? new Date(c.creadoEn.seconds * 1000).toLocaleDateString()
-              : "N/A",
+  c.creadoEn?.seconds
+    ? new Date(c.creadoEn.seconds * 1000).toLocaleDateString()
+    : c.createdAt?.seconds
+    ? new Date(c.createdAt.seconds * 1000).toLocaleDateString()
+    : "N/A",
           visible: c.publico ?? true,
           image: c.urlImagen || "/images/default-course.jpg",
           videoPresentacion: c.videoPresentacion || "",
@@ -202,6 +204,14 @@ useEffect(() => {
 
               {/* ACCIONES */}
               <div className="flex flex-wrap justify-end gap-3 p-5 border-t border-gray-100 bg-gray-50">
+               
+              <Button
+    variant="outline"
+    onClick={() => window.open(`/material-academico/${course.id}`, "_blank")}
+    className="border-blue-200 text-blue-600 hover:bg-blue-50 rounded-lg text-sm"
+  >
+    Ver curso
+  </Button>
                 <Button
                   variant="outline"
                   onClick={() => handleEdit(course)}
@@ -242,17 +252,17 @@ useEffect(() => {
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogOverlay className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40" />
         <DialogContent className="!max-w-none !w-[95vw] !h-[90vh] !p-0 overflow-hidden bg-transparent shadow-none border-none">
-          <VisuallyHidden>
-            <DialogTitle>Editar Curso</DialogTitle>
-          </VisuallyHidden>
-          {isModalOpen && selectedCourse && (
-            <EditCourseForm
-              course={selectedCourse}
-              onClose={() => setIsModalOpen(false)}
-              onUpdated={reloadData}
-            />
-          )}
-        </DialogContent>
+  <VisuallyHidden>
+    <DialogTitle>Editar Curso</DialogTitle>
+  </VisuallyHidden>
+
+  {isModalOpen && selectedCourse && (
+    <EditCourseForm
+      courseId={selectedCourse.id}   // ✅ ahora sí se pasa
+      onClose={() => setIsModalOpen(false)}
+    />
+  )}
+</DialogContent>
       </Dialog>
     </div>
   );

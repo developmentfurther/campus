@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useMemo } from "react";
 import { onAuthStateChanged, User, signOut } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import {
@@ -20,6 +20,8 @@ import { toast } from "sonner";
 
 /* ==========================================================
    🔹 Contexto de Autenticación Global
+
+   -Define que datos y funciones van a estar disponibles en toda la app
    ========================================================== */
 
 interface AuthContextType {
@@ -82,7 +84,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
 
   /* ==========================================================
-     🔹 Logout
+     🔹 Logout => Cierra sesion en firebase y limpia todo el estado local
      ========================================================== */
   const logout = async () => {
     try {
@@ -98,7 +100,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   /* ==========================================================
-     🔹 Cargar alumnos (para admin o profesor)
+     🔹 Cargar alumnos (para admin o profesor) => Lee todos los documentos en la coleccion alumnos
      ========================================================== */
   const loadAlumnos = async () => {
     try {
@@ -426,7 +428,8 @@ const getCourseProgress = async (uid: string, courseId: string) => {
   /* ==========================================================
      🔹 Valor del contexto
      ========================================================== */
-  const value: AuthContextType = {
+  const value = useMemo(
+  () => ({
     user,
     role,
     userProfile,
@@ -447,8 +450,23 @@ const getCourseProgress = async (uid: string, courseId: string) => {
     profesores,
     loadingProfesores,
     loadProfesores,
+  }),
+  [
+    user,
+    role,
+    userProfile,
+    authReady,
+    loading,
+    alumnos,
+    misCursos,
+    allCursos,
+    loadingCursos,
+    loadingAllCursos,
+    profesores,
+    loadingProfesores,
+  ]
+);
 
-  };
 
   return (
     <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

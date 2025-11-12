@@ -5,7 +5,7 @@ import { useState, useMemo } from "react";
 import { FiSearch, FiUser, FiBookOpen, FiCalendar, FiMail } from "react-icons/fi";
 
 export default function AlumnosPage() {
-  const { alumnos, loading } = useAuth();
+  const { alumnos, loading, toggle } = useAuth();
   const [search, setSearch] = useState("");
 
   // 🔹 Filtrado dinámico

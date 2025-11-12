@@ -81,7 +81,8 @@ export const addUserToBatch = async (firebaseUser: User, role: Role = "alumno") 
       batchId: targetBatchId,
       createdAt: new Date().toISOString(),
       cursosAdquiridos: [],
-      progreso: {}, // ✅ estructura necesaria
+      progreso: {}, 
+      active: true,
     };
 
     console.log("🧩 Usuario a guardar:", newUser);
@@ -119,7 +120,8 @@ export const fetchUserFromBatchesByUid = async (
           email: user.email,
           role: user.role,
           batchId: `batch_${i}`,
-          userKey: key, // ✅ agregado
+          userKey: key,
+          active: user.active ?? true,
         };
       }
     }
@@ -154,7 +156,8 @@ export const fetchUserFromBatches = async (
           email: user.email,
           role: user.role,
           batchId: `batch_${i}`,
-          userKey: key, // ✅ agregado
+          userKey: key, 
+          active: user.active ?? true,
         };
       }
     }
@@ -184,6 +187,7 @@ export const fetchAllUsers = async (): Promise<UserProfile[]> => {
           email: u.email,
           role: u.role,
           batchId: u.batchId ?? batchDoc.id,
+          active: u.active ?? true,
         });
       }
     }
@@ -256,4 +260,27 @@ export const enrollUserInCourse = async (email: string, courseId: string) => {
   } catch (err) {
     console.error("🔥 [enrollUserInCourse] Error:", err);
   }
+};
+
+// Función para activar o desactivar alumnos desde admin
+export const updateUserActive = async (uid: string, state: boolean) => {
+  console.log(`🟢 [updateUserActive] Cambiando estado de ${uid} a ${state}`);
+  const alumnosRef = collection(db, "alumnos");
+  const snap = await getDocs(alumnosRef);
+
+  for (const batchDoc of snap.docs) {
+    const data = batchDoc.data();
+    for (const key in data) {
+      if (key.startsWith(USER_KEY_PREFIX) && data[key].uid === uid) {
+        const userPath = `${key}.active`;
+        await updateDoc(doc(db, "alumnos", batchDoc.id), {
+          [userPath]: state,
+        });
+        console.log(`✅ [updateUserActive] Estado actualizado para ${uid}`);
+        return;
+      }
+    }
+  }
+
+  console.warn("⚠️ [updateUserActive] Usuario no encontrado en ningún batch.");
 };

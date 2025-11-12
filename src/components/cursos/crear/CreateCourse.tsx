@@ -13,7 +13,7 @@
  * - On create: addDoc + serverTimestamp; enroll students into alumnos/{email}.cursosAdquiridos via arrayUnion
  */
 
-import React, { useContext, useState, useEffect, useMemo } from "react";
+import React, { useContext, useState, useEffect, useMemo, useCallback } from "react";
 import {
   collection,
   addDoc,
@@ -56,17 +56,12 @@ import {
   FiGlobe,
 } from "react-icons/fi";
 import { storage, db } from "@/lib/firebase";
-import { enrollAlumnoToCourse } from "@/lib/enrollment";
-import { fetchUserFromBatches } from "@/lib/userBatches";
+
 
 
 /* ----------------- Interfaces for Data Structures ----------------- */
 
-interface Precio {
-  monto: number | string; // Can be string for input, then parsed to number
-  montoDescuento: number | string; // Can be string for input, then parsed to number
-  descuentoActivo: boolean;
-}
+
 
 interface Ejercicio {
   // Define structure of an exercise
@@ -86,6 +81,7 @@ interface Leccion {
   pdfUrl: string;
   ejercicios: Ejercicio[];
   finalMessage: string;
+  teoria?: any;
 }
 
 interface Unidad {
@@ -95,10 +91,19 @@ interface Unidad {
   urlVideo: string; // Forced empty on save
   duracion?: number; // Optional duration in minutes
   urlImagen: string;
-  ejercicios: Ejercicio[]; // Although exercises are handled at lesson level, kept for backward compat
+  ejercicios: Ejercicio[]; // Legacy, kept for backward compat
   textoCierre: string;
   lecciones: Leccion[];
+
+  // 🆕 Nueva estructura para manejar el cierre de unidad
+  closing?: {
+    examIntro?: string;           // Texto introductorio para examen de cierre
+    examExercises?: Ejercicio[];  // Ejercicios del examen
+    closingText?: string;         // Texto final de la unidad
+    pdfUrl?: string;              // ✅ URL del resumen PDF
+  };
 }
+
 
 interface ExamenFinal {
   introTexto: string;
@@ -119,7 +124,6 @@ interface Curso {
   publico: boolean;
   videoPresentacion: string;
   urlImagen: string;
-  precio: Precio;
   cursantes: string[]; // array of student emails
   textoFinalCurso: string;
   textoFinalCursoVideoUrl: string;
@@ -127,6 +131,15 @@ interface Curso {
   examenFinal?: ExamenFinal; // Will be added on save
   capstone?: Capstone; // Will be added on save
   creadoEn?: Timestamp;
+
+  // 🔹 Profesor asignado (opcional)
+  profesorId?: string;
+  profesorRef?: DocumentReference | null;
+  profesorNombre?: string;
+
+  // 🔹 Fechas de creación y actualización
+  createdAt?: Timestamp | null;
+  updatedAt?: Timestamp | null;
 }
 
 interface Alumno {
@@ -213,7 +226,6 @@ function CrearCurso({ onClose }: CrearCursoProps) {
     publico: true,
     videoPresentacion: "",
     urlImagen: "",
-    precio: { monto: "", montoDescuento: "", descuentoActivo: false },
     cursantes: [], // selected emails
     textoFinalCurso: "",
     textoFinalCursoVideoUrl: "", // NEW: optional closing video
@@ -280,10 +292,7 @@ const batchId = "batch_1"; // o tomalo desde contexto si lo tenés
     }));
   };
 
-  const handlePrecioChange = (field: keyof Precio, e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = e.target.type === "checkbox" ? e.target.checked : e.target.value;
-    setCurso((p) => ({ ...p, precio: { ...p.precio, [field]: v } }));
-  };
+ 
 
   /* =========================
      Units
@@ -317,9 +326,45 @@ const batchId = "batch_1"; // o tomalo desde contexto si lo tenés
     setActiveLeccion(0);
   };
 
-  const updateUnidad = (idx: number, patch: Partial<Unidad>) => {
-    setUnidades((p) => p.map((u, i) => (i === idx ? { ...u, ...patch } : u)));
-  };
+const updateUnidad = useCallback(
+  (
+    idx: number,
+    patch: Partial<Unidad> | ((prev: Unidad) => Unidad)
+  ) => {
+    setUnidades((prev) => {
+      // Clonamos el array completo para evitar referencias mutadas
+      const nuevas = structuredClone(prev);
+
+      // Aplicamos el patch de forma segura
+      const unidadPrev = nuevas[idx];
+      nuevas[idx] =
+        typeof patch === "function" ? patch(unidadPrev) : { ...unidadPrev, ...patch };
+
+      return nuevas;
+    });
+  },
+  []
+);
+
+const updateLeccion = useCallback(
+  (unidadIdx: number, leccionIdx: number, patch: Partial<Leccion>) => {
+    setUnidades((prev) => {
+      const nuevas = structuredClone(prev);
+      const unidad = nuevas[unidadIdx];
+      if (!unidad || !Array.isArray(unidad.lecciones)) return prev;
+
+      unidad.lecciones[leccionIdx] = {
+        ...unidad.lecciones[leccionIdx],
+        ...patch,
+      };
+
+      nuevas[unidadIdx] = unidad;
+      return nuevas;
+    });
+  },
+  []
+);
+
 
   /* =========================
      Lessons
@@ -357,20 +402,6 @@ const batchId = "batch_1"; // o tomalo desde contexto si lo tenés
     setActiveLeccion((i) => (i > 0 ? i - 1 : 0));
   };
 
-  const updateLeccion = (unidadIdx: number, leccionIdx: number, patch: Partial<Leccion>) => {
-    setUnidades((p) =>
-      p.map((u, i) =>
-        i === unidadIdx
-          ? {
-              ...u,
-              lecciones: u.lecciones.map((l, j) =>
-                j === leccionIdx ? { ...l, ...patch } : l
-              ),
-            }
-          : u
-      )
-    );
-  };
 
 
   // === Subida a Imgur ===
@@ -477,6 +508,27 @@ async function uploadToImgur(file: File): Promise<string | null> {
     });
   }, [alumnos, searchAlumno]);
 
+  useEffect(() => {
+  const fetchProfesores = async () => {
+    try {
+      const docRef = doc(db, "profesores", "batch_1");
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        const data = snap.data() || {};
+        const list = Object.values(data);
+        setProfesores(Array.isArray(list) ? list : []);
+      } else {
+        console.warn("⚠️ No hay profesores en batch_1");
+        setProfesores([]);
+      }
+    } catch (err) {
+      console.error("❌ Error cargando profesores:", err);
+      setProfesores([]);
+    }
+  };
+  fetchProfesores();
+}, []);
+
   /* =========================
      Save / HandleSubmit
      ========================= */
@@ -506,85 +558,96 @@ async function uploadToImgur(file: File): Promise<string | null> {
   console.log("🔹 [DEBUG] Pasó validaciones iniciales");
 
   // Normalizamos unidades
-  const unidadesToSave: Unidad[] = unidades.map((u) => ({
-    id: u.id || makeId(),
-    titulo: u.titulo || "",
-    descripcion: u.descripcion || "",
-    urlVideo: "",
-    urlImagen: u.urlImagen || "",
-    duracion: u.duracion ? Number(u.duracion) : undefined,
-    ejercicios: [],
-    textoCierre: u.textoCierre || "",
-    lecciones: (u.lecciones || []).map((l) => ({
-      id: l.id || makeId(),
-      titulo: l.titulo || "",
-      texto: l.texto || "",
-      urlVideo: l.urlVideo || "",
-      urlImagen: l.urlImagen || "",
-      pdfUrl: l.pdfUrl || "",
-      ejercicios: Array.isArray(l.ejercicios) ? l.ejercicios : [],
-      finalMessage: l.finalMessage || "",
-    })),
-  }));
+ const unidadesToSave: Unidad[] = unidades.map((u) => ({
+  id: u.id || makeId(),
+  titulo: u.titulo || "",
+  descripcion: u.descripcion || "",
+  urlVideo: "",
+  urlImagen: u.urlImagen || "",
+  duracion: u.duracion ? Number(u.duracion) : undefined,
+  ejercicios: [],
+  textoCierre: u.textoCierre || "",
+  lecciones: (u.lecciones || []).map((l) => ({
+    id: l.id || makeId(),
+    titulo: l.titulo || "",
+    texto: l.texto || "",
+    urlVideo: l.urlVideo || "",
+    urlImagen: l.urlImagen || "",
+    pdfUrl: l.pdfUrl || "",
+    ejercicios: Array.isArray(l.ejercicios) ? l.ejercicios : [],
+    finalMessage: l.finalMessage || "",
+  })),
+  closing: {
+    examIntro: u.closing?.examIntro || "",
+    examExercises: Array.isArray(u.closing?.examExercises)
+      ? u.closing.examExercises
+      : [],
+    closingText: u.closing?.closingText || "",
+  },
+}));
+
+
 
   try {
     console.log("🚀 [DEBUG] Iniciando bloque principal de creación...");
 
-    // =====================================================
-    // 1️⃣ Crear profesor si aplica
-    // =====================================================
-      const batchId = "batch_1"; // o dinámico si querés
-const batchRef = doc(dbToUse, "profesores", batchId);
+  // =====================================================
+// 1️⃣ Crear o asignar profesor solo si aplica
+// =====================================================
+let profesorData: any = null;
 
-// Generar un ID de profesor único
-const profesorId = `profesor_${Date.now()}`;
+if (asignarProfesor === "nuevo" && nuevoProfesor.email.trim()) {
+  const profesorId = `profesor_${Date.now()}`;
+  profesorData = {
+    id: profesorId,
+    nombre: nuevoProfesor.nombre,
+    apellido: nuevoProfesor.apellido,
+    email: nuevoProfesor.email,
+    idioma: nuevoProfesor.idioma,
+    nivel: nuevoProfesor.nivel,
+    role: "profesor",
+    createdAt: new Date().toISOString(),
+  };
 
-// Crear el objeto
-const profesorData = {
-  id: profesorId,
-  nombre: nuevoProfesor.nombre,
-  apellido: nuevoProfesor.apellido,
-  email: nuevoProfesor.email,
-  idioma: nuevoProfesor.idioma,
-  nivel: nuevoProfesor.nivel,
-  role: "profesor",
-  createdAt: new Date().toISOString(),
-};
+  const batchRef = doc(dbToUse, "profesores", "batch_1");
+  await setDoc(batchRef, { [profesorId]: profesorData }, { merge: true });
 
-// Guardarlo dentro del batch, igual que alumnos
-await setDoc(
-  batchRef,
-  { [profesorId]: profesorData },
-  { merge: true }
-);
+  console.log("✅ Profesor nuevo creado:", profesorData);
+}
 
-console.log("✅ Profesor creado dentro de profesores/batch_1:", profesorData);
+if (asignarProfesor === "existente" && profesorSeleccionado) {
+  profesorData =
+    profesores.find((p) => p.id === profesorSeleccionado) || null;
+}
+
+console.log("📘 Profesor asignado:", profesorData);
 
 
     // =====================================================
     // 2️⃣ Crear el curso
     // =====================================================
-    const payload = {
-      ...curso,
-      unidades: unidadesToSave,
-      examenFinal,
-      capstone,
-      creadoEn: serverTimestamp(),
-      ...(profesorData
-        ? {
-            profesorId: profesorData.id,
-            profesorRef: profesorData.ref,
-            profesorNombre: profesorData.nombre
-              ? `${profesorData.nombre} ${profesorData.apellido || ""}`.trim()
-              : undefined,
-          }
-        : {}),
-    };
+ const payload = {
+  ...curso,
+  unidades: unidadesToSave,
+  examenFinal,
+  capstone,
+  creadoEn: serverTimestamp(),      
+  actualizadoEn: serverTimestamp(),
+  ...(profesorData && profesorData.ref
+    ? {
+        profesorId: profesorData.id,
+        profesorRef: profesorData.ref,
+        profesorNombre: `${profesorData.nombre || ""} ${profesorData.apellido || ""}`.trim(),
+      }
+    : {}),
+};
 
-    console.log("📦 [DEBUG] Payload final listo:", payload);
 
-    const refCurso = await addDoc(collection(dbToUse, "cursos"), payload);
-    console.log("✅ Curso creado con ID:", refCurso.id);
+
+ // ✅ Guardá el payload directo
+const refCurso = await addDoc(collection(dbToUse, "cursos"), payload);
+
+
 
     // =====================================================
     // 3️⃣ Enrolamiento de alumnos (si existen)
@@ -634,14 +697,16 @@ console.log("✅ Profesor creado dentro de profesores/batch_1:", profesorData);
     // =====================================================
     // 4️⃣ Relación inversa en profesor (si aplica)
     // =====================================================
-    if (profesorData?.ref) {
-      await updateDoc(profesorData.ref, {
-        cursoAsignadoId: refCurso.id,
-        cursoAsignadoRef: refCurso,
-        updatedAt: serverTimestamp(),
-      });
-      console.log("🔁 Profesor actualizado con curso asignado.");
-    }
+    // 4️⃣ Relación inversa en profesor (opcional)
+if (asignarProfesor === "nuevo" && profesorData?.email) {
+  const profBatchRef = doc(dbToUse, "profesores", "batch_1");
+  await updateDoc(profBatchRef, {
+    [`${profesorData.id}.cursoAsignadoId`]: refCurso.id,
+    [`${profesorData.id}.updatedAt`]: serverTimestamp(),
+  });
+  console.log("🔁 Profesor actualizado con curso asignado.");
+}
+
 
     // =====================================================
     // 5️⃣ Actualizar estado local y cerrar modal
@@ -1043,111 +1108,50 @@ console.log("✅ Profesor creado dentro de profesores/batch_1:", profesorData);
         </div>
       </section>
 
-      {/* 💰 Pricing */}
-      <section className="rounded-xl bg-white border border-gray-200 shadow-sm p-6">
-        <header className="flex items-center gap-3 mb-6">
-          <div className="flex items-center justify-center w-10 h-10 bg-green-50 text-green-600 rounded-lg">
-            <FiDollarSign className="w-5 h-5" />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900">
-            Price settings
-          </h3>
-        </header>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          {/* Precio normal */}
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">
-              Regular Price
-            </label>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={curso.precio.monto}
-              onChange={(e) => handlePrecioChange("monto", e)}
-              placeholder="49.99"
-              className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
-            />
-          </div>
-
-          {/* Precio con descuento */}
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">
-              Discounted price
-            </label>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={curso.precio.montoDescuento}
-              onChange={(e) => handlePrecioChange("montoDescuento", e)}
-              placeholder="29.99"
-              className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
-            />
-          </div>
-
-          {/* Toggle descuento */}
-          <label className="flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 p-4 text-gray-800">
-            <input
-              type="checkbox"
-              checked={!!curso.precio.descuentoActivo}
-              onChange={(e) => handlePrecioChange("descuentoActivo", e)}
-              className="h-5 w-5 accent-green-600"
-            />
-            <div>
-              <span className="block font-medium">Descuento activo</span>
-              <span className="text-xs text-gray-500">
-                Apply reduced price
-              </span>
-            </div>
-          </label>
-        </div>
-      </section>
+      
     </div>
           )}
 
-          {/* TAB UNIT */}
-          {/* TAB: Unidades */}
+ {/* TAB: Unidades */}
 {activeMainTab === "unidades" && (
   <div className="space-y-8">
-    <section className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+    <section className="bg-gradient-to-br from-indigo-50 to-indigo-100/50 rounded-2xl p-6 border border-indigo-200">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-blue-50 text-blue-600 flex items-center justify-center rounded-lg">
-          <FiLayers className="w-5 h-5" />
+        <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+          <FiLayers className="w-5 h-5 text-indigo-600" />
         </div>
-        <h3 className="text-lg font-semibold text-gray-900">
-          Course Content: Units and Lessons
+        <h3 className="text-xl font-semibold text-slate-900">
+          Course Content: Units & Lessons
         </h3>
       </div>
 
       {unidades.length === 0 ? (
-        <div className="p-8 text-center border border-dashed border-gray-300 rounded-lg bg-gray-50 text-gray-600">
-          <p className="mb-4 font-medium">There are no units created yet</p>
+        <div className="p-8 text-center bg-indigo-50 rounded-xl border border-dashed border-indigo-200 text-indigo-600">
+          <p className="mb-4 text-lg font-medium">No units added yet</p>
           <button
             type="button"
             onClick={agregarUnidad}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
+            className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors gap-2"
           >
-            <FiPlus /> Add first unit
+            <FiPlus size={18} /> Add First Unit
           </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {/* === LISTA DE UNIDADES === */}
+          {/* Unit List */}
           <div className="md:col-span-1 space-y-3">
             {unidades.map((u, idx) => (
               <div
                 key={u.id}
-                onClick={() => setActiveUnidad(idx)}
-                className={`flex justify-between items-center p-3 rounded-lg border cursor-pointer transition ${
+                className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${
                   activeUnidad === idx
-                    ? "bg-blue-50 border-blue-400 text-blue-700 shadow-sm"
-                    : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
+                    ? "bg-indigo-100 border-indigo-400 border text-indigo-800 shadow-md"
+                    : "bg-white border border-slate-200 hover:bg-slate-50"
                 }`}
+                onClick={() => setActiveUnidad(idx)}
               >
-                <span className="text-sm font-medium truncate">
-                  Unit {idx + 1}: {u.titulo || "Sin título"}
+                <span className="font-medium text-sm">
+                  Unit {idx + 1}: {u.titulo || "Untitled Unit"}
                 </span>
                 <button
                   type="button"
@@ -1155,74 +1159,90 @@ console.log("✅ Profesor creado dentro de profesores/batch_1:", profesorData);
                     e.stopPropagation();
                     borrarUnidad(idx);
                   }}
-                  className="text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50 transition"
+                  className="text-slate-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50 transition-colors"
+                  aria-label="Delete unit"
                 >
-                  <FiTrash2 size={15} />
+                  <FiTrash2 size={16} />
                 </button>
               </div>
             ))}
             <button
               type="button"
               onClick={agregarUnidad}
-              className="w-full flex items-center justify-center gap-2 p-3 text-blue-600 border border-dashed border-blue-300 rounded-lg bg-blue-50 hover:bg-blue-100 transition font-medium text-sm"
+              className="w-full flex items-center justify-center gap-2 p-3 bg-indigo-50 text-indigo-600 rounded-xl border border-dashed border-indigo-200 hover:bg-indigo-100 transition-colors"
             >
-              <FiPlus /> New Unit
+              <FiPlus size={16} /> Add New Unit
             </button>
           </div>
 
-          {/* === DETALLE DE UNIDAD === */}
-          <div className="md:col-span-3 bg-gray-50 border border-gray-200 rounded-xl p-5">
+          {/* Unit Details */}
+          <div className="md:col-span-3 bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
             {unidades[activeUnidad] && (
               <>
-                {/* Tabs internos */}
-                <div className="flex justify-between items-center mb-4 border-b border-gray-200 pb-2">
-                  <h4 className="font-semibold text-gray-800">
-                    Editing unit {activeUnidad + 1}
+                {/* Header tabs */}
+                <div className="flex justify-between items-center mb-4 pb-4 border-b border-slate-200">
+                  <h4 className="text-lg font-semibold text-slate-800">
+                    Editing Unit {activeUnidad + 1}
                   </h4>
                   <div className="flex gap-2">
-                    {["datos", "lecciones", "cierre"].map((tab) => (
-                      <button
-                        key={tab}
-                        type="button"
-                        onClick={() => setActiveUnitTab(tab)}
-                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${
-                          activeUnitTab === tab
-                            ? "bg-blue-600 text-white"
-                            : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
-                        }`}
-                      >
-                        {tab === "datos"
-                          ? "Detalles"
-                          : tab === "lecciones"
-                          ? `Lecciones (${unidades[activeUnidad]?.lecciones?.length || 0})`
-                          : "Cierre"}
-                      </button>
-                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setActiveUnitTab("datos")}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                        activeUnitTab === "datos"
+                          ? "bg-indigo-600 text-white"
+                          : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                      }`}
+                    >
+                      Details
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveUnitTab("lecciones")}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                        activeUnitTab === "lecciones"
+                          ? "bg-indigo-600 text-white"
+                          : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                      }`}
+                    >
+                      Lessons ({unidades[activeUnidad]?.lecciones?.length || 0})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveUnitTab("cierre")}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                        activeUnitTab === "cierre"
+                          ? "bg-indigo-600 text-white"
+                          : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                      }`}
+                    >
+                      Closing
+                    </button>
                   </div>
                 </div>
 
                 {/* === TAB: Datos === */}
                 {activeUnitTab === "datos" && (
                   <div className="space-y-4">
-                    {/* Título */}
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium text-gray-700">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-700">
                         Unit title
                       </label>
                       <input
                         type="text"
-                        placeholder="Ej: Introduction to JavaScript"
+                        placeholder="e.g., Introduction to JavaScript Basics"
                         value={unidades[activeUnidad]?.titulo || ""}
                         onChange={(e) =>
-                          updateUnidad(activeUnidad, { titulo: e.target.value })
+                          updateUnidad(activeUnidad, {
+                            titulo: e.target.value,
+                          })
                         }
-                        className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                        className="w-full p-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        required
                       />
                     </div>
-
-                    {/* Descripción */}
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium text-gray-700">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-700">
                         Description (optional)
                       </label>
                       <textarea
@@ -1233,55 +1253,54 @@ console.log("✅ Profesor creado dentro de profesores/batch_1:", profesorData);
                             descripcion: e.target.value,
                           })
                         }
+                        className="w-full p-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
                         rows={3}
-                        className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
                       />
                     </div>
-
-                    {/* Duración */}
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
-                        <FiClock className="text-blue-500" /> Duración estimada (min)
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                        <FiClock className="w-4 h-4" /> Estimated duration (minutes)
                       </label>
                       <input
                         type="number"
                         min="0"
-                        placeholder="Ej: 60"
+                        placeholder="e.g., 60"
                         value={unidades[activeUnidad]?.duracion || ""}
                         onChange={(e) =>
                           updateUnidad(activeUnidad, {
-                            duracion: parseInt(e.target.value, 10) || undefined,
+                            duracion:
+                              parseInt(e.target.value, 10) || undefined,
                           })
                         }
-                        className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                        className="w-full p-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                       />
                     </div>
-
-                    {/* Imagen */}
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
-                        <FiImage className="text-blue-500" /> Image (URL optional)
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                        <FiImage className="w-4 h-4" /> Unit thumbnail (optional URL)
                       </label>
                       <div className="relative">
-                        <FiLink2 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <FiLink2 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                         <input
                           type="url"
-                          placeholder="https://ejemplo.com/imagen.jpg"
+                          placeholder="https://example.com/unit-image.jpg"
                           value={unidades[activeUnidad]?.urlImagen || ""}
                           onChange={(e) =>
                             updateUnidad(activeUnidad, {
                               urlImagen: e.target.value,
                             })
                           }
-                          className="w-full rounded-lg border border-gray-300 bg-white p-3 pl-10 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                          className="w-full p-3 pl-10 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                         />
                       </div>
                       {unidades[activeUnidad]?.urlImagen &&
-                        isValidUrl(unidades[activeUnidad]?.urlImagen || "") && (
+                        isValidUrl(
+                          unidades[activeUnidad]?.urlImagen || ""
+                        ) && (
                           <img
                             src={unidades[activeUnidad]?.urlImagen}
-                            alt="Miniatura de la unidad"
-                            className="w-full rounded-lg border border-gray-200 object-cover max-h-36"
+                            alt="Unit thumbnail"
+                            className="w-full rounded-xl border object-cover max-h-36"
                           />
                         )}
                     </div>
@@ -1316,7 +1335,7 @@ console.log("✅ Profesor creado dentro de profesores/batch_1:", profesorData);
                           >
                             <div className="flex items-center justify-between mb-2">
                               <span className="font-medium text-gray-800">
-                                Lesson {lIdx + 1}: {l.titulo || "Sin título"}
+                                Lesson {lIdx + 1}: {l.titulo || "Untitled"}
                               </span>
                               <button
                                 type="button"
@@ -1330,34 +1349,29 @@ console.log("✅ Profesor creado dentro de profesores/batch_1:", profesorData);
                               </button>
                             </div>
 
-                            {/* Lección activa */}
                             {activeLeccion === lIdx && (
                               <div className="mt-3 space-y-4 border-t border-gray-200 pt-3">
-                                {/* Título */}
                                 <div className="space-y-1">
                                   <label className="text-sm font-medium text-gray-700">
                                     Lesson Title
                                   </label>
                                   <input
                                     type="text"
-                                    placeholder="Ej: Variables y tipos de datos"
                                     value={l.titulo}
                                     onChange={(e) =>
                                       updateLeccion(activeUnidad, lIdx, {
                                         titulo: e.target.value,
                                       })
                                     }
-                                    className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                                    className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-blue-500"
                                   />
                                 </div>
 
-                                {/* Texto */}
                                 <div className="space-y-1">
                                   <label className="text-sm font-medium text-gray-700">
-                                    Text content (optional)
+                                    Text content
                                   </label>
                                   <textarea
-                                    placeholder="Contenido detallado de la lección"
                                     value={l.texto}
                                     onChange={(e) =>
                                       updateLeccion(activeUnidad, lIdx, {
@@ -1365,106 +1379,26 @@ console.log("✅ Profesor creado dentro de profesores/batch_1:", profesorData);
                                       })
                                     }
                                     rows={4}
-                                    className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
+                                    className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-blue-500 resize-none"
                                   />
                                 </div>
 
-                                {/* Video */}
-                                <div className="space-y-1">
-                                  <label className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
-                                    <FiVideo className="text-blue-500" /> Video URL (optional)
-                                  </label>
-                                  <div className="relative">
-                                    <FiLink2 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                    <input
-                                      type="url"
-                                      placeholder="https://youtube.com/watch?v=..."
-                                      value={l.urlVideo}
-                                      onChange={(e) =>
-                                        updateLeccion(activeUnidad, lIdx, {
-                                          urlVideo: e.target.value,
-                                        })
-                                      }
-                                      className="w-full rounded-lg border border-gray-300 bg-white p-3 pl-10 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                                    />
-                                  </div>
-                                  {l.urlVideo && isValidUrl(l.urlVideo) && (
-                                    <div className="aspect-video rounded-lg overflow-hidden border border-gray-200">
-                                      <iframe
-                                        src={l.urlVideo}
-                                        title="Video de lección"
-                                        className="w-full h-full"
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                        allowFullScreen
-                                      />
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* PDF */}
-                                <div className="space-y-1">
-                                  <label className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
-                                    <FiFileText className="text-blue-500" /> Attached PDF (optional)
-                                  </label>
-                                  <label className="flex cursor-pointer items-center justify-center gap-2 p-3 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:bg-gray-100 text-gray-600 text-sm transition">
-                                    <FiUpload /> {uploading ? "Uploading..." : "Upload PDF"}
-                                    <input
-                                      type="file"
-                                      accept="application/pdf"
-                                      className="hidden"
-                                      onChange={(e) =>
-                                        onUploadPdfLeccion(
-                                          activeUnidad,
-                                          lIdx,
-                                          e.target.files?.[0]
-                                        )
-                                      }
-                                      disabled={uploading}
-                                    />
-                                  </label>
-                                  {l.pdfUrl && (
-                                    <a
-                                      href={l.pdfUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="flex items-center gap-1 text-blue-600 hover:underline text-sm"
-                                    >
-                                      <FiLink2 /> View PDF
-                                    </a>
-                                  )}
-                                </div>
-
-                                {/* Ejercicios */}
                                 <div className="space-y-1">
                                   <label className="text-sm font-medium text-gray-700">
-                                    Exercises (optional)
+                                    Exercises
                                   </label>
-                                  <Exercises
-                                    exercises={l.ejercicios}
-                                    setExercises={(newExercises: Ejercicio[]) =>
-                                      updateLeccion(activeUnidad, lIdx, {
-                                        ejercicios: newExercises,
-                                      })
-                                    }
-                                  />
-                                </div>
+                                 <Exercises
+  initial={l.ejercicios}
+  onChange={(newExercises: Ejercicio[]) => {
+    console.log("🧩 [DEBUG] setExercises LECCION ejecutado", {
+      unidad: activeUnidad,
+      leccion: lIdx,
+      newExercises,
+    });
+    updateLeccion(activeUnidad, lIdx, { ejercicios: [...newExercises] });
+  }}
+/>
 
-                                {/* Mensaje final */}
-                                <div className="space-y-1">
-                                  <label className="text-sm font-medium text-gray-700">
-                                    Final message (optional)
-                                  </label>
-                                  <textarea
-                                    placeholder="Message displayed when completing exercises"
-                                    value={l.finalMessage}
-                                    onChange={(e) =>
-                                      updateLeccion(activeUnidad, lIdx, {
-                                        finalMessage: e.target.value,
-                                      })
-                                    }
-                                    rows={2}
-                                    className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
-                                  />
                                 </div>
                               </div>
                             )}
@@ -1485,71 +1419,102 @@ console.log("✅ Profesor creado dentro de profesores/batch_1:", profesorData);
                 {/* === TAB: Cierre === */}
                 {activeUnitTab === "cierre" && (
                   <div className="space-y-6">
-                    {/* Examen de unidad */}
                     <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
                       <h3 className="text-gray-800 font-semibold mb-3 text-sm">
                         Final unit exam
                       </h3>
-
-                      {/* Intro examen */}
                       <div className="space-y-1 mb-4">
                         <label className="text-sm font-medium text-gray-700">
-                          Introductory text (optional)
+                          Introductory text
                         </label>
                         <textarea
-                          placeholder="Instrucciones o introducción para el examen"
+                          placeholder="Intro or instructions"
                           value={unidades[activeUnidad]?.closing?.examIntro || ""}
                           onChange={(e) =>
-                            updateUnidad(activeUnidad, {
+                            updateUnidad(activeUnidad, (prev) => ({
+                              ...prev,
                               closing: {
-                                ...unidades[activeUnidad]?.closing,
+                                ...(prev.closing || {}),
                                 examIntro: e.target.value,
                               },
-                            })
+                            }))
                           }
                           rows={3}
-                          className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
+                          className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
-
-                      {/* Ejercicios examen */}
                       <div className="space-y-1">
                         <label className="text-sm font-medium text-gray-700">
                           Exam exercises
                         </label>
                         <Exercises
-                          initial={unidades[activeUnidad]?.closing?.examExercises || []}
-                          onChange={(updatedExercises) =>
-                            updateUnidad(activeUnidad, {
-                              closing: {
-                                ...unidades[activeUnidad]?.closing,
-                                examExercises: updatedExercises,
-                              },
-                            })
-                          }
-                        />
+  initial={unidades[activeUnidad]?.closing?.examExercises || []}
+  onChange={(updatedExercises) => {
+    console.log("🧩 [DEBUG] setExercises CIERRE ejecutado", {
+      unidad: activeUnidad,
+      updatedExercises,
+    });
+    updateUnidad(activeUnidad, (prevUnidad) => ({
+      ...prevUnidad,
+      closing: {
+        ...(prevUnidad.closing || {}),
+        examExercises: [...updatedExercises],
+      },
+    }));
+  }}
+/>
+
                       </div>
                     </div>
-
-                    {/* Texto de cierre */}
                     <div className="space-y-1">
                       <label className="text-sm font-medium text-gray-700">
-                        Closing text (optional)
+                        Closing text
                       </label>
                       <textarea
-                        placeholder="Texto mostrado al finalizar la unidad"
+                        placeholder="Displayed after finishing the unit"
                         value={unidades[activeUnidad]?.closing?.closingText || ""}
                         onChange={(e) =>
-                          updateUnidad(activeUnidad, {
+                          updateUnidad(activeUnidad, (prev) => ({
+                            ...prev,
                             closing: {
-                              ...unidades[activeUnidad]?.closing,
+                              ...(prev.closing || {}),
                               closingText: e.target.value,
                             },
-                          })
+                          }))
                         }
                         rows={4}
-                        className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
+                        className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-blue-500"
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                        <FiLink2 className="w-4 h-4" /> PDF summary URL (optional)
+                      </label>
+                      <input
+                        type="url"
+                        placeholder="https://drive.google.com/yourfile.pdf"
+                        value={unidades[activeUnidad]?.closing?.pdfUrl || ""}
+                        onChange={(e) =>
+                          updateUnidad(activeUnidad, (prev) => ({
+                            ...prev,
+                            closing: {
+                              ...(prev.closing || {}),
+                              pdfUrl: e.target.value,
+                            },
+                          }))
+                        }
+                        className="w-full p-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                      {unidades[activeUnidad]?.closing?.pdfUrl && (
+                        <a
+                          href={unidades[activeUnidad]?.closing?.pdfUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+                        >
+                          <FiFileText size={14} /> Preview PDF
+                        </a>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1561,6 +1526,7 @@ console.log("✅ Profesor creado dentro de profesores/batch_1:", profesorData);
     </section>
   </div>
 )}
+
 
 
         {/* TAB: Examen */}

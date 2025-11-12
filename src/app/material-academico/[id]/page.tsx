@@ -22,6 +22,7 @@ import {
   FiClock,
   FiMaximize,
   FiBookOpen,
+  FiFileText
 } from "react-icons/fi";
 import { useAuth } from "@/contexts/AuthContext";
 import { db as firestore, storage } from "@/lib/firebase";
@@ -189,18 +190,21 @@ useEffect(() => {
     });
 
     // 2️⃣ Cierre / examen final de la unidad (solo 1)
-    if (u.closing && (u.closing.examIntro || u.closing.examExercises?.length)) {
-      lessons.push({
-        key: buildKey(unitId, "closing"),
-        id: "closing",
-        unitId,
-        title: "🧠 Cierre de la unidad",
-        text: u.closing.examIntro || "",
-        ejercicios: Array.isArray(u.closing.examExercises)
-          ? u.closing.examExercises
-          : [],
-      });
-    }
+    // 2️⃣ Cierre / examen final de la unidad (solo 1)
+if (u.closing && (u.closing.examIntro || u.closing.examExercises?.length || u.closing.pdfUrl)) {
+  lessons.push({
+    key: buildKey(unitId, "closing"),
+    id: "closing",
+    unitId,
+    title: "🧠 Cierre de la unidad",
+    text: u.closing.examIntro || "",
+    ejercicios: Array.isArray(u.closing.examExercises)
+      ? u.closing.examExercises
+      : [],
+    pdfUrl: u.closing.pdfUrl || "", // ✅ nuevo campo PDF
+  });
+}
+
 
     normalized.push({
       id: unitId,
@@ -987,113 +991,113 @@ function CapstoneForm({
           </div>
         )}
 
-        {activeLesson?.text && (
+        
+
+        {activeLesson?.pdfUrl && (
+  <div className="bg-slate-900/60 p-5 rounded-xl border border-slate-800">
+    <h3 className="text-yellow-400 font-semibold mb-3 flex items-center gap-2">
+      <FiFileText /> Resumen de la unidad
+    </h3>
+    <iframe
+      src={toEmbedPdfUrl(activeLesson.pdfUrl)}
+      className="w-full h-[500px] rounded-lg border border-slate-700"
+      title="Resumen PDF"
+    />
+  </div>
+)}
+{activeLesson?.text && (
           <div className="bg-slate-900/60 p-5 rounded-xl border border-slate-800">
             <p className="text-slate-300 whitespace-pre-line">{activeLesson.text}</p>
           </div>
         )}
 
-        {activeLesson?.pdfUrl && (
-          <div className="p-4 bg-slate-900/60 rounded-xl border border-slate-800">
-            <a
-              href={activeLesson.pdfUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-yellow-400 hover:underline flex items-center gap-2"
-            >
-              📄 Ver PDF adjunto
-            </a>
-          </div>
-        )}
-
         {/* ======= EJERCICIOS (con navegación) ======= */}
         {Array.isArray(activeLesson?.ejercicios) &&
-          activeLesson.ejercicios.length > 0 && (
-            <div className="bg-slate-900/70 p-6 rounded-xl border border-slate-800">
-              <h2 className="text-xl font-semibold mb-4 text-yellow-400">
-                🧠 Ejercicios ({activeLesson.ejercicios.length})
-              </h2>
+  activeLesson.ejercicios.length > 0 && (
+    <section className="bg-slate-900/70 p-6 rounded-2xl border border-slate-800 space-y-6 shadow-sm">
+      {/* HEADER */}
+      <div className="flex items-center justify-between">
+        
+        <span className="text-sm text-slate-400">
+          {currentExercise + 1} / {activeLesson.ejercicios.length}
+        </span>
+      </div>
 
-              <div className="space-y-6">
-                <div>
-                  <h3 className="font-medium text-gray-200 mb-3">
-                    {activeLesson.ejercicios[currentExercise].question ||
-                      activeLesson.ejercicios[currentExercise].prompt ||
-                      "Ejercicio"}
-                  </h3>
+      {/* CONTENIDO DEL EJERCICIO */}
+      <div>
+        
 
-                  <ExerciseRunner
-  ejercicios={[activeLesson.ejercicios[currentExercise]]}
-  lessonKey={activeLesson.key}
-  batchId={userProfile?.batchId}
-  userKey={userProfile?.userKey}
-  courseId={courseId}
-  onSubmit={async ({ correct, total }) => {
-  const passed = correct === total;
+        <ExerciseRunner
+          ejercicios={[activeLesson.ejercicios[currentExercise]]}
+          lessonKey={activeLesson.key}
+          batchId={userProfile?.batchId}
+          userKey={userProfile?.userKey}
+          courseId={courseId}
+          onSubmit={async ({ correct, total }) => {
+            const passed = correct === total;
 
-  if (!user?.uid) {
-    toast.error("Inicia sesión para guardar tu progreso");
-    return;
-  }
-  if (!activeLesson?.key) {
-    console.error("No hay activeLesson.key");
-    return;
-  }
+            if (!user?.uid) {
+              toast.error("Inicia sesión para guardar tu progreso");
+              return;
+            }
+            if (!activeLesson?.key) {
+              console.error("No hay activeLesson.key");
+              return;
+            }
 
-  try {
-    await saveCourseProgress(user.uid, courseId, {
-      [activeLesson.key]: {
-        exSubmitted: true,
-        exPassed: passed,
-        score: { correct, total },
-      },
-    });
+            try {
+              await saveCourseProgress(user.uid, courseId, {
+                [activeLesson.key]: {
+                  exSubmitted: true,
+                  exPassed: passed,
+                  score: { correct, total },
+                },
+              });
 
-    setProgress((prev) => ({
-      ...prev,
-      [activeLesson.key]: {
-        ...(prev[activeLesson.key] || {}),
-        exSubmitted: true,
-        exPassed: passed,
-        score: { correct, total },
-      },
-    }));
+              setProgress((prev) => ({
+                ...prev,
+                [activeLesson.key]: {
+                  ...(prev[activeLesson.key] || {}),
+                  exSubmitted: true,
+                  exPassed: passed,
+                  score: { correct, total },
+                },
+              }));
 
-    toast[passed ? "success" : "info"](
-      passed ? "🎉 ¡Ejercicio aprobado!" : "❌ Fallaste. Tu intento quedó guardado."
-    );
-  } catch (error) {
-    console.error("🔥 Error guardando progreso:", error);
-    toast.error("No se pudo guardar tu progreso");
-  }
-}}
+              toast[passed ? "success" : "info"](
+                passed
+                  ? "🎉 ¡Ejercicio aprobado!"
+                  : "❌ Fallaste. Tu intento quedó guardado."
+              );
+            } catch (error) {
+              console.error("🔥 Error guardando progreso:", error);
+              toast.error("No se pudo guardar tu progreso");
+            }
+          }}
+        />
+      </div>
 
-/>
+      {/* NAVEGACIÓN ENTRE EJERCICIOS */}
+      <div className="flex justify-between items-center pt-2 border-t border-slate-800">
+        <button
+          onClick={prevExercise}
+          disabled={currentExercise === 0}
+          className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-gray-200 disabled:opacity-50 text-sm font-medium transition-all"
+        >
+          ← Anterior
+        </button>
 
-                </div>
+        <button
+          onClick={nextExercise}
+          disabled={currentExercise >= activeLesson.ejercicios.length - 1}
+          className="px-4 py-2 rounded-lg bg-yellow-400 hover:bg-yellow-300 text-black font-semibold text-sm transition-all"
+        >
+          Siguiente →
+        </button>
+      </div>
+    </section>
+  )}
 
-                {/* Navegación entre ejercicios */}
-                <div className="flex justify-between">
-                  <button
-                    onClick={prevExercise}
-                    disabled={currentExercise === 0}
-                    className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-gray-200 disabled:opacity-50"
-                  >
-                    ← Anterior
-                  </button>
-                  <button
-                    onClick={nextExercise}
-                    disabled={
-                      currentExercise >= activeLesson.ejercicios.length - 1
-                    }
-                    className="px-4 py-2 rounded-lg bg-yellow-400 hover:bg-yellow-300 text-black font-semibold"
-                  >
-                    Siguiente →
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
 
         {/* ======= MENSAJE FINAL DE LECCIÓN ======= */}
         {activeLesson?.finalMessage && (
