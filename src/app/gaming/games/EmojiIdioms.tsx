@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { FiCheck, FiX } from "react-icons/fi";
 import { useAuth } from "@/contexts/AuthContext";
 import { userPlayedToday, updateUserGameAttempt } from "@/lib/games/attempts";
 
+// Normaliza textos
 function norm(s: string) {
   return s
     .toLowerCase()
@@ -53,9 +54,7 @@ const GAME_ID = "idioms";
 export default function EmojiIdioms() {
   const { user, role } = useAuth();
 
-  /* Seleccionamos un IDIOM aleatorio por día */
-  const item = useMemo(() => BANK[Math.floor(Math.random() * BANK.length)], []);
-
+  const [item, setItem] = useState<Item | null>(null);
   const [input, setInput] = useState("");
   const [revealed, setRevealed] = useState(false);
   const [wrongCount, setWrongCount] = useState(0);
@@ -63,13 +62,16 @@ export default function EmojiIdioms() {
   const [blocked, setBlocked] = useState(false);
   const [checkingAttempt, setCheckingAttempt] = useState(true);
 
-  /* 1️⃣  Intento diario */
+  // ===========================================
+  // 1️⃣ Verificación del intento diario
+  // ===========================================
   useEffect(() => {
     const check = async () => {
       if (!user) return setCheckingAttempt(false);
 
       if (role === "admin" || role === "profesor") {
-        return setCheckingAttempt(false);
+        setCheckingAttempt(false);
+        return;
       }
 
       const played = await userPlayedToday(user.uid, GAME_ID);
@@ -81,22 +83,38 @@ export default function EmojiIdioms() {
     check();
   }, [user, role]);
 
-  /* 2️⃣ Checkeo */
-  const onCheck = () => {
-    if (correct) return;  
+  // ===========================================
+  // 2️⃣ Generar idiom solo si NO está bloqueado
+  // ===========================================
+  useEffect(() => {
+    if (!checkingAttempt && !blocked) {
+      const random = BANK[Math.floor(Math.random() * BANK.length)];
+      setItem(random);
+    }
+  }, [checkingAttempt, blocked]);
 
+  // ===========================================
+  // 3️⃣ Handler principal
+  // ===========================================
+  const correct =
+    revealed && item && item.answers.some((a) => norm(a) === norm(input));
+
+  const onCheck = () => {
+    if (!item) return;
+    if (correct) return;
 
     const ok = item.answers.some((a) => norm(a) === norm(input));
-
     setRevealed(true);
 
     if (!ok) setWrongCount((c) => c + 1);
   };
 
-  /* 3️⃣ Guardar intento si acertó */
+  // ===========================================
+  // 4️⃣ Guardar intento si acertó
+  // ===========================================
   useEffect(() => {
     const save = async () => {
-      if (!revealed) return;
+      if (!revealed || !item) return;
       if (!user) return;
       if (role !== "alumno") return;
 
@@ -108,40 +126,45 @@ export default function EmojiIdioms() {
     };
 
     save();
-  }, [revealed]);
+  }, [revealed, item, user, role]);
 
-  /* 4️⃣ Pistas progresivas */
+  // ===========================================
+  // 5️⃣ Pistas progresivas
+  // ===========================================
   const hints: string[] = [];
 
-  if (wrongCount >= 1) {
-    hints.push(`📏 Palabras: ${item.answers[0].split(" ").length}`);
+  if (item) {
+    if (wrongCount >= 1)
+      hints.push(`📏 Palabras: ${item.answers[0].split(" ").length}`);
+
+    if (wrongCount >= 2)
+      hints.push(`🔤 Primera palabra: "${item.answers[0].split(" ")[0]}"`);
+
+    if (wrongCount >= 3) {
+      const parts = item.answers[0].split(" ");
+      hints.push(`🔡 Última palabra: "${parts[parts.length - 1]}"`);
+    }
+
+    if (wrongCount >= 4) {
+      const target = item.answers[0].split(" ");
+      const guessParts = input.split(" ");
+
+      const reveal = target
+        .map((w, i) =>
+          guessParts[i] && norm(guessParts[i]) === norm(w) ? w : "___"
+        )
+        .join(" ");
+
+      hints.push(`🧩 En posición: ${reveal}`);
+    }
   }
 
-  if (wrongCount >= 2) {
-    hints.push(`🔤 Primera palabra: "${item.answers[0].split(" ")[0]}"`);
-  }
+  // ===========================================
+  // 6️⃣ UI – Estados iniciales
+  // ===========================================
 
-  if (wrongCount >= 3) {
-    const parts = item.answers[0].split(" ");
-    hints.push(`🔡 Última palabra: "${parts[parts.length - 1]}"`);
-  }
-
-  if (wrongCount >= 4) {
-    const target = item.answers[0].split(" ");
-    const guessParts = input.split(" ");
-
-    const reveal = target
-      .map((w, i) =>
-        guessParts[i] && norm(guessParts[i]) === norm(w) ? w : "___"
-      )
-      .join(" ");
-
-    hints.push(`🧩 En posición: ${reveal}`);
-  }
-
-  /* UI */
   if (checkingAttempt) {
-    return <div className="py-20 text-center">Verificando intento...</div>;
+    return <div className="py-20 text-center">Verificando intento…</div>;
   }
 
   if (blocked && role === "alumno") {
@@ -153,8 +176,13 @@ export default function EmojiIdioms() {
     );
   }
 
-  const correct = revealed && item.answers.some((a) => norm(a) === norm(input));
+  if (!item) {
+    return <div className="py-20 text-center">Cargando idiom…</div>;
+  }
 
+  // ===========================================
+  // 7️⃣ UI – Juego principal
+  // ===========================================
   return (
     <div className="max-w-2xl mx-auto px-6 py-8">
       <div className="rounded-2xl border p-8 shadow-sm bg-white">
@@ -168,64 +196,53 @@ export default function EmojiIdioms() {
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            disabled={correct}  
-
+            disabled={correct}
             placeholder="Escribe el idiom..."
             className="flex-1 border p-3 rounded-lg"
             onKeyDown={(e) => e.key === "Enter" && onCheck()}
           />
 
           <button
-  onClick={onCheck}
-  disabled={correct || !input.trim()}
-  className={`px-4 py-2 rounded-lg text-white transition
-    ${
-      correct || !input.trim()
-        ? "bg-slate-400 cursor-not-allowed"
-        : "bg-blue-600 hover:bg-blue-700"
-    }
-  `}
->
-  Comprobar
-</button>
-
+            onClick={onCheck}
+            disabled={correct || !input.trim()}
+            className={`px-4 py-2 rounded-lg text-white transition ${
+              correct || !input.trim()
+                ? "bg-slate-400 cursor-not-allowed"
+                : "bg-blue-600 hover:bg-blue-700"
+            }`}
+          >
+            Comprobar
+          </button>
         </div>
 
         {/* Resultado */}
         {revealed && (
-  <div
-    className={`mt-6 p-4 rounded-lg border ${
-      correct
-        ? "bg-emerald-50 border-emerald-300"
-        : "bg-rose-50 border-rose-300"
-    }`}
-  >
-    {/* Mensaje principal */}
-    {correct ? "✔ ¡Correcto!" : "❌ No es correcto"}
+          <div
+            className={`mt-6 p-4 rounded-lg border ${
+              correct
+                ? "bg-emerald-50 border-emerald-300"
+                : "bg-rose-50 border-rose-300"
+            }`}
+          >
+            {correct ? "✔ ¡Correcto!" : "❌ No es correcto"}
 
-    {/* Solo mostrar respuesta si es correcto */}
-    {correct && (
-      <p className="mt-2 text-slate-700">
-        Respuesta: {item.answers.join(", ")}
-      </p>
-    )}
+            {/* Respuesta solo si acierta */}
+            {correct && (
+              <>
+                <p className="mt-2 text-slate-700">
+                  Respuesta: {item.answers.join(", ")}
+                </p>
+                <p className="mt-2 text-slate-500">{item.explain}</p>
+              </>
+            )}
 
-    {/* Explicación SOLO si es correcto */}
-    {correct && (
-      <p className="mt-2 text-slate-500">
-        {item.explain}
-      </p>
-    )}
-
-    {/* Cuando es incorrecto, mostrar mensaje motivador */}
-    {!correct && (
-      <p className="mt-2 text-slate-500">
-        Seguí intentando… usá las pistas para acercarte 👍
-      </p>
-    )}
-  </div>
-)}
-
+            {!correct && (
+              <p className="mt-2 text-slate-500">
+                Seguí intentando… usá las pistas 👍
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Pistas */}
         {hints.length > 0 && (
