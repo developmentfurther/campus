@@ -19,6 +19,8 @@ export default function AlumnoDashboard() {
       return <AlumnoCertificatesPage />;
     case "perfil":
       return <AlumnoProfilePage />;
+    case "gaming":
+      return <GamingHub />; 
     default:
       return <HomeDashboard />;
   }

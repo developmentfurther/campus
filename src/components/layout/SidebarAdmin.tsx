@@ -10,6 +10,7 @@ import {
   FiBarChart2,
   FiUser,
   FiLogOut,
+  FiTarget
 } from "react-icons/fi";
 
 export default function SidebarAdmin() {
@@ -30,6 +31,8 @@ export default function SidebarAdmin() {
     { id: "alumnos", label: "Alumnos", icon: <FiUsers size={16} /> },
     { id: "profesores", label: "Profesores", icon: <FiUser size={16} /> },
     { id: "estadisticas", label: "Estadísticas", icon: <FiBarChart2 size={16} /> },
+    { id: "gaming", label: "Gaming", icon: <FiTarget size={16} /> },
+    
   ];
 
   const menuCuenta = [

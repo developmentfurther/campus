@@ -8,9 +8,11 @@ import ProfileInfo from "../../perfil/ProfileInfo";
 import AdminHome from "./AdminHome";
 import AlumnosPage from "./AlumnosPage";
 import ProfesoresPage from "./ProfesoresPage";
+import GamingHub from "@/app/dashboard/gaming/page";
 
 export default function AdminDashboard() {
   const { section } = useDashboardUI();
+  
 
   switch (section) {
     case "home":
@@ -21,6 +23,8 @@ export default function AdminDashboard() {
       return <AlumnosPage />;
     case "profesores":
       return <ProfesoresPage />;
+      case "gaming":
+    return <GamingHub />; // 👈 nuevo
     default:
       return <HomeDashboard />;
   }

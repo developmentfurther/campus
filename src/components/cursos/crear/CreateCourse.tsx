@@ -59,6 +59,7 @@ import { storage, db } from "@/lib/firebase";
 
 
 
+
 /* ----------------- Interfaces for Data Structures ----------------- */
 
 
@@ -75,13 +76,13 @@ interface Ejercicio {
 interface Leccion {
   id: string;
   titulo: string;
-  texto: string;
+  descripcion?: string;  // ✅ nuevo campo breve
+  teoria?: string;       // ✅ texto markdown (en vez de textarea “texto”)
   urlVideo: string;
   urlImagen: string;
   pdfUrl: string;
   ejercicios: Ejercicio[];
   finalMessage: string;
-  teoria?: any;
 }
 
 interface Unidad {
@@ -568,15 +569,17 @@ async function uploadToImgur(file: File): Promise<string | null> {
   ejercicios: [],
   textoCierre: u.textoCierre || "",
   lecciones: (u.lecciones || []).map((l) => ({
-    id: l.id || makeId(),
-    titulo: l.titulo || "",
-    texto: l.texto || "",
-    urlVideo: l.urlVideo || "",
-    urlImagen: l.urlImagen || "",
-    pdfUrl: l.pdfUrl || "",
-    ejercicios: Array.isArray(l.ejercicios) ? l.ejercicios : [],
-    finalMessage: l.finalMessage || "",
-  })),
+  id: l.id || makeId(),
+  titulo: l.titulo || "",
+  descripcion: l.descripcion || "",
+  teoria: l.teoria || "",
+  urlVideo: l.urlVideo || "",
+  urlImagen: l.urlImagen || "",
+  pdfUrl: l.pdfUrl || "",
+  ejercicios: Array.isArray(l.ejercicios) ? l.ejercicios : [],
+  finalMessage: l.finalMessage || "",
+})),
+
   closing: {
     examIntro: u.closing?.examIntro || "",
     examExercises: Array.isArray(u.closing?.examExercises)
@@ -1308,113 +1311,142 @@ if (asignarProfesor === "nuevo" && profesorData?.email) {
                 )}
 
                 {/* === TAB: Lecciones === */}
-                {activeUnitTab === "lecciones" && (
-                  <div className="space-y-4">
-                    {(unidades[activeUnidad]?.lecciones?.length || 0) === 0 ? (
-                      <div className="p-6 text-center border border-dashed border-gray-300 rounded-lg bg-gray-50 text-gray-600">
-                        <p className="mb-3">There are no lessons in this unit yet</p>
-                        <button
-                          type="button"
-                          onClick={() => agregarLeccion(activeUnidad)}
-                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                        >
-                          <FiPlus /> Add first lesson
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        {unidades[activeUnidad].lecciones.map((l, lIdx) => (
-                          <div
-                            key={l.id}
-                            onClick={() => setActiveLeccion(lIdx)}
-                            className={`p-4 rounded-lg border cursor-pointer transition ${
-                              activeLeccion === lIdx
-                                ? "border-blue-400 bg-blue-50"
-                                : "border-gray-200 bg-white hover:bg-gray-50"
-                            }`}
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="font-medium text-gray-800">
-                                Lesson {lIdx + 1}: {l.titulo || "Untitled"}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  borrarLeccion(activeUnidad, lIdx);
-                                }}
-                                className="text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50 transition"
-                              >
-                                <FiTrash2 size={15} />
-                              </button>
-                            </div>
+       {/* === TAB: Lecciones === */}
+{activeUnitTab === "lecciones" && (
+  <div className="space-y-6">
+    {/* Lista de lecciones de la unidad */}
+    {unidades[activeUnidad]?.lecciones?.length > 0 ? (
+      unidades[activeUnidad].lecciones.map((l, lIdx) => (
+        <div
+          key={l.id}
+          className={`p-4 rounded-xl border transition-all ${
+            activeLeccion === lIdx
+              ? "border-blue-500 bg-blue-50"
+              : "border-slate-200 bg-white hover:bg-slate-50"
+          }`}
+        >
+          {/* Header con el título de la lección */}
+          <div className="flex items-center justify-between">
+            <h4 className="font-medium text-slate-800">
+              Lesson {lIdx + 1}: {l.titulo || "Untitled"}
+            </h4>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setActiveLeccion(lIdx)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
+                  activeLeccion === lIdx
+                    ? "bg-blue-600 text-white"
+                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                }`}
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                onClick={() => borrarLeccion(activeUnidad, lIdx)}
+                className="p-2 rounded-lg text-red-500 hover:bg-red-50"
+              >
+                <FiTrash2 size={16} />
+              </button>
+            </div>
+          </div>
 
-                            {activeLeccion === lIdx && (
-                              <div className="mt-3 space-y-4 border-t border-gray-200 pt-3">
-                                <div className="space-y-1">
-                                  <label className="text-sm font-medium text-gray-700">
-                                    Lesson Title
-                                  </label>
-                                  <input
-                                    type="text"
-                                    value={l.titulo}
-                                    onChange={(e) =>
-                                      updateLeccion(activeUnidad, lIdx, {
-                                        titulo: e.target.value,
-                                      })
-                                    }
-                                    className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-blue-500"
-                                  />
-                                </div>
+          {/* Si está activa, mostramos el formulario de edición */}
+          {activeLeccion === lIdx && (
+            <div className="mt-3 space-y-4 border-t border-gray-200 pt-3">
+              {/* Título */}
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">
+                  Lesson Title
+                </label>
+                <input
+                  type="text"
+                  value={l.titulo}
+                  onChange={(e) =>
+                    updateLeccion(activeUnidad, lIdx, {
+                      titulo: e.target.value,
+                    })
+                  }
+                  className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
 
-                                <div className="space-y-1">
-                                  <label className="text-sm font-medium text-gray-700">
-                                    Text content
-                                  </label>
-                                  <textarea
-                                    value={l.texto}
-                                    onChange={(e) =>
-                                      updateLeccion(activeUnidad, lIdx, {
-                                        texto: e.target.value,
-                                      })
-                                    }
-                                    rows={4}
-                                    className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-blue-500 resize-none"
-                                  />
-                                </div>
+              {/* Descripción breve */}
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">
+                  Description (short)
+                </label>
+                <textarea
+                  placeholder="Short description of this lesson..."
+                  value={l.descripcion || ""}
+                  onChange={(e) =>
+                    updateLeccion(activeUnidad, lIdx, {
+                      descripcion: e.target.value,
+                    })
+                  }
+                  rows={2}
+                  className="w-full rounded-lg border border-gray-300 bg-white p-2 text-gray-800 focus:ring-2 focus:ring-blue-500 resize-none"
+                />
+              </div>
 
-                                <div className="space-y-1">
-                                  <label className="text-sm font-medium text-gray-700">
-                                    Exercises
-                                  </label>
-                                 <Exercises
-  initial={l.ejercicios}
-  onChange={(newExercises: Ejercicio[]) => {
-    console.log("🧩 [DEBUG] setExercises LECCION ejecutado", {
-      unidad: activeUnidad,
-      leccion: lIdx,
-      newExercises,
-    });
-    updateLeccion(activeUnidad, lIdx, { ejercicios: [...newExercises] });
-  }}
-/>
+              {/* Contenido teórico (Markdown) */}
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">
+                  Theory (Markdown)
+                </label>
+                <textarea
+                  placeholder="Use Markdown: **bold**, _italic_, - lists, [link](https://...)"
+                  value={l.teoria || ""}
+                  onChange={(e) =>
+                    updateLeccion(activeUnidad, lIdx, {
+                      teoria: e.target.value,
+                    })
+                  }
+                  rows={5}
+                  className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-blue-500 resize-none"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Supports <code>**bold**</code>, <code>_italic_</code>, lists (-) and links.
+                </p>
+              </div>
 
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                        <button
-                          type="button"
-                          onClick={() => agregarLeccion(activeUnidad)}
-                          className="w-full flex items-center justify-center gap-2 p-3 text-blue-600 border border-dashed border-blue-300 rounded-lg bg-blue-50 hover:bg-blue-100 transition font-medium text-sm"
-                        >
-                          <FiPlus /> New lesson
-                        </button>
-                      </>
-                    )}
-                  </div>
-                )}
+              {/* Ejercicios */}
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">
+                  Exercises
+                </label>
+                <Exercises
+                  initial={l.ejercicios}
+                  onChange={(newExercises: Ejercicio[]) =>
+                    updateLeccion(activeUnidad, lIdx, {
+                      ejercicios: [...newExercises],
+                    })
+                  }
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      ))
+    ) : (
+      <div className="text-center text-slate-500 py-10">
+        No lessons yet.
+      </div>
+    )}
+
+    {/* Botón para agregar lección */}
+    <button
+      type="button"
+      onClick={() => agregarLeccion(activeUnidad)}
+      className="w-full flex items-center justify-center gap-2 p-3 bg-blue-50 text-blue-600 rounded-xl border border-dashed border-blue-200 hover:bg-blue-100 transition-colors"
+    >
+      <FiPlus size={16} /> Add New Lesson
+    </button>
+  </div>
+)}
+
+
 
                 {/* === TAB: Cierre === */}
                 {activeUnitTab === "cierre" && (

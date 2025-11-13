@@ -27,6 +27,8 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { db as firestore, storage } from "@/lib/firebase";
 import { getCourseProgressStats } from "@/contexts/AuthContext";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 
 
@@ -176,18 +178,22 @@ useEffect(() => {
   // 1️⃣ Unidades normales
   (curso.unidades || []).forEach((u: any, idxU: number) => {
     const unitId = u.id || `unit-${idxU + 1}`;
+
     const lessons = (u.lecciones || []).map((l: any, idxL: number) => {
-      const lessonId = l.id || `lesson-${idxU + 1}-${idxL + 1}`;
-      return {
-        key: buildKey(unitId, lessonId),
-        id: lessonId,
-        unitId,
-        title: l.titulo || `Lección ${idxL + 1}`,
-        text: l.texto || "",
-        videoUrl: l.urlVideo || "",
-        ejercicios: Array.isArray(l.ejercicios) ? l.ejercicios : [],
-      };
-    });
+  const lessonId = l.id || `lesson-${idxU + 1}-${idxL + 1}`;
+  return {
+    key: buildKey(unitId, lessonId),
+    id: lessonId,
+    unitId,
+    title: l.titulo || `Lección ${idxL + 1}`,
+    description: l.descripcion || "",
+    text: l.texto || "",
+    theory: l.teoria || "",   // ✅ nuevo campo markdown
+    videoUrl: l.urlVideo || "",
+    ejercicios: Array.isArray(l.ejercicios) ? l.ejercicios : [],
+  };
+});
+
 
     // 2️⃣ Cierre / examen final de la unidad (solo 1)
     // 2️⃣ Cierre / examen final de la unidad (solo 1)
@@ -851,26 +857,26 @@ function CapstoneForm({
   /* =========================================================
      🔹 UI inicial (básica)
      ========================================================= */
-  return (
-  <div className="flex min-h-screen bg-[#0B1220] text-slate-200">
+ return (
+  <div className="flex min-h-screen bg-white text-slate-900">
     {/* ======================= SIDEBAR IZQUIERDA ======================= */}
-    <aside className="w-72 shrink-0 border-r border-slate-800 bg-[#0F172A] overflow-y-auto">
-      <div className="p-4 border-b border-slate-800">
+    <aside className="w-72 shrink-0 border-r border-slate-200 bg-white overflow-y-auto">
+      <div className="p-4 border-b border-slate-200">
         <button
           onClick={() => router.push("/dashboard")}
-          className="flex items-center gap-2 text-sm text-slate-300 hover:text-yellow-400"
+          className="flex items-center gap-2 text-sm text-slate-600 hover:text-blue-600"
         >
-          <FiChevronLeft className="text-yellow-400" />
+          <FiChevronLeft className="text-blue-600" />
           Volver al inicio
         </button>
       </div>
 
-      <div className="p-4 border-b border-slate-800">
-        <h1 className="text-lg font-bold text-white line-clamp-1">{curso.titulo}</h1>
-        <p className="text-xs text-slate-400 line-clamp-2">{curso.descripcion}</p>
-        <div className="mt-3 h-2 bg-slate-800 rounded-full overflow-hidden">
+      <div className="p-4 border-b border-slate-200">
+        <h1 className="text-lg font-bold text-slate-900 line-clamp-1">{curso.titulo}</h1>
+        <p className="text-xs text-slate-500 line-clamp-2">{curso.descripcion}</p>
+        <div className="mt-3 h-2 bg-slate-200 rounded-full overflow-hidden">
           <div
-            className="h-full bg-yellow-400 rounded-full transition-all duration-500"
+            className="h-full bg-blue-600 rounded-full transition-all duration-500"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
@@ -878,110 +884,109 @@ function CapstoneForm({
 
       <nav className="p-3 space-y-2">
         {units.map((u, uIdx) => {
-  // Si es el cierre global del curso, NO lo tratamos como "Unit"
-  if (u.id === "closing-course") {
-    const l = u.lessons?.[0]; // siempre 1
-    const done = l && (progress[l.key]?.videoEnded || progress[l.key]?.exSubmitted);
-    const active = activeU === uIdx && activeL === 0;
+          // Cierre del curso
+          if (u.id === "closing-course") {
+            const l = u.lessons?.[0];
+            const done = l && (progress[l.key]?.videoEnded || progress[l.key]?.exSubmitted);
+            const active = activeU === uIdx && activeL === 0;
 
-    return (
-      <div key={u.id} className="mt-4 pt-3 border-t border-slate-800">
-        <div className="px-3 py-2 font-semibold text-slate-200">
-          🎓 Cierre del curso
-        </div>
-
-        <button
-          onClick={() => {
-            setActiveU(uIdx);
-            setActiveL(0);
-          }}
-          className={`block w-full text-left px-5 py-1.5 rounded-md text-sm transition ${
-            active
-              ? "bg-yellow-400/10 text-yellow-300 border border-yellow-400/30"
-              : done
-              ? "text-emerald-400 hover:bg-slate-800"
-              : "text-slate-300 hover:bg-slate-800"
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="truncate">{l?.title || "Cierre del Curso"}</span>
-            {done && <FiCheckCircle size={12} className="text-emerald-400" />}
-          </div>
-        </button>
-      </div>
-    );
-  }
-
-  // Para las unidades normales, calculamos el número real (ignora closing-course)
-  const unitNumber =
-    units.slice(0, uIdx).filter((x) => x.id !== "closing-course").length + 1;
-
-  return (
-    <div key={u.id}>
-      <button
-        onClick={() =>
-          setExpandedUnits((prev) => ({ ...prev, [uIdx]: !prev[uIdx] }))
-        }
-        className={`w-full text-left px-3 py-2 font-semibold flex justify-between items-center ${
-          expandedUnits[uIdx]
-            ? "bg-yellow-400/20 text-yellow-300"
-            : "hover:bg-slate-800 text-slate-300"
-        }`}
-      >
-        <span>Unit {unitNumber}: {u.title}</span>
-        <FiChevronRight
-          className={`transition-transform ${
-            expandedUnits[uIdx] ? "rotate-90" : ""
-          }`}
-        />
-      </button>
-
-      {expandedUnits[uIdx] && (
-        <div className="mt-1 space-y-1">
-          {u.lessons.map((l, lIdx) => {
-            const done =
-              progress[l.key]?.videoEnded || progress[l.key]?.exSubmitted;
-            const active = activeU === uIdx && activeL === lIdx;
             return (
+              <div key={u.id} className="mt-4 pt-3 border-t border-slate-200">
+                <div className="px-3 py-2 font-semibold text-slate-700">🎓 Cierre del curso</div>
+                <button
+                  onClick={() => {
+                    setActiveU(uIdx);
+                    setActiveL(0);
+                  }}
+                  className={`block w-full text-left px-5 py-1.5 rounded-md text-sm transition ${
+                    active
+                      ? "bg-blue-50 text-blue-600 border border-blue-200"
+                      : done
+                      ? "text-emerald-600 hover:bg-slate-100"
+                      : "text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="truncate">{l?.title || "Cierre del Curso"}</span>
+                    {done && <FiCheckCircle size={12} className="text-emerald-500" />}
+                  </div>
+                </button>
+              </div>
+            );
+          }
+
+          const unitNumber =
+            units.slice(0, uIdx).filter((x) => x.id !== "closing-course").length + 1;
+
+          return (
+            <div key={u.id}>
               <button
-                key={l.key}
-                onClick={() => {
-                  setActiveU(uIdx);
-                  setActiveL(lIdx);
-                }}
-                className={`block w-full text-left px-5 py-1.5 rounded-md text-sm transition ${
-                  active
-                    ? "bg-yellow-400/10 text-yellow-300 border border-yellow-400/30"
-                    : done
-                    ? "text-emerald-400 hover:bg-slate-800"
-                    : "text-slate-300 hover:bg-slate-800"
+                onClick={() =>
+                  setExpandedUnits((prev) => ({ ...prev, [uIdx]: !prev[uIdx] }))
+                }
+                className={`w-full text-left px-3 py-2 font-semibold flex justify-between items-center rounded-md transition ${
+                  expandedUnits[uIdx]
+                    ? "bg-blue-50 text-blue-700"
+                    : "hover:bg-slate-100 text-slate-700"
                 }`}
               >
-                <div className="flex items-center justify-between">
-                  <span className="truncate">{l.title}</span>
-                  {done && <FiCheckCircle size={12} className="text-emerald-400" />}
-                </div>
+                <span>
+                  Unit {unitNumber}: {u.title}
+                </span>
+                <FiChevronRight
+                  className={`transition-transform ${
+                    expandedUnits[uIdx] ? "rotate-90" : ""
+                  }`}
+                />
               </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-})}
 
+              {expandedUnits[uIdx] && (
+                <div className="mt-1 space-y-1">
+                  {u.lessons.map((l, lIdx) => {
+                    const done =
+                      progress[l.key]?.videoEnded || progress[l.key]?.exSubmitted;
+                    const active = activeU === uIdx && activeL === lIdx;
+                    return (
+                      <button
+                        key={l.key}
+                        onClick={() => {
+                          setActiveU(uIdx);
+                          setActiveL(lIdx);
+                        }}
+                        className={`block w-full text-left px-5 py-1.5 rounded-md text-sm transition ${
+                          active
+                            ? "bg-blue-50 text-blue-700 border border-blue-200"
+                            : done
+                            ? "text-emerald-600 hover:bg-slate-100"
+                            : "text-slate-600 hover:bg-slate-100"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="truncate">{l.title}</span>
+                          {done && (
+                            <FiCheckCircle size={12} className="text-emerald-500" />
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </nav>
     </aside>
 
     {/* ======================= CONTENIDO PRINCIPAL ======================= */}
-    <main className="flex-1 p-8 overflow-y-auto">
+    <main className="flex-1 p-8 overflow-y-auto bg-white">
       <div className="max-w-5xl mx-auto space-y-6">
-        <h1 className="text-2xl font-bold text-white">
+        <h1 className="text-2xl font-bold text-slate-900">
           {activeLesson?.title || "Lección actual"}
         </h1>
 
         {resolvedVideoUrl && (
-          <div className="aspect-video rounded-xl overflow-hidden bg-black">
+          <div className="aspect-video rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
             <iframe
               src={resolvedVideoUrl}
               className="w-full h-full"
@@ -991,126 +996,120 @@ function CapstoneForm({
           </div>
         )}
 
-        
-
         {activeLesson?.pdfUrl && (
-  <div className="bg-slate-900/60 p-5 rounded-xl border border-slate-800">
-    <h3 className="text-yellow-400 font-semibold mb-3 flex items-center gap-2">
-      <FiFileText /> Resumen de la unidad
-    </h3>
-    <iframe
-      src={toEmbedPdfUrl(activeLesson.pdfUrl)}
-      className="w-full h-[500px] rounded-lg border border-slate-700"
-      title="Resumen PDF"
-    />
-  </div>
-)}
-{activeLesson?.text && (
-          <div className="bg-slate-900/60 p-5 rounded-xl border border-slate-800">
-            <p className="text-slate-300 whitespace-pre-line">{activeLesson.text}</p>
+          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+            <h3 className="text-blue-600 font-semibold mb-3 flex items-center gap-2">
+              <FiFileText /> Resumen de la unidad
+            </h3>
+            <iframe
+              src={toEmbedPdfUrl(activeLesson.pdfUrl)}
+              className="w-full h-[500px] rounded-lg border border-slate-200"
+              title="Resumen PDF"
+            />
           </div>
         )}
 
-        {/* ======= EJERCICIOS (con navegación) ======= */}
+        {activeLesson?.description && (
+          <p className="text-slate-600 mb-2">{activeLesson.description}</p>
+        )}
+
+        {activeLesson?.theory && (
+          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+            <article className="prose max-w-none">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {activeLesson.theory}
+              </ReactMarkdown>
+            </article>
+          </div>
+        )}
+
+        {/* ======= EJERCICIOS ======= */}
         {Array.isArray(activeLesson?.ejercicios) &&
-  activeLesson.ejercicios.length > 0 && (
-    <section className="bg-slate-900/70 p-6 rounded-2xl border border-slate-800 space-y-6 shadow-sm">
-      {/* HEADER */}
-      <div className="flex items-center justify-between">
-        
-        <span className="text-sm text-slate-400">
-          {currentExercise + 1} / {activeLesson.ejercicios.length}
-        </span>
-      </div>
+          activeLesson.ejercicios.length > 0 && (
+            <section className="bg-white p-6 rounded-2xl border border-slate-200 space-y-6 shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-600">
+                  {currentExercise + 1} / {activeLesson.ejercicios.length}
+                </span>
+              </div>
 
-      {/* CONTENIDO DEL EJERCICIO */}
-      <div>
-        
+              <ExerciseRunner
+                ejercicios={[activeLesson.ejercicios[currentExercise]]}
+                lessonKey={activeLesson.key}
+                batchId={userProfile?.batchId}
+                userKey={userProfile?.userKey}
+                courseId={courseId}
+                onSubmit={async ({ correct, total }) => {
+                  const passed = correct === total;
+                  if (!user?.uid) {
+                    toast.error("Inicia sesión para guardar tu progreso");
+                    return;
+                  }
+                  if (!activeLesson?.key) {
+                    console.error("No hay activeLesson.key");
+                    return;
+                  }
 
-        <ExerciseRunner
-          ejercicios={[activeLesson.ejercicios[currentExercise]]}
-          lessonKey={activeLesson.key}
-          batchId={userProfile?.batchId}
-          userKey={userProfile?.userKey}
-          courseId={courseId}
-          onSubmit={async ({ correct, total }) => {
-            const passed = correct === total;
+                  try {
+                    await saveCourseProgress(user.uid, courseId, {
+                      [activeLesson.key]: {
+                        exSubmitted: true,
+                        exPassed: passed,
+                        score: { correct, total },
+                      },
+                    });
 
-            if (!user?.uid) {
-              toast.error("Inicia sesión para guardar tu progreso");
-              return;
-            }
-            if (!activeLesson?.key) {
-              console.error("No hay activeLesson.key");
-              return;
-            }
+                    setProgress((prev) => ({
+                      ...prev,
+                      [activeLesson.key]: {
+                        ...(prev[activeLesson.key] || {}),
+                        exSubmitted: true,
+                        exPassed: passed,
+                        score: { correct, total },
+                      },
+                    }));
 
-            try {
-              await saveCourseProgress(user.uid, courseId, {
-                [activeLesson.key]: {
-                  exSubmitted: true,
-                  exPassed: passed,
-                  score: { correct, total },
-                },
-              });
+                    toast[passed ? "success" : "info"](
+                      passed
+                        ? "🎉 ¡Ejercicio aprobado!"
+                        : "❌ Fallaste. Tu intento quedó guardado."
+                    );
+                  } catch (error) {
+                    console.error("🔥 Error guardando progreso:", error);
+                    toast.error("No se pudo guardar tu progreso");
+                  }
+                }}
+              />
 
-              setProgress((prev) => ({
-                ...prev,
-                [activeLesson.key]: {
-                  ...(prev[activeLesson.key] || {}),
-                  exSubmitted: true,
-                  exPassed: passed,
-                  score: { correct, total },
-                },
-              }));
+              <div className="flex justify-between items-center pt-2 border-t border-slate-200">
+                <button
+                  onClick={prevExercise}
+                  disabled={currentExercise === 0}
+                  className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:opacity-50 text-sm font-medium transition-all"
+                >
+                  ← Anterior
+                </button>
+                <button
+                  onClick={nextExercise}
+                  disabled={currentExercise >= activeLesson.ejercicios.length - 1}
+                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition-all"
+                >
+                  Siguiente →
+                </button>
+              </div>
+            </section>
+          )}
 
-              toast[passed ? "success" : "info"](
-                passed
-                  ? "🎉 ¡Ejercicio aprobado!"
-                  : "❌ Fallaste. Tu intento quedó guardado."
-              );
-            } catch (error) {
-              console.error("🔥 Error guardando progreso:", error);
-              toast.error("No se pudo guardar tu progreso");
-            }
-          }}
-        />
-      </div>
-
-      {/* NAVEGACIÓN ENTRE EJERCICIOS */}
-      <div className="flex justify-between items-center pt-2 border-t border-slate-800">
-        <button
-          onClick={prevExercise}
-          disabled={currentExercise === 0}
-          className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-gray-200 disabled:opacity-50 text-sm font-medium transition-all"
-        >
-          ← Anterior
-        </button>
-
-        <button
-          onClick={nextExercise}
-          disabled={currentExercise >= activeLesson.ejercicios.length - 1}
-          className="px-4 py-2 rounded-lg bg-yellow-400 hover:bg-yellow-300 text-black font-semibold text-sm transition-all"
-        >
-          Siguiente →
-        </button>
-      </div>
-    </section>
-  )}
-
-
-        {/* ======= MENSAJE FINAL DE LECCIÓN ======= */}
         {activeLesson?.finalMessage && (
-          <div className="bg-green-900/40 border border-green-800 rounded-xl p-6 text-green-300">
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-6 text-emerald-700">
             {activeLesson.finalMessage}
           </div>
         )}
 
-        {/* ======= BOTÓN SIGUIENTE LECCIÓN ======= */}
         <div className="mt-6 flex justify-end">
           <button
             onClick={goNextLesson}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold shadow bg-yellow-400 text-slate-900 hover:bg-yellow-300"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold shadow bg-blue-600 text-white hover:bg-blue-700"
           >
             Siguiente lección
             <FiChevronRight />
@@ -1120,33 +1119,33 @@ function CapstoneForm({
     </main>
 
     {/* ======================= SIDEBAR DERECHA ======================= */}
-    <aside className="hidden xl:block xl:w-80 xl:shrink-0 bg-[#0F172A] border-l border-slate-800 p-6">
-      <h3 className="text-lg font-semibold text-slate-200 mb-2">
+    <aside className="hidden xl:block xl:w-80 xl:shrink-0 bg-white border-l border-slate-200 p-6">
+      <h3 className="text-lg font-semibold text-slate-900 mb-2">
         Resumen del curso
       </h3>
-      <p className="text-sm text-slate-400 mb-4">
+      <p className="text-sm text-slate-600 mb-4">
         {curso?.descripcion || "Sin descripción disponible"}
       </p>
 
       <div className="space-y-2 mb-6">
-        <div className="flex items-center justify-between text-xs text-slate-400">
+        <div className="flex items-center justify-between text-xs text-slate-600">
           <span>Progreso total</span>
-          <span className="font-semibold text-white">{progressPercent}%</span>
+          <span className="font-semibold text-slate-900">{progressPercent}%</span>
         </div>
-        <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+        <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
           <div
-            className="h-full bg-yellow-400 rounded-full transition-all duration-500"
+            className="h-full bg-blue-600 rounded-full transition-all duration-500"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
-        <div className="text-xs text-slate-400">
+        <div className="text-xs text-slate-600">
           {completedCount} de {totalLessons} lecciones completadas
         </div>
       </div>
 
-      <div className="border-t border-slate-800 pt-4 space-y-1 text-sm">
-        <p className="text-slate-400">Lección actual</p>
-        <p className="font-semibold text-yellow-400">
+      <div className="border-t border-slate-200 pt-4 space-y-1 text-sm">
+        <p className="text-slate-600">Lección actual</p>
+        <p className="font-semibold text-blue-600">
           {activeLesson?.title || "—"}
         </p>
         <p className="text-xs text-slate-500">
@@ -1156,5 +1155,6 @@ function CapstoneForm({
     </aside>
   </div>
 );
+
 
 }

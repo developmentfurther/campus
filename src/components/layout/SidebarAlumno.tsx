@@ -11,6 +11,7 @@ import {
   FiLogOut,
   FiCalendar,
   FiMessageSquare,
+  FiTarget,
 } from "react-icons/fi";
 
 export default function SidebarAlumno() {
@@ -28,6 +29,7 @@ export default function SidebarAlumno() {
     { id: "home", label: "Campus", icon: <FiHome size={16} /> },
     { id: "miscursos", label: "Mi aprendizaje", icon: <FiBookOpen size={16} /> },
     { id: "certificados", label: "Certificados", icon: <FiAward size={16} /> },
+    { id: "gaming", label: "Gaming", icon: <FiTarget size={16} /> },
   ];
 
   const menuPersonal = [
