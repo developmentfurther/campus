@@ -76,6 +76,7 @@ interface Unidad {
     examIntro?: string;
     examExercises?: Ejercicio[];
     pdfUrl?: string; // ✅ nuevo campo
+    videoUrl?: string;
   };
 }
 
@@ -255,6 +256,7 @@ console.log("🧩 [EditCourseForm] Props:", { courseId, firestore });
         : [],
       closingText: u.closing?.closingText || "",
       pdfUrl: u.closing?.pdfUrl || "",
+      videoUrl: u.closing?.videoUrl || "",  // ← 🔥 NUEVO
     },
     lecciones: (u.lecciones || []).map((l: any) => ({
       ...l,
@@ -1201,6 +1203,41 @@ if (!curso) {
                 />
               </div>
 
+
+{/* URL del Video */}
+<div className="space-y-1">
+  <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+    <FiVideo className="w-4 h-4" /> Video URL (Vimeo, YouTube o archivo)
+  </label>
+
+  <div className="relative">
+    <FiLink2 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+    <input
+      type="url"
+      placeholder="https://vimeo.com/123...  |  https://..."
+      value={l.urlVideo || ""}
+      onChange={(e) =>
+        updateLeccion(activeUnidad, lIdx, {
+          urlVideo: e.target.value,
+        })
+      }
+      className="w-full p-3 pl-10 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+    />
+  </div>
+
+  {/* PREVIEW AUTOMÁTICO */}
+  {l.urlVideo && isValidUrl(l.urlVideo) && (
+    <div className="aspect-video rounded-xl overflow-hidden border border-slate-200 bg-slate-50 mt-2">
+      <iframe
+        src={l.urlVideo}
+        className="w-full h-full"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+      />
+    </div>
+  )}
+</div>
+
               {/* Teoría en Markdown */}
               <div className="space-y-1">
                 <label className="text-sm font-medium text-gray-700">
@@ -1283,6 +1320,46 @@ if (!curso) {
                           className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
+{/* VIDEO DEL CIERRE DE LA UNIDAD */}
+<div className="space-y-1">
+  <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+    <FiVideo className="w-4 h-4" /> Closing Video (optional)
+  </label>
+
+  <div className="relative">
+    <FiLink2 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+    <input
+      type="url"
+      placeholder="https://vimeo.com/123...  |  https://youtube.com/..."
+      value={unidades[activeUnidad]?.closing?.videoUrl || ""}
+      onChange={(e) =>
+        updateUnidad(activeUnidad, (prev) => ({
+          ...prev,
+          closing: {
+            ...(prev.closing || {}),
+            videoUrl: e.target.value,
+          },
+        }))
+      }
+      className="w-full p-3 pl-10 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+    />
+  </div>
+
+  {/* PREVIEW */}
+  {unidades[activeUnidad]?.closing?.videoUrl &&
+    isValidUrl(unidades[activeUnidad]?.closing?.videoUrl || "") && (
+      <div className="aspect-video mt-2 rounded-xl overflow-hidden border border-slate-200 bg-slate-100">
+        <iframe
+          src={unidades[activeUnidad]?.closing?.videoUrl}
+          className="w-full h-full"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
+      </div>
+    )}
+</div>
+
+
                       <div className="space-y-1">
                         <label className="text-sm font-medium text-gray-700">
                           Exam exercises

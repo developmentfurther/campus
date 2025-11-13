@@ -22,13 +22,15 @@ import {
   FiClock,
   FiMaximize,
   FiBookOpen,
-  FiFileText
+  FiFileText,
+  FiLock,
 } from "react-icons/fi";
 import { useAuth } from "@/contexts/AuthContext";
 import { db as firestore, storage } from "@/lib/firebase";
 import { getCourseProgressStats } from "@/contexts/AuthContext";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import Player from "@vimeo/player";
 
 
 
@@ -142,8 +144,7 @@ export default function CoursePlayerPage() {
   const [videoEnded, setVideoEnded] = useState(false);
   const [pdfModalOpen, setPdfModalOpen] = useState(false);
 
-  // 🔸 Refs
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+
 
   /* =========================================================
      🔹 Cargar curso desde Firestore
@@ -217,6 +218,7 @@ if (u.closing && (u.closing.examIntro || u.closing.examExercises?.length || u.cl
       ? u.closing.examExercises
       : [],
     pdfUrl: u.closing.pdfUrl || "", // ✅ nuevo campo PDF
+    videoUrl: u.closing.videoUrl || "",
   });
 }
 
@@ -301,6 +303,7 @@ setProgress(normalized);
 }, [mobileNavOpen]);
 
 
+
  /* =========================================================
      🔹 Resolver video de Firebase o HTTP
      ========================================================= */
@@ -309,6 +312,31 @@ setProgress(normalized);
     [units, activeU, activeL]
   );
 
+const isClosingLesson = activeLesson?.id === "closing";
+
+const closingIsLocked = useMemo(() => {
+  if (!isClosingLesson) return false;
+
+  // si no hay video, no bloquear
+  if (!activeLesson?.videoUrl) return false;
+
+  // si el video no terminó, bloquear
+  return !progress?.[activeLesson.key]?.videoEnded;
+}, [isClosingLesson, activeLesson, progress]);
+
+function normalizeVimeo(url: string) {
+  // ya viene embed
+  if (url.includes("player.vimeo.com")) return url;
+
+  // https://vimeo.com/123456
+  const match = url.match(/vimeo\.com\/(\d+)/);
+  if (match?.[1]) {
+    return `https://player.vimeo.com/video/${match[1]}`;
+  }
+
+  return url;
+}
+
 useEffect(() => {
   if (!activeLesson?.videoUrl) {
     setResolvedVideoUrl(null);
@@ -316,10 +344,12 @@ useEffect(() => {
   }
   const url = activeLesson.videoUrl;
 
-  if (url.startsWith("http")) {
-    setResolvedVideoUrl(url);
-    return;
-  }
+if (url.startsWith("http")) {
+  const normalized = normalizeVimeo(url);
+  setResolvedVideoUrl(normalized);
+  return;
+}
+
 
   const load = async () => {
     try {
@@ -332,6 +362,16 @@ useEffect(() => {
   };
   load();
 }, [activeLesson?.videoUrl]);
+
+const lessonIsLocked = useMemo(() => {
+  if (!activeLesson) return false;
+  if (isClosingLesson) return false; // el closing tiene su propia regla
+  if (!activeLesson.videoUrl) return false;
+  return !progress?.[activeLesson.key]?.videoEnded;
+}, [activeLesson, progress]);
+
+
+
 
 
 
@@ -456,47 +496,48 @@ function computeStats(byLesson: any, totalLessons: number) {
 
 
 
-useEffect(() => {
-  const el = videoRef.current;
-  if (!el) return;
 
-  const handleEnded = async () => {
-    console.log("🎬 [DEBUG] handleEnded disparado");
+
+useEffect(() => {
+  if (!resolvedVideoUrl) return;
+  if (!resolvedVideoUrl.includes("player.vimeo.com")) return;
+
+  const iframe = document.querySelector("#vimeo-player") as HTMLIFrameElement;
+  if (!iframe) return;
+
+  const player = new Player(iframe);
+
+  console.log("🎬 Vimeo player inicializado");
+
+  player.on("ended", async () => {
+    console.log("🎬 Vimeo video ended");
     setVideoEnded(true);
 
     if (activeLesson?.key) {
-      console.log("🔑 [DEBUG] activeLesson.key:", activeLesson.key);
-
       toast.success("🎬 Video completado");
 
-      // Actualiza localmente
-      setProgress((prev) => {
-        const updated = {
-          ...prev,
-          [activeLesson.key]: {
-            ...prev[activeLesson.key],
-            videoEnded: true,
-          },
-        };
-        console.log("💾 [DEBUG] Progreso local actualizado:", updated);
-        return updated;
-      });
+      // Actualizar UI
+      setProgress((prev) => ({
+        ...prev,
+        [activeLesson.key]: {
+          ...(prev[activeLesson.key] || {}),
+          videoEnded: true,
+        },
+      }));
 
+      // Guardar progreso
       if (user?.uid && saveCourseProgress) {
-  await saveCourseProgress(user.uid, courseId, {
-    [activeLesson.key]: { videoEnded: true },
-  });
-}
-
-    } else {
-      console.warn("⚠️ [DEBUG] No hay activeLesson.key definido");
+        await saveCourseProgress(user.uid, courseId, {
+          [activeLesson.key]: { videoEnded: true },
+        });
+      }
     }
+  });
+
+  return () => {
+    player.unload?.();
   };
-
-  el.addEventListener("ended", handleEnded);
-  return () => el.removeEventListener("ended", handleEnded);
-}, [activeLesson?.key, user?.uid, saveCourseProgress]);
-
+}, [resolvedVideoUrl, activeLesson?.key, user?.uid]);
 
 /* =========================================================
    🧠 ExerciseRunner — versión avanzada completa (TSX)
@@ -997,6 +1038,7 @@ function CapstoneForm({
         {resolvedVideoUrl && (
           <div className="aspect-video rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
             <iframe
+            id="vimeo-player"
               src={resolvedVideoUrl}
               className="w-full h-full"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -1032,82 +1074,112 @@ function CapstoneForm({
           </div>
         )}
 
-        {/* ======= EJERCICIOS ======= */}
-        {Array.isArray(activeLesson?.ejercicios) &&
-          activeLesson.ejercicios.length > 0 && (
-            <section className="bg-white p-6 rounded-2xl border border-slate-200 space-y-6 shadow-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-600">
-                  {currentExercise + 1} / {activeLesson.ejercicios.length}
-                </span>
-              </div>
+        {/* ======= EJERCICIOS (bloqueados hasta terminar video) ======= */}
+{Array.isArray(activeLesson?.ejercicios) &&
+  activeLesson.ejercicios.length > 0 && (
+    <>
+      {lessonIsLocked || closingIsLocked ? (
+        // 🔒 EJERCICIOS BLOQUEADOS
+        <div className="bg-slate-100 p-6 rounded-2xl border border-slate-300 shadow-inner text-center">
+          <div className="mx-auto w-14 h-14 bg-slate-200 rounded-full grid place-items-center mb-3">
+            <FiLock className="text-slate-500" size={26} />
+          </div>
+          <h3 className="text-lg font-semibold text-slate-700">
+            Completa el video para habilitar los ejercicios
+          </h3>
+          <p className="text-sm text-slate-500 mt-1">
+            Los ejercicios se desbloquearán automáticamente cuando hayas visto el video completo.
+          </p>
 
-              <ExerciseRunner
-                ejercicios={[activeLesson.ejercicios[currentExercise]]}
-                lessonKey={activeLesson.key}
-                batchId={userProfile?.batchId}
-                userKey={userProfile?.userKey}
-                courseId={courseId}
-                onSubmit={async ({ correct, total }) => {
-                  const passed = correct === total;
-                  if (!user?.uid) {
-                    toast.error("Inicia sesión para guardar tu progreso");
-                    return;
-                  }
-                  if (!activeLesson?.key) {
-                    console.error("No hay activeLesson.key");
-                    return;
-                  }
+          <button
+            disabled
+            className="mt-4 px-4 py-2 rounded-lg bg-slate-300 text-white font-semibold cursor-not-allowed"
+          >
+            🔒 Ejercicios bloqueados
+          </button>
+        </div>
+      ) : (
+        // ✅ EJERCICIOS DESBLOQUEADOS
+        <section className="bg-white p-6 rounded-2xl border border-slate-200 space-y-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-slate-600">
+              {currentExercise + 1} / {activeLesson.ejercicios.length}
+            </span>
+          </div>
 
-                  try {
-                    await saveCourseProgress(user.uid, courseId, {
-                      [activeLesson.key]: {
-                        exSubmitted: true,
-                        exPassed: passed,
-                        score: { correct, total },
-                      },
-                    });
+          <ExerciseRunner
+            ejercicios={[activeLesson.ejercicios[currentExercise]]}
+            lessonKey={activeLesson.key}
+            batchId={userProfile?.batchId}
+            userKey={userProfile?.userKey}
+            courseId={courseId}
+            onSubmit={async ({ correct, total }) => {
+              const passed = correct === total;
 
-                    setProgress((prev) => ({
-                      ...prev,
-                      [activeLesson.key]: {
-                        ...(prev[activeLesson.key] || {}),
-                        exSubmitted: true,
-                        exPassed: passed,
-                        score: { correct, total },
-                      },
-                    }));
+              if (!user?.uid) {
+                toast.error("Inicia sesión para guardar tu progreso");
+                return;
+              }
+              if (!activeLesson?.key) {
+                console.error("No hay activeLesson.key");
+                return;
+              }
 
-                    toast[passed ? "success" : "info"](
-                      passed
-                        ? "🎉 ¡Ejercicio aprobado!"
-                        : "❌ Fallaste. Tu intento quedó guardado."
-                    );
-                  } catch (error) {
-                    console.error("🔥 Error guardando progreso:", error);
-                    toast.error("No se pudo guardar tu progreso");
-                  }
-                }}
-              />
+              try {
+                await saveCourseProgress(user.uid, courseId, {
+                  [activeLesson.key]: {
+                    exSubmitted: true,
+                    exPassed: passed,
+                    score: { correct, total },
+                  },
+                });
 
-              <div className="flex justify-between items-center pt-2 border-t border-slate-200">
-                <button
-                  onClick={prevExercise}
-                  disabled={currentExercise === 0}
-                  className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:opacity-50 text-sm font-medium transition-all"
-                >
-                  ← Anterior
-                </button>
-                <button
-                  onClick={nextExercise}
-                  disabled={currentExercise >= activeLesson.ejercicios.length - 1}
-                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition-all"
-                >
-                  Siguiente →
-                </button>
-              </div>
-            </section>
-          )}
+                setProgress((prev) => ({
+                  ...prev,
+                  [activeLesson.key]: {
+                    ...(prev[activeLesson.key] || {}),
+                    exSubmitted: true,
+                    exPassed: passed,
+                    score: { correct, total },
+                  },
+                }));
+
+                toast[passed ? "success" : "info"](
+                  passed
+                    ? "🎉 ¡Ejercicio aprobado!"
+                    : "❌ Fallaste. Tu intento quedó guardado."
+                );
+              } catch (error) {
+                console.error("🔥 Error guardando progreso:", error);
+                toast.error("No se pudo guardar tu progreso");
+              }
+            }}
+          />
+
+          <div className="flex justify-between items-center pt-2 border-t border-slate-200">
+            <button
+              onClick={prevExercise}
+              disabled={currentExercise === 0}
+              className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:opacity-50 text-sm font-medium transition-all"
+            >
+              ← Anterior
+            </button>
+            <button
+              onClick={nextExercise}
+              disabled={
+                currentExercise >= activeLesson.ejercicios.length - 1
+              }
+              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition-all"
+            >
+              Siguiente →
+            </button>
+          </div>
+        </section>
+      )}
+    </>
+  )}
+
+
 
         {activeLesson?.finalMessage && (
           <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-6 text-emerald-700">
