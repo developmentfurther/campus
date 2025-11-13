@@ -8,8 +8,8 @@ import { UsersProvider } from '@/contexts/UserContext';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Mi App Roles',
-  description: 'App con autenticación y roles',
+  title: 'Further Campus – Tu espacio para aprender, practicar y certificar tu inglés',
+  description: 'Further Campus es la plataforma educativa oficial de Further Corporate: accedé a tus cursos, progresos, lecciones interactivas, exámenes automáticos, certificaciones y un nuevo módulo de gaming para aprender inglés de forma dinámica y a tu ritmo.',
 };
 
 export default function RootLayout({
