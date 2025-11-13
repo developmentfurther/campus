@@ -41,7 +41,18 @@ interface AuthContextType {
   reloadData?: () => Promise<void>;
   loadMisCursos?: (uid: string) => Promise<void>;
   loadAllCursos?: () => Promise<void>;
-  saveCourseProgress?: (uid: string, courseId: string, data: any) => Promise<void>;
+
+  saveCourseProgress?: (
+    uid: string,
+    courseId: string,
+    data: any
+  ) => Promise<void>;
+
+  getCourseProgress?: (
+    uid: string,
+    courseId: string
+  ) => Promise<any>;   // 👈 AGREGAR ESTO
+
   logout?: () => Promise<void>;
   firestore?: any;
   storage?: any;
@@ -49,8 +60,10 @@ interface AuthContextType {
   profesores?: any[];
   loadingProfesores?: boolean;
   loadProfesores?: () => Promise<void>;
-  
+
+  loadAlumnos?: () => Promise<void>;  // 👈 OPCIONAL, PERO LO USÁS EN reloadData
 }
+
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
@@ -428,28 +441,42 @@ const getCourseProgress = async (uid: string, courseId: string) => {
   /* ==========================================================
      🔹 Valor del contexto
      ========================================================== */
-  const value = useMemo(
+ 
+const value = useMemo(
   () => ({
+    // --- Estado base ---
     user,
     role,
     userProfile,
     authReady,
     loading,
+
+    // --- Datos académicos ---
     alumnos,
     misCursos,
     allCursos,
+    profesores,
+
+    // --- Loaders ---
     loadingCursos,
     loadingAllCursos,
+    loadingProfesores,
+
+    // --- Funciones principales ---
     reloadData,
     loadMisCursos,
     loadAllCursos,
+    loadProfesores,
+    loadAlumnos,          // 👈 Agregar porque reloadData lo necesita
+
     saveCourseProgress,
     getCourseProgress,
+
     logout,
+
+    // --- Firestore & storage (opcional) ---
     firestore: db,
-    profesores,
-    loadingProfesores,
-    loadProfesores,
+    storage,
   }),
   [
     user,
@@ -460,9 +487,9 @@ const getCourseProgress = async (uid: string, courseId: string) => {
     alumnos,
     misCursos,
     allCursos,
+    profesores,
     loadingCursos,
     loadingAllCursos,
-    profesores,
     loadingProfesores,
   ]
 );
