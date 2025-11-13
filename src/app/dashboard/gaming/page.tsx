@@ -12,7 +12,8 @@ export default function GamingHub() {
     // Podés definir metadatos para cada juego si querés personalizar títulos / descripciones / iconos
     const meta: Record<
       string,
-      { title: string; description: string; icon: JSX.Element }
+      { title: string; description: string; icon: React.ReactElement
+  }
     > = {
       hangman: {
         title: "Hangman",
