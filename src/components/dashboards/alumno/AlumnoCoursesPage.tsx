@@ -78,7 +78,7 @@ export default function AlumnoCoursesPage() {
                 <InfoItem
                   icon={<FiUser />}
                   label="Teacher"
-                  value={c.profesor || "N/A"}
+                  value={c.profesorNombre || "N/A"}
                 />
               </div>
 

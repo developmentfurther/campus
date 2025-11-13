@@ -121,6 +121,7 @@ interface Curso {
   titulo: string;
   descripcion: string;
   nivel: string;
+  idioma: string;
   categoria: string;
   publico: boolean;
   videoPresentacion: string;
@@ -133,9 +134,6 @@ interface Curso {
   capstone?: Capstone; // Will be added on save
   creadoEn?: Timestamp;
 
-  // 🔹 Profesor asignado (opcional)
-  profesorId?: string;
-  profesorRef?: DocumentReference | null;
   profesorNombre?: string;
 
   // 🔹 Fechas de creación y actualización
@@ -597,33 +595,20 @@ async function uploadToImgur(file: File): Promise<string | null> {
   // =====================================================
 // 1️⃣ Crear o asignar profesor solo si aplica
 // =====================================================
-let profesorData: any = null;
+let profesorNombreFinal: string | null = null;
 
-if (asignarProfesor === "nuevo" && nuevoProfesor.email.trim()) {
-  const profesorId = `profesor_${Date.now()}`;
-  profesorData = {
-    id: profesorId,
-    nombre: nuevoProfesor.nombre,
-    apellido: nuevoProfesor.apellido,
-    email: nuevoProfesor.email,
-    idioma: nuevoProfesor.idioma,
-    nivel: nuevoProfesor.nivel,
-    role: "profesor",
-    createdAt: new Date().toISOString(),
-  };
-
-  const batchRef = doc(dbToUse, "profesores", "batch_1");
-  await setDoc(batchRef, { [profesorId]: profesorData }, { merge: true });
-
-  console.log("✅ Profesor nuevo creado:", profesorData);
-}
-
+// EXISTENTE
 if (asignarProfesor === "existente" && profesorSeleccionado) {
-  profesorData =
-    profesores.find((p) => p.id === profesorSeleccionado) || null;
+  const p = profesores.find((x) => x.id === profesorSeleccionado);
+  if (p) profesorNombreFinal = `${p.nombre} ${p.apellido}`.trim();
 }
 
-console.log("📘 Profesor asignado:", profesorData);
+// NUEVO
+if (asignarProfesor === "nuevo" && nuevoProfesor.nombre.trim()) {
+  profesorNombreFinal = `${nuevoProfesor.nombre} ${nuevoProfesor.apellido}`.trim();
+}
+
+
 
 
     // =====================================================
@@ -636,13 +621,10 @@ console.log("📘 Profesor asignado:", profesorData);
   capstone,
   creadoEn: serverTimestamp(),      
   actualizadoEn: serverTimestamp(),
-  ...(profesorData && profesorData.ref
-    ? {
-        profesorId: profesorData.id,
-        profesorRef: profesorData.ref,
-        profesorNombre: `${profesorData.nombre || ""} ${profesorData.apellido || ""}`.trim(),
-      }
-    : {}),
+  idioma: curso.idioma,
+  nivel: curso.nivel,
+  profesorNombre: profesorNombreFinal ?? null,
+  
 };
 
 
@@ -751,6 +733,14 @@ if (asignarProfesor === "nuevo" && profesorData?.email) {
     { value: "B2.5", label: "B2.5 - High Intermediate" }, 
     { value: "C1", label: "C1 - Advanced" },
     { value: "C2", label: "C2 - Mastery" },
+];
+
+const idiomasCurso = [
+  { value: "es", label: "Spanish" },
+  { value: "en", label: "English" },
+  { value: "pt", label: "Portuguese" },
+  { value: "fr", label: "French" },
+  { value: "it", label: "Italian" },
 ];
 
   /* =========================
@@ -893,23 +883,35 @@ if (asignarProfesor === "nuevo" && profesorData?.email) {
                 </div>
               </div>
 
-              {/* Categoría */}
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700">
-                  Category
-                </label>
-                <div className="relative">
-                  <FiTag className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    name="categoria"
-                    value={curso.categoria}
-                    onChange={handleChange}
-                    placeholder="Ej: Programación, Diseño, Marketing..."
-                    className="w-full rounded-lg border border-gray-300 bg-white p-3 pl-10 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  />
-                </div>
-              </div>
+              {/* Language */}
+<div className="space-y-1">
+  <label className="text-sm font-medium text-gray-700">
+    Language
+  </label>
+  <div className="relative">
+    <FiGlobe className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+    <select
+  name="categoria"
+  value={curso.categoria}
+  onChange={handleChange}
+  required
+  className="w-full rounded-lg border border-gray-300 bg-white p-3 pl-10 text-gray-800
+             focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+>
+  <option value="" disabled hidden>
+    Select a language
+  </option>
+
+  {idiomasCurso.map((lang) => (
+    <option key={lang.value} value={lang.value}>
+      {lang.label}
+    </option>
+  ))}
+</select>
+
+  </div>
+</div>
+
             </div>
 
             {/* Profesor a cargo */}
@@ -952,7 +954,7 @@ if (asignarProfesor === "nuevo" && profesorData?.email) {
     </label>
   </div>
 
-  {/* Si selecciona EXISTENTE */}
+  {/* EXISTENTE */}
   {asignarProfesor === "existente" && (
     <select
       value={profesorSeleccionado}
@@ -962,58 +964,38 @@ if (asignarProfesor === "nuevo" && profesorData?.email) {
       <option value="">Select existing professor</option>
       {profesores.map((p) => (
         <option key={p.id} value={p.id}>
-          {p.nombre} {p.apellido} ({p.email})
+          {p.nombre} {p.apellido}
         </option>
       ))}
     </select>
   )}
 
-  {/* Si selecciona NUEVO */}
+  {/* NUEVO — solo nombre y apellido */}
   {asignarProfesor === "nuevo" && (
     <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
       <input
         type="text"
         placeholder="Name"
         value={nuevoProfesor.nombre}
-        onChange={(e) => setNuevoProfesor({ ...nuevoProfesor, nombre: e.target.value })}
+        onChange={(e) =>
+          setNuevoProfesor({ ...nuevoProfesor, nombre: e.target.value })
+        }
         className="rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
+
       <input
         type="text"
         placeholder="Last name"
         value={nuevoProfesor.apellido}
-        onChange={(e) => setNuevoProfesor({ ...nuevoProfesor, apellido: e.target.value })}
+        onChange={(e) =>
+          setNuevoProfesor({ ...nuevoProfesor, apellido: e.target.value })
+        }
         className="rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
-      <input
-        type="email"
-        placeholder="Email"
-        value={nuevoProfesor.email}
-        onChange={(e) => setNuevoProfesor({ ...nuevoProfesor, email: e.target.value })}
-        className="rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-      />
-      <input
-        type="text"
-        placeholder="Language (e.g. English)"
-        value={nuevoProfesor.idioma}
-        onChange={(e) => setNuevoProfesor({ ...nuevoProfesor, idioma: e.target.value })}
-        className="rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-      />
-      <select
-        value={nuevoProfesor.nivel}
-        onChange={(e) => setNuevoProfesor({ ...nuevoProfesor, nivel: e.target.value })}
-        className="rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-      >
-        <option value="">Select level</option>
-        {niveles.map((n) => (
-          <option key={n.value} value={n.value}>
-            {n.label}
-          </option>
-        ))}
-      </select>
     </div>
   )}
 </div>
+
 
 
             {/* Público */}

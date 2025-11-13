@@ -168,6 +168,20 @@ const [activeUnidad, setActiveUnidad] = useState<number>(0);
 const [activeUnitTab, setActiveUnitTab] = useState<"datos" | "lecciones" | "cierre">("datos");
 const [activeLeccion, setActiveLeccion] = useState<number>(0);
 
+// Profesor asignado en EDIT
+const [asignarProfesor, setAsignarProfesor] = useState<
+  "keep" | "none" | "existente" | "nuevo"
+>("keep");
+
+
+const [profesores, setProfesores] = useState<any[]>([]);
+const [profesorSeleccionado, setProfesorSeleccionado] = useState<string>("");
+
+// Para crear un profesor “rápido” (solo nombre/apellido → se guarda como texto)
+const [nuevoProfesor, setNuevoProfesor] = useState({
+  nombre: "",
+  apellido: "",
+});
 console.log("🧩 [EditCourseForm] Props:", { courseId, firestore });
 
   /* ==============================================================
@@ -196,15 +210,42 @@ console.log("🧩 [EditCourseForm] Props:", { courseId, firestore });
     loadCourse();
   }, [firestore, courseId]);
 
+
+  // cargar los profes
+  useEffect(() => {
+  const fetchProfesores = async () => {
+    if (!firestore) return;
+    try {
+      const docRef = doc(firestore, "profesores", "batch_1");
+      const snap = await getDoc(docRef);
+      if (!snap.exists()) {
+        setProfesores([]);
+        return;
+      }
+      const data = snap.data() || {};
+      const list = Object.values(data);
+      setProfesores(Array.isArray(list) ? list : []);
+    } catch (err) {
+      console.error("❌ Error cargando profesores:", err);
+      setProfesores([]);
+    }
+  };
+
+  fetchProfesores();
+}, [firestore]);
+
   /* ==============================================================
      🔹 Guardar cambios
      ============================================================== */
-  const handleSubmit = async (e: React.FormEvent) => {
+ const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
+
   if (!firestore) return toast.error("Firestore no inicializado");
   if (!curso) return toast.error("Curso no cargado");
 
-  // 🔧 Normalizar unidades antes de guardar
+  const refCurso = doc(firestore, "cursos", courseId);
+
+  // 1️⃣ Normalizar unidades
   const unidadesToSave = (unidades || []).map((u: any) => ({
     ...u,
     closing: {
@@ -212,6 +253,8 @@ console.log("🧩 [EditCourseForm] Props:", { courseId, firestore });
       examExercises: Array.isArray(u.closing?.examExercises)
         ? u.closing.examExercises
         : [],
+      closingText: u.closing?.closingText || "",
+      pdfUrl: u.closing?.pdfUrl || "",
     },
     lecciones: (u.lecciones || []).map((l: any) => ({
       ...l,
@@ -219,77 +262,121 @@ console.log("🧩 [EditCourseForm] Props:", { courseId, firestore });
     })),
   }));
 
-  const refCurso = doc(firestore, "cursos", courseId);
-
-  
-
- const payload = {
-  ...curso,
-  unidades: unidadesToSave,
-  examenFinal,
-  capstone,
-  updatedAt: serverTimestamp(),
-  ...(profesorData && profesorData.ref
-    ? {
-        profesorId: profesorData.id,
-        profesorRef: profesorData.ref,
-        profesorNombre: `${profesorData.nombre || ""} ${profesorData.apellido || ""}`.trim(),
-      }
-    : {}),
-};
-
-await updateDoc(doc(firestore, "cursos", courseId), payload);
-
+  // 2️⃣ Normalizar cursantes
+  const nuevosCursantes =
+    curso.cursantes?.map((e) => e.toLowerCase().trim()).filter(Boolean) || [];
 
   try {
+   // 3️⃣ PROFESOR ASIGNADO (solo nombre)
+  let profesorNombre: string | null = null;
+
+  // 🟦 KEEP CURRENT → mantener el que ya tiene el curso
+  if (asignarProfesor === "keep") {
+    profesorNombre = curso.profesorNombre || null;
+  }
+
+  // ⛔ NONE → eliminar profesor
+  if (asignarProfesor === "none") {
+    profesorNombre = null;
+  }
+
+  // 🔵 EXISTENTE → asignar profesor seleccionado
+  if (asignarProfesor === "existente" && profesorSeleccionado) {
+    const prof = profesores.find((p) => p.id === profesorSeleccionado);
+    if (prof) {
+      profesorNombre = `${prof.nombre} ${prof.apellido}`.trim();
+    }
+  }
+
+  // 🟢 NUEVO → crear profesor (solo nombre)
+  if (asignarProfesor === "nuevo" && nuevoProfesor.nombre.trim()) {
+    profesorNombre = `${nuevoProfesor.nombre} ${nuevoProfesor.apellido}`.trim();
+  }
+
+    // 4️⃣ Payload limpio
+    const payload: any = {
+      ...curso,
+      profesorNombre,           // 👈 solo esto
+      unidades: unidadesToSave,
+      examenFinal,
+      capstone,
+      cursantes: nuevosCursantes,
+      updatedAt: serverTimestamp(),
+    };
+
+    // 5️⃣ Guardar curso
     await updateDoc(refCurso, payload);
 
-    // 🔹 Reasignar alumnos (sin cambios)
-    if (curso.cursantes?.length) {
-      console.log("🚀 Actualizando cursos adquiridos en batches...");
+    // 6️⃣ Enrolamiento en alumnos/batch_X/user_Y.cursosAdquiridos
+    if (nuevosCursantes.length > 0) {
+      console.log("🚀 Comenzando ENROLAMIENTO...");
 
-      for (const email of curso.cursantes.map((e) => e.toLowerCase().trim())) {
-        try {
-          let userFound = false;
+      for (const email of nuevosCursantes) {
+        let userFound = false;
 
-          for (let i = 1; i <= 10; i++) {
-            const batchRef = doc(firestore, "alumnos", `batch_${i}`);
-            const snap = await getDoc(batchRef);
-            if (!snap.exists()) continue;
+        for (let i = 1; i <= 10 && !userFound; i++) {
+          const batchRef = doc(firestore, "alumnos", `batch_${i}`);
+          const snap = await getDoc(batchRef);
+          if (!snap.exists()) continue;
 
-            const data = snap.data();
-            const userKey = Object.keys(data).find(
-              (key) => key.startsWith("user_") && data[key]?.email === email
-            );
+          const data = snap.data();
+          const userKey = Object.keys(data).find(
+            (key) => key.startsWith("user_") && data[key]?.email === email
+          );
 
-            if (userKey) {
-              const path = `${userKey}.cursosAdquiridos`;
-              await updateDoc(batchRef, { [path]: arrayUnion(courseId) });
-              console.log(`✅ ${email} actualizado en ${batchRef.id}/${userKey}`);
-              userFound = true;
-              break;
-            }
+          if (userKey) {
+            const path = `${userKey}.cursosAdquiridos`;
+            await updateDoc(batchRef, {
+              [path]: arrayUnion(courseId),
+            });
+
+            console.log(`✅ ${email} enrolado en ${batchRef.id}/${userKey}`);
+            userFound = true;
           }
+        }
 
-          if (!userFound) {
-            console.warn(`⚠️ Usuario ${email} no encontrado en ningún batch`);
-          }
-        } catch (err) {
-          console.error(`❌ Error actualizando ${email}:`, err);
+        if (!userFound) {
+          console.warn(`⚠️ Usuario ${email} no encontrado en ningún batch`);
         }
       }
-
-      console.log("✅ Todos los alumnos actualizados correctamente.");
     }
 
     toast.success(`✅ Curso "${curso.titulo}" actualizado correctamente`);
-    await reloadData();
+    await reloadData?.();
     onClose?.();
+
   } catch (err) {
     console.error("❌ Error actualizando curso:", err);
-    toast.error("Error al guardar los cambios del curso");
+    toast.error("Error al guardar el curso");
   }
 };
+
+
+
+
+useEffect(() => {
+  const fetchProfesores = async () => {
+    try {
+      const docRef = doc(firestore, "profesores", "batch_1");
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        const data = snap.data() || {};
+        const list = Object.entries(data).map(([id, val]: any) => ({
+          id,
+          ...val,
+        }));
+        setProfesores(list);
+      } else {
+        setProfesores([]);
+      }
+    } catch (err) {
+      console.error("❌ Error cargando profesores:", err);
+      setProfesores([]);
+    }
+  };
+
+  if (firestore) fetchProfesores();
+}, [firestore]);
 
 
   /* ==============================================================
@@ -418,9 +505,7 @@ await updateDoc(doc(firestore, "cursos", courseId), payload);
     );
   };
 
-  useEffect(() => {
-  console.log("🧠 [DEBUG] EditCourseForm - Estado UNIDADES actualizado:", unidades);
-}, [unidades]);
+  
 
   /* ==============================================================
      🔹 UX: ESC to close + scroll lock
@@ -489,10 +574,23 @@ await updateDoc(doc(firestore, "cursos", courseId), payload);
   ];
 
   const niveles = [
-    { value: "principiante", label: "Beginner" },
-    { value: "intermedio", label: "Intermediate" },
-    { value: "avanzado", label: "Advanced" },
-  ];
+  { value: "A1", label: "A1 - Beginner" },
+  { value: "A2", label: "A2 - Elementary" },
+  { value: "B1", label: "B1 - Intermediate" },
+  { value: "B2", label: "B2 - Upper Intermediate" },
+  { value: "B2.5", label: "B2.5 - High Intermediate" },
+  { value: "C1", label: "C1 - Advanced" },
+  { value: "C2", label: "C2 - Mastery" },
+];
+// Idiomas del curso (usamos curso.categoria como "language")
+const idiomasCurso = [
+  { value: "es", label: "Spanish" },
+  { value: "en", label: "English" },
+  { value: "pt", label: "Portuguese" },
+  { value: "fr", label: "French" },
+  { value: "it", label: "Italian" },
+];
+
 // ✅ Evitar crash mientras carga
 if (!curso) {
   return (
@@ -586,54 +684,171 @@ if (!curso) {
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700">Description</label>
-                      <textarea
-                        name="descripcion"
-                        placeholder="Briefly describe what students will learn…"
-                        value={curso.descripcion}
-                        onChange={handleChange}
-                        rows={4}
-                        className="w-full p-3.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                        required
-                      />
-                    </div>
+                    {/* Nivel + Idioma */}
+<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+  {/* Level */}
+  <div className="space-y-1">
+    <label className="text-sm font-medium text-slate-700">
+      Level
+    </label>
+    <div className="relative">
+      <select
+        name="nivel"
+        value={curso.nivel}
+        onChange={handleChange}
+        required
+        className="w-full appearance-none rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+      >
+        <option value="" disabled>
+          Select a level
+        </option>
+        {niveles.map((n) => (
+          <option key={n.value} value={n.value}>
+            {n.label}
+          </option>
+        ))}
+      </select>
+      <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+    </div>
+  </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-700">Level</label>
-                        <div className="relative">
-                          <select
-                            name="nivel"
-                            value={curso.nivel}
-                            onChange={handleChange}
-                            required
-                            className="w-full p-3.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-white"
-                          >
-                            <option value="" disabled>Select a level</option>
-                            {niveles.map((n) => (
-                              <option key={n.value} value={n.value}>{n.label}</option>
-                            ))}
-                          </select>
-                          <FiChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                        </div>
-                      </div>
+  {/* Language (usamos curso.categoria como idioma) */}
+  <div className="space-y-1">
+    <label className="text-sm font-medium text-slate-700">
+      Language
+    </label>
+    <div className="relative">
+      <FiGlobe className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+      <select
+        name="categoria"
+        value={curso.categoria}
+        onChange={handleChange}
+        className="w-full rounded-lg border border-gray-300 bg-white p-3 pl-10 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+      >
+        <option value="" disabled hidden>
+    Select a language
+  </option>
+        {idiomasCurso.map((lang) => (
+          <option key={lang.value} value={lang.value}>
+            {lang.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  </div>
+</div>
 
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-700">Category</label>
-                        <div className="relative">
-                          <FiTag className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                          <input
-                            type="text"
-                            name="categoria"
-                            placeholder="Ej: Programación, Diseño…"
-                            value={curso.categoria}
-                            onChange={handleChange}
-                            className="w-full p-3.5 pl-11 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-                      </div>
-                    </div>
+{/* Profesor a cargo */}
+<div className="mt-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
+    <FiUsers className="w-4 h-4 text-blue-600" />
+    Professor in charge
+  </label>
+
+  {/* Profesor actual (solo lectura, si existe) */}
+  {curso.profesorNombre && (
+    <p className="text-xs text-slate-500 mb-3">
+      Current professor:{" "}
+      <span className="font-medium text-slate-700">
+        {curso.profesorNombre}
+      </span>
+    </p>
+  )}
+
+  {/* OPCIONES */}
+  <div className="flex flex-wrap gap-6 mb-4">
+
+    {/* KEEP (solo si existe profesor) */}
+    {curso.profesorNombre && (
+      <label className="flex items-center gap-2 text-gray-700">
+        <input
+          type="radio"
+          checked={asignarProfesor === "keep"}
+          onChange={() => setAsignarProfesor("keep")}
+          className="h-4 w-4 accent-blue-600"
+        />
+        <span className="text-sm">Keep current</span>
+      </label>
+    )}
+
+    {/* NONE (siempre visible) */}
+    <label className="flex items-center gap-2 text-gray-700">
+      <input
+        type="radio"
+        checked={asignarProfesor === "none"}
+        onChange={() => setAsignarProfesor("none")}
+        className="h-4 w-4 accent-blue-600"
+      />
+      <span className="text-sm">
+        {curso.profesorNombre ? "Remove professor" : "None"}
+      </span>
+    </label>
+
+    {/* EXISTING */}
+    <label className="flex items-center gap-2 text-gray-700">
+      <input
+        type="radio"
+        checked={asignarProfesor === "existente"}
+        onChange={() => setAsignarProfesor("existente")}
+        className="h-4 w-4 accent-blue-600"
+      />
+      <span className="text-sm">Existing</span>
+    </label>
+
+    {/* NEW */}
+    <label className="flex items-center gap-2 text-gray-700">
+      <input
+        type="radio"
+        checked={asignarProfesor === "nuevo"}
+        onChange={() => setAsignarProfesor("nuevo")}
+        className="h-4 w-4 accent-blue-600"
+      />
+      <span className="text-sm">New</span>
+    </label>
+  </div>
+
+  {/* SELECT EXISTING */}
+  {asignarProfesor === "existente" && (
+    <select
+      value={profesorSeleccionado}
+      onChange={(e) => setProfesorSeleccionado(e.target.value)}
+      className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+    >
+      <option value="">Select existing professor</option>
+      {profesores.map((p) => (
+        <option key={p.id} value={p.id}>
+          {p.nombre} {p.apellido}
+        </option>
+      ))}
+    </select>
+  )}
+
+  {/* NEW PROFESSOR */}
+  {asignarProfesor === "nuevo" && (
+    <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <input
+        type="text"
+        placeholder="Name"
+        value={nuevoProfesor.nombre}
+        onChange={(e) =>
+          setNuevoProfesor((prev) => ({ ...prev, nombre: e.target.value }))
+        }
+        className="rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+      <input
+        type="text"
+        placeholder="Last name"
+        value={nuevoProfesor.apellido}
+        onChange={(e) =>
+          setNuevoProfesor((prev) => ({ ...prev, apellido: e.target.value }))
+        }
+        className="rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+    </div>
+  )}
+</div>
+
+
 
                     <label className="flex items-center gap-3 p-3.5 bg-slate-50 rounded-xl border border-slate-200">
                       <input

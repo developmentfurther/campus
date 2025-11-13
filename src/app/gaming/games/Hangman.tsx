@@ -1,10 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  userPlayedToday,
+  updateUserGameAttempt,
+} from "@/lib/games/attempts";
 
 type GameStatus = "playing" | "won" | "lost";
 
+const GAME_ID = "hangman"; // 👈 importantísimo que sea siempre el mismo string
+
 export default function Hangman() {
+  const { user, role } = useAuth();
+
   const [word, setWord] = useState<string>("");
   const [guessedLetters, setGuessedLetters] = useState<string[]>([]);
   const [wrongGuesses, setWrongGuesses] = useState<number>(0);
@@ -12,6 +21,34 @@ export default function Hangman() {
 
   const [loadingWord, setLoadingWord] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
+
+  // 👇 nuevo: control de intentos
+  const [blocked, setBlocked] = useState(false);
+  const [checkingAttempt, setCheckingAttempt] = useState(true);
+
+  // 🔹 Al montar, si es alumno, revisar si ya jugó hoy
+  useEffect(() => {
+    const check = async () => {
+      if (!user) {
+        setCheckingAttempt(false);
+        return;
+      }
+
+      // admin y profesor → pueden jugar siempre
+      if (role === "admin" || role === "profesor") {
+        setBlocked(false);
+        setCheckingAttempt(false);
+        return;
+      }
+
+      // alumno → mirar en Firestore
+      const played = await userPlayedToday(user.uid, GAME_ID);
+      if (played) setBlocked(true);
+      setCheckingAttempt(false);
+    };
+
+    void check();
+  }, [user, role]);
 
   // 👉 Función IA
   const fetchWord = async () => {
@@ -38,10 +75,12 @@ export default function Hangman() {
     }
   };
 
-  // cargar palabra inicial
+  // cargar palabra inicial (solo si no está bloqueado)
   useEffect(() => {
-    void fetchWord();
-  }, []);
+    if (!blocked) {
+      void fetchWord();
+    }
+  }, [blocked]);
 
   // estado del juego
   useEffect(() => {
@@ -56,6 +95,7 @@ export default function Hangman() {
 
   const handleGuess = (letter: string) => {
     if (status !== "playing" || guessedLetters.includes(letter)) return;
+    if (blocked) return; // por las dudas
 
     if (word.includes(letter)) {
       setGuessedLetters((prev) => [...prev, letter]);
@@ -64,26 +104,40 @@ export default function Hangman() {
     }
   };
 
-  // dibujo del muñeco
-  const stages = [
-    "",
-    "🪢",
-    "🪢\n😐",
-    "🪢\n😐\n | ",
-    "🪢\n😐\n/| ",
-    "🪢\n😐\n/|\\",
-    "🪢\n😵\n/|\\\n/ ",
-    "🪢\n😵\n/|\\\n/ \\",
-  ];
+  // 🔹 Cuando termina la partida, si es alumno, marcamos el intento y bloqueamos
+  useEffect(() => {
+    const markAttempt = async () => {
+      if (!user) return;
+      if (role !== "alumno") return; // solo alumnos limitados
+      if (status === "playing") return;
 
-  const displayWord =
-    word &&
-    word
-      .split("")
-      .map((l) => (guessedLetters.includes(l) ? l : "_"))
-      .join(" ");
+      await updateUserGameAttempt(user.uid, GAME_ID);
+      setBlocked(true); // 👈 importante: bloqueamos también en el front
+    };
+
+    void markAttempt();
+  }, [status, user, role]);
 
   // === UI ===
+
+  if (checkingAttempt) {
+    return (
+      <div className="py-20 text-center text-slate-600">
+        Verificando intentos de hoy...
+      </div>
+    );
+  }
+
+  if (blocked && role === "alumno") {
+    return (
+      <div className="py-20 text-center text-slate-600">
+        <h2 className="text-2xl font-bold mb-3">Ya jugaste hoy a Hangman 🎮</h2>
+        <p className="text-slate-500">
+          Tenés 1 partida por día. Podés volver a jugar mañana.
+        </p>
+      </div>
+    );
+  }
 
   if (loadingWord) {
     return (
@@ -106,6 +160,24 @@ export default function Hangman() {
       </div>
     );
   }
+
+  const stages = [
+    "",
+    "🪢",
+    "🪢\n😐",
+    "🪢\n😐\n | ",
+    "🪢\n😐\n/| ",
+    "🪢\n😐\n/|\\",
+    "🪢\n😵\n/|\\\n/ ",
+    "🪢\n😵\n/|\\\n/ \\",
+  ];
+
+  const displayWord =
+    word &&
+    word
+      .split("")
+      .map((l) => (guessedLetters.includes(l) ? l : "_"))
+      .join(" ");
 
   return (
     <div className="flex flex-col items-center justify-center space-y-8 text-center">

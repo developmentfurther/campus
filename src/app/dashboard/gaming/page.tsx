@@ -44,7 +44,7 @@ export default function GamingHub() {
   });
 
   return (
-    <div className="min-h-[80vh] bg-white text-slate-900 px-6 py-10">
+    <div className="min-h-[80vh]  text-slate-900 px-6 py-10">
       <header className="mb-8">
         <h1 className="text-2xl font-semibold">Gaming Hub</h1>
         <p className="text-slate-600">
