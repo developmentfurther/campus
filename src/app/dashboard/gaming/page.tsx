@@ -2,6 +2,7 @@
 import { useRouter } from "next/navigation";
 import { FiPlay, FiTarget, FiZap, FiBookOpen } from "react-icons/fi";
 import { GAMES_MAP } from "@/app/gaming/games"; // 👈 importamos el registro real
+import WordScramble from "@/app/gaming/games/WordScramble";
 
 export default function GamingHub() {
   const router = useRouter();
@@ -19,8 +20,14 @@ export default function GamingHub() {
         icon: <FiBookOpen className="text-blue-600 text-xl" />,
       },
       emojiIdioms: {
-        title: "Emoji Idioms",
-        description: "Adiviná la jerga con emojis."
+        title: "Guess the Idiom with Emojis",
+        description: "Adiviná la jerga con emojis.",
+        icon: <FiBookOpen className="text-blue-600 text-xl" />,
+      },
+      wordScramble: {
+        title: "Word Scramble",
+        description: "Adiviná la palabra",
+        icon: <FiBookOpen className="text-blue-600 text-xl" />,
       }
       
       // ⚙️ Si agregás más juegos en el futuro, podés definirlos acá
