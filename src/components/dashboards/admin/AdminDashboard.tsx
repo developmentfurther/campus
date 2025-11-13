@@ -2,9 +2,7 @@
 
 import { useDashboardUI } from "@/stores/useDashboardUI";
 import HomeDashboard from "../HomeDashboard";
-import UsersDashboard from "../UsersDashboard";
 import AdminCoursesPage from "./AdminCoursesPage";
-import ProfileInfo from "../../perfil/ProfileInfo";
 import AdminHome from "./AdminHome";
 import AlumnosPage from "./AlumnosPage";
 import ProfesoresPage from "./ProfesoresPage";

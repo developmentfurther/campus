@@ -4,6 +4,7 @@ import { useDashboardUI } from "@/stores/useDashboardUI";
 import ProfesorHomePage from "./ProfesorHomePage";
 import ProfesorCoursesPage from "./ProfesorCoursesPage";
 import ProfesorEntregasPage from "./ProfesorEntregasPage";
+// import ProfesorStudentsPage from "./ProfesorStudentsPage"; // futuro
 
 export default function ProfesorDashboard() {
   const { section } = useDashboardUI();
@@ -11,10 +12,16 @@ export default function ProfesorDashboard() {
   switch (section) {
     case "home":
       return <ProfesorHomePage />;
+
     case "evaluaciones":
-      return <ProfesorEntregasPage  />;
+      return <ProfesorEntregasPage />;
+
+    case "cursos":
+      return <ProfesorCoursesPage />;
+
     // case "alumnos":
     //   return <ProfesorStudentsPage />;
+
     default:
       return <ProfesorHomePage />;
   }
