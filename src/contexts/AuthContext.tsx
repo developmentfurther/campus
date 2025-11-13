@@ -55,7 +55,6 @@ interface AuthContextType {
 
   logout?: () => Promise<void>;
   firestore?: any;
-  storage?: any;
 
   profesores?: any[];
   loadingProfesores?: boolean;
@@ -476,7 +475,6 @@ const value = useMemo(
 
     // --- Firestore & storage (opcional) ---
     firestore: db,
-    storage,
   }),
   [
     user,
