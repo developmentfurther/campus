@@ -77,10 +77,11 @@ export default function Hangman() {
 
   // cargar palabra inicial (solo si no está bloqueado)
   useEffect(() => {
-    if (!blocked) {
-      void fetchWord();
-    }
-  }, [blocked]);
+  if (!checkingAttempt && !blocked) {
+    void fetchWord();
+  }
+}, [checkingAttempt, blocked]);
+
 
   // estado del juego
   useEffect(() => {
