@@ -65,7 +65,16 @@ interface Curso {
   descripcion?: string;
   unidades?: Unit[];
   cursantes?: string[];
+
+  // 🔹 Campos reales del Creator
+  textoFinalCurso?: string;
+  textoFinalCursoVideoUrl?: string;
+
+  // 🔹 Final exam & capstone (opcional, pero futuro-proof)
+  examenFinal?: any;
+  capstone?: any;
 }
+
 
 /* =========================================================
    🧮 Helpers
