@@ -7,10 +7,10 @@ import {
   FiHome,
   FiBookOpen,
   FiUsers,
-  FiBarChart2,
   FiUser,
   FiLogOut,
-  FiTarget
+  FiTarget,
+  FiMessageSquare,
 } from "react-icons/fi";
 
 export default function SidebarAdmin() {
@@ -24,20 +24,40 @@ export default function SidebarAdmin() {
     router.push("/login");
   };
 
-  // 🔹 Navegación principal
-  const menuCampus = [
+  /* ============================================================
+     🔹 SECCIONES DEL SIDEBAR
+     ============================================================ */
+
+  // 📘 Sección administrativa / académica
+  const adminSection = [
     { id: "home", label: "Dashboard", icon: <FiHome size={16} /> },
     { id: "material", label: "Material Académico", icon: <FiBookOpen size={16} /> },
     { id: "alumnos", label: "Alumnos", icon: <FiUsers size={16} /> },
     { id: "profesores", label: "Profesores", icon: <FiUser size={16} /> },
-    { id: "estadisticas", label: "Estadísticas", icon: <FiBarChart2 size={16} /> },
-    { id: "gaming", label: "Gaming", icon: <FiTarget size={16} /> },
-    
   ];
 
-  const menuCuenta = [
+  // 🎮 Gaming
+  const gamingSection = [
+    { id: "gaming", label: "Gaming Hub", icon: <FiTarget size={16} /> },
+  ];
+
+  // 💬 Chat Conversacional
+  const chatSection = [
+    {
+      id: "chatbot",
+      label: "Chat Conversacional",
+      icon: <FiMessageSquare size={16} />,
+    },
+  ];
+
+  // 👤 Cuenta
+  const accountSection = [
     { id: "perfil", label: "Perfil", icon: <FiUser size={16} /> },
   ];
+
+  /* ============================================================
+     🔹 RENDER
+     ============================================================ */
 
   return (
     <aside className="w-64 bg-white border-r border-gray-200 flex flex-col h-screen">
@@ -51,28 +71,53 @@ export default function SidebarAdmin() {
 
       {/* NAVIGATION */}
       <nav className="flex-1 px-3 py-5 overflow-y-auto">
-        <SectionTitle>Administrar</SectionTitle>
+
+        {/* ADMINISTRACIÓN */}
+        <SectionTitle>Administración</SectionTitle>
         <ul className="space-y-1 mb-6">
-          {menuCampus.map((item) => (
+          {adminSection.map((item) => (
             <SidebarButton
               key={item.id}
-              id={item.id}
-              icon={item.icon}
-              label={item.label}
+              {...item}
               active={section === item.id}
               onClick={() => setSection(item.id as any)}
             />
           ))}
         </ul>
 
-        <SectionTitle>Cuenta</SectionTitle>
-        <ul className="space-y-1">
-          {menuCuenta.map((item) => (
+        {/* GAMING */}
+        <SectionTitle>Gaming</SectionTitle>
+        <ul className="space-y-1 mb-6">
+          {gamingSection.map((item) => (
             <SidebarButton
               key={item.id}
-              id={item.id}
-              icon={item.icon}
-              label={item.label}
+              {...item}
+              active={section === item.id}
+              onClick={() => setSection(item.id as any)}
+            />
+          ))}
+        </ul>
+
+        {/* CHAT */}
+        <SectionTitle>Chat Conversacional</SectionTitle>
+        <ul className="space-y-1 mb-6">
+          {chatSection.map((item) => (
+            <SidebarButton
+              key={item.id}
+              {...item}
+              active={section === item.id}
+              onClick={() => setSection(item.id as any)}
+            />
+          ))}
+        </ul>
+
+        {/* CUENTA */}
+        <SectionTitle>Cuenta</SectionTitle>
+        <ul className="space-y-1">
+          {accountSection.map((item) => (
+            <SidebarButton
+              key={item.id}
+              {...item}
               active={section === item.id}
               onClick={() => setSection(item.id as any)}
             />
@@ -110,20 +155,8 @@ export default function SidebarAdmin() {
   );
 }
 
-/* 🔹 COMPONENTES AUXILIARES */
-function SidebarButton({
-  id,
-  icon,
-  label,
-  active,
-  onClick,
-}: {
-  id: string;
-  icon: React.ReactNode;
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
+/* AUX COMPONENTS */
+function SidebarButton({ id, icon, label, active, onClick }) {
   return (
     <button
       onClick={onClick}
@@ -139,7 +172,7 @@ function SidebarButton({
   );
 }
 
-function SectionTitle({ children }: { children: React.ReactNode }) {
+function SectionTitle({ children }) {
   return (
     <p className="text-xs uppercase text-gray-400 font-semibold tracking-wide px-4 mb-2 mt-1">
       {children}

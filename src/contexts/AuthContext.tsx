@@ -60,7 +60,9 @@ interface AuthContextType {
   loadingProfesores?: boolean;
   loadProfesores?: () => Promise<void>;
 
-  loadAlumnos?: () => Promise<void>;  // 👈 OPCIONAL, PERO LO USÁS EN reloadData
+  loadAlumnos?: () => Promise<void>;  
+  setUserProfile?: (data: any) => void;
+
 }
 
 
@@ -400,6 +402,22 @@ const getCourseProgress = async (uid: string, courseId: string) => {
 
       let profile = await fetchUserFromBatchesByUid(firebaseUser.uid);
 
+      if (profile?.batchId && profile?.userKey) {
+  const batchRef = doc(db, "alumnos", profile.batchId);
+  const snap = await getDoc(batchRef);
+
+  if (snap.exists()) {
+    const data = snap.data()[profile.userKey] || {};
+
+    profile = {
+      ...profile,
+      ...data, // acá vienen firstName, lastName, lenguaje, nivel, DNI, lo que sea
+    };
+  }
+}
+
+setUserProfile(profile);
+
       if (!profile) {
         console.warn("⚠️ Usuario no encontrado en batches, creando...");
         await addUserToBatch(firebaseUser, "alumno");
@@ -475,6 +493,7 @@ const value = useMemo(
     getCourseProgress,
 
     logout,
+    setUserProfile,
 
     // --- Firestore & storage (opcional) ---
     firestore: db,

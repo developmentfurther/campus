@@ -8,6 +8,7 @@ import AlumnoHome from "./AlumnoHome";
 import AlumnoCertificatesPage from "./AlumnoCertificatePage";
 import AlumnoProfilePage from "./AlumnoProfilePage";
 import GamingHub from "@/app/dashboard/gaming/page";
+import ChatBox from "@/components/chat/ChatBox";
 
 export default function AlumnoDashboard() {
   const { section } = useDashboardUI();
@@ -27,6 +28,9 @@ export default function AlumnoDashboard() {
 
     case "gaming":
       return <GamingHub />;
+
+    case "chatbot":
+      return <ChatBox />;
 
     default:
       return <HomeDashboard />;
