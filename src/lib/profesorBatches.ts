@@ -1,47 +1,41 @@
-import { doc, getDoc, setDoc, updateDoc, getDocs } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
-const MAX_PROFES_PER_BATCH = 200;
+const BATCH_ID = "batch_1";
 
 /**
- * Agrega un profesor al batch correspondiente.
- * Estructura: profesores/{batch_X}/profesor_N
+ * Agrega un profesor al batch usando el ID estándar:  prof_123456789
  */
 export const addProfesorToBatch = async (profesorData: any) => {
   try {
-    console.log("🚀 [addProfesorToBatch] Iniciando...");
+    console.log("🚀 [addProfesorToBatch] Creando profesor...");
 
-    // 1️⃣ Buscar batch existente
-    const profesoresRef = doc(db, "profesores", "batch_1");
+    const profesoresRef = doc(db, "profesores", BATCH_ID);
+
+    // Crear ID único (mismo formato que en EditCourseForm)
+    const profesorId = `prof_${Date.now()}`;
+
+    // Asegurar que el documento exista
     const snap = await getDoc(profesoresRef);
-
-    let nextIndex = 0;
-    let existingData = {};
-
-    if (snap.exists()) {
-      existingData = snap.data();
-      const keys = Object.keys(existingData).filter((k) => k.startsWith("profesor_"));
-      nextIndex = keys.length;
+    if (!snap.exists()) {
+      await setDoc(profesoresRef, {});
     }
 
-    const profesorKey = `profesor_${nextIndex}`;
+    // Datos mínimos del profesor
     const dataToSave = {
       ...profesorData,
-      batchId: "batch_1",
+      batchId: BATCH_ID,
       createdAt: new Date().toISOString(),
+      uid: profesorId,
     };
 
-    // 2️⃣ Guardar dentro del documento
-    await setDoc(
-      profesoresRef,
-      {
-        [profesorKey]: dataToSave,
-      },
-      { merge: true }
-    );
+    // Guardar profesor dentro del batch
+    await updateDoc(profesoresRef, {
+      [profesorId]: dataToSave,
+    });
 
-    console.log("✅ Profesor guardado correctamente:", profesorKey);
-    return dataToSave;
+    console.log("✅ Profesor guardado correctamente:", profesorId);
+    return { id: profesorId, ...dataToSave };
   } catch (err) {
     console.error("❌ [addProfesorToBatch] Error:", err);
     throw err;

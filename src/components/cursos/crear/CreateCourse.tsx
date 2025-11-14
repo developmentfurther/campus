@@ -90,7 +90,7 @@ interface Unidad {
   id: string;
   titulo: string;
   descripcion: string;
-  urlVideo: string; // Forced empty on save
+  introVideo?: string;
   duracion?: number; // Optional duration in minutes
   urlImagen: string;
   ejercicios: Ejercicio[]; // Legacy, kept for backward compat
@@ -124,7 +124,6 @@ interface Curso {
   descripcion: string;
   nivel: string;
   idioma: string;
-  categoria: string;
   publico: boolean;
   videoPresentacion: string;
   urlImagen: string;
@@ -136,7 +135,8 @@ interface Curso {
   capstone?: Capstone; // Will be added on save
   creadoEn?: Timestamp;
 
-  profesorNombre?: string;
+  profesorNombre: string | null;
+
 
   // 🔹 Fechas de creación y actualización
   createdAt?: Timestamp | null;
@@ -174,22 +174,33 @@ export const uploadFile = async (path: string, file: File): Promise<string> => {
 };
 
 
-// 🔹 Helper para crear profesor
-const crearProfesorEnFirestore = async (firestore: Firestore, batchId: string, data: any) => {
+// 🔹 Crear profesor mínimo dentro de profesores/batch_1
+// 🔹 Crear profesor mínimo dentro de profesores/batch_1 (SAFE)
+async function crearProfesorMinimo(dbToUse: Firestore, datos: { nombre: string; apellido: string }) {
+  const batchRef = doc(dbToUse, "profesores", "batch_1");
 
-  const dbToUse = firestore || db;
-  // Ruta válida con 3 segmentos (colección / documento / subcolección)
-const profCol = collection(dbToUse, "profesores_batches", `batch_${batchId}`, "profesores");
+  const profesorId = `prof_${Date.now()}`;
 
-  const profRef = doc(profCol); // genera profesor_X
+  // aseguramos que el documento exista
+  const snap = await getDoc(batchRef);
+  if (!snap.exists()) {
+    await setDoc(batchRef, {}); // crea el documento vacío
+  }
 
-  await setDoc(profRef, {
-    ...data,
-    createdAt: serverTimestamp(),
+  await updateDoc(batchRef, {
+    [profesorId]: {
+      nombre: datos.nombre,
+      apellido: datos.apellido,
+      email: "",
+      idioma: "",
+      nivel: "",
+      createdAt: serverTimestamp(),
+    },
   });
 
-  return { id: profRef.id, ref: profRef };
-};
+  return { id: profesorId };
+}
+
 
 
 interface CrearCursoProps {
@@ -220,17 +231,18 @@ function CrearCurso({ onClose }: CrearCursoProps) {
      Course state (level course)
      ========================= */
   const [curso, setCurso] = useState<Curso>({
-    titulo: "",
-    descripcion: "",
-    nivel: "",
-    categoria: "",
-    publico: true,
-    videoPresentacion: "",
-    urlImagen: "",
-    cursantes: [], // selected emails
-    textoFinalCurso: "",
-    textoFinalCursoVideoUrl: "", // NEW: optional closing video
-  });
+  titulo: "",
+  descripcion: "",
+  nivel: "",
+  idioma: "",         // ← reemplaza a categoria
+  publico: true,
+  videoPresentacion: "",
+  urlImagen: "",
+  cursantes: [],
+  textoFinalCurso: "",
+  textoFinalCursoVideoUrl: "",
+});
+
 
   // --- Profesor asignado ---
 const [asignarProfesor, setAsignarProfesor] = useState<"ninguno" | "existente" | "nuevo">("ninguno");
@@ -374,12 +386,13 @@ const updateLeccion = useCallback(
     const nueva: Leccion = {
       id: makeId(),
       titulo: "",
-      texto: "",
+      descripcion: "",
+      teoria: "",
       urlVideo: "",
       urlImagen: "",
       pdfUrl: "",
       ejercicios: [],
-      finalMessage: "", // NEW: message after finishing exercises
+      finalMessage: "",
     };
     setUnidades((p) =>
       p.map((u, i) =>
@@ -509,15 +522,18 @@ async function uploadToImgur(file: File): Promise<string | null> {
     });
   }, [alumnos, searchAlumno]);
 
-  useEffect(() => {
+ useEffect(() => {
   const fetchProfesores = async () => {
     try {
       const docRef = doc(db, "profesores", "batch_1");
       const snap = await getDoc(docRef);
       if (snap.exists()) {
         const data = snap.data() || {};
-        const list = Object.values(data);
-        setProfesores(Array.isArray(list) ? list : []);
+        const list = Object.entries(data).map(([id, value]: [string, any]) => ({
+          id,
+          ...(value || {}),
+        }));
+        setProfesores(list);
       } else {
         console.warn("⚠️ No hay profesores en batch_1");
         setProfesores([]);
@@ -529,6 +545,7 @@ async function uploadToImgur(file: File): Promise<string | null> {
   };
   fetchProfesores();
 }, []);
+
 
   /* =========================
      Save / HandleSubmit
@@ -581,36 +598,44 @@ async function uploadToImgur(file: File): Promise<string | null> {
 })),
 
   closing: {
-    examIntro: u.closing?.examIntro || "",
-    examExercises: Array.isArray(u.closing?.examExercises)
-      ? u.closing.examExercises
-      : [],
-    closingText: u.closing?.closingText || "",
-    pdfUrl: u.closing?.pdfUrl || "",
-    videoUrl: u.closing?.videoUrl || "",  // ← 🔥 NUEVO
-  },
+  examIntro: u.closing?.examIntro ?? "",
+  examExercises: u.closing?.examExercises ?? [],
+  closingText: u.closing?.closingText ?? "",
+  pdfUrl: u.closing?.pdfUrl ?? "",
+  videoUrl: u.closing?.videoUrl ?? "",
+},
+
 }));
 
 
 
-  try {
+   try {
     console.log("🚀 [DEBUG] Iniciando bloque principal de creación...");
 
-  // =====================================================
-// 1️⃣ Crear o asignar profesor solo si aplica
-// =====================================================
-let profesorNombreFinal: string | null = null;
+    // 1️⃣ Profesor asignado (existente o nuevo)
+    let profesorIdFinal: string | null = null;
+    let profesorNombreFinal: string | null = null;
 
-// EXISTENTE
-if (asignarProfesor === "existente" && profesorSeleccionado) {
-  const p = profesores.find((x) => x.id === profesorSeleccionado);
-  if (p) profesorNombreFinal = `${p.nombre} ${p.apellido}`.trim();
-}
+    // EXISTENTE
+    if (asignarProfesor === "existente" && profesorSeleccionado) {
+      const p = profesores.find((x) => x.id === profesorSeleccionado);
+      if (p) {
+        profesorIdFinal = p.id;
+        profesorNombreFinal = `${p.nombre} ${p.apellido}`.trim();
+      }
+    }
 
-// NUEVO
-if (asignarProfesor === "nuevo" && nuevoProfesor.nombre.trim()) {
-  profesorNombreFinal = `${nuevoProfesor.nombre} ${nuevoProfesor.apellido}`.trim();
-}
+    // NUEVO
+    if (asignarProfesor === "nuevo" && nuevoProfesor.nombre.trim()) {
+      const created = await crearProfesorMinimo(dbToUse, {
+        nombre: nuevoProfesor.nombre,
+        apellido: nuevoProfesor.apellido,
+      });
+
+      profesorIdFinal = created.id;
+      profesorNombreFinal = `${nuevoProfesor.nombre} ${nuevoProfesor.apellido}`.trim();
+    }
+
 
 
 
@@ -627,7 +652,8 @@ if (asignarProfesor === "nuevo" && nuevoProfesor.nombre.trim()) {
   actualizadoEn: serverTimestamp(),
   idioma: curso.idioma,
   nivel: curso.nivel,
-  profesorNombre: profesorNombreFinal ?? null,
+  profesorAsignadoId: profesorIdFinal,
+  profesorNombre: profesorNombreFinal,
   
 };
 
@@ -683,19 +709,15 @@ const refCurso = await addDoc(collection(dbToUse, "cursos"), payload);
       console.log("✅ Enrolamiento completado correctamente.");
     }
 
-    // =====================================================
-    // 4️⃣ Relación inversa en profesor (si aplica)
-    // =====================================================
-    // 4️⃣ Relación inversa en profesor (opcional)
-if (asignarProfesor === "nuevo" && profesorData?.email) {
+ 
+// Relación inversa en profesor (opcional)
+if (profesorIdFinal) {
   const profBatchRef = doc(dbToUse, "profesores", "batch_1");
   await updateDoc(profBatchRef, {
-    [`${profesorData.id}.cursoAsignadoId`]: refCurso.id,
-    [`${profesorData.id}.updatedAt`]: serverTimestamp(),
+    [`${profesorIdFinal}.cursoAsignadoId`]: refCurso.id,
+    [`${profesorIdFinal}.updatedAt`]: serverTimestamp(),
   });
-  console.log("🔁 Profesor actualizado con curso asignado.");
 }
-
 
     // =====================================================
     // 5️⃣ Actualizar estado local y cerrar modal
@@ -895,23 +917,19 @@ const idiomasCurso = [
   <div className="relative">
     <FiGlobe className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
     <select
-  name="categoria"
-  value={curso.categoria}
+  name="idioma"
+  value={curso.idioma}
   onChange={handleChange}
   required
-  className="w-full rounded-lg border border-gray-300 bg-white p-3 pl-10 text-gray-800
-             focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
 >
-  <option value="" disabled hidden>
-    Select a language
-  </option>
-
+  <option value="" disabled hidden>Select a language</option>
   {idiomasCurso.map((lang) => (
     <option key={lang.value} value={lang.value}>
       {lang.label}
     </option>
   ))}
 </select>
+
 
   </div>
 </div>
@@ -1293,6 +1311,40 @@ const idiomasCurso = [
                           />
                         )}
                     </div>
+                    <div className="space-y-2">
+  <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+    <FiVideo className="w-4 h-4" /> Intro Video (optional)
+  </label>
+
+  <div className="relative">
+    <FiLink2 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+    <input
+      type="url"
+      placeholder="https://vimeo.com/12345"
+      value={unidades[activeUnidad]?.introVideo || ""}
+      onChange={(e) =>
+        updateUnidad(activeUnidad, {
+          introVideo: e.target.value,
+        })
+      }
+      className="w-full p-3 pl-10 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+    />
+  </div>
+
+  {/* Preview */}
+  {unidades[activeUnidad]?.introVideo &&
+    isValidUrl(unidades[activeUnidad]?.introVideo || "") && (
+      <div className="aspect-video mt-2 rounded-xl overflow-hidden border border-slate-200 bg-slate-100">
+        <iframe
+          src={unidades[activeUnidad]?.introVideo}
+          className="w-full h-full"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
+      </div>
+    )}
+</div>
+
                   </div>
                 )}
 
@@ -1651,11 +1703,12 @@ const idiomasCurso = [
         Exam exercises
       </label>
       <Exercises
-        exercises={examenFinal.ejercicios}
-        setExercises={(newExercises: Ejercicio[]) =>
-          setExamenFinal((p) => ({ ...p, ejercicios: newExercises }))
-        }
-      />
+  initial={examenFinal.ejercicios}
+  onChange={(newExercises: Ejercicio[]) =>
+    setExamenFinal((prev) => ({ ...prev, ejercicios: newExercises }))
+  }
+/>
+
     </div>
   </section>
 )}

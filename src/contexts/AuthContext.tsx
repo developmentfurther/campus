@@ -244,8 +244,10 @@ const loadProfesores = async () => {
 
     snap.forEach((batchDoc) => {
       const data = batchDoc.data();
+
       for (const key in data) {
-        if (key.startsWith("profesor_")) {
+        // 🔥 Aceptar AMBOS formatos
+        if (key.startsWith("profesor_") || key.startsWith("prof_")) {
           allProfes.push({
             id: key,
             batchId: batchDoc.id,
@@ -257,6 +259,7 @@ const loadProfesores = async () => {
 
     setProfesores(allProfes);
     console.log("✅ Profesores cargados:", allProfes.length);
+
   } catch (err) {
     console.error("❌ [AuthContext] Error cargando profesores:", err);
     toast.error("Error cargando profesores");

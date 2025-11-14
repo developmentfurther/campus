@@ -31,6 +31,7 @@ import { getCourseProgressStats } from "@/contexts/AuthContext";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import Player from "@vimeo/player";
+import {motion} from "framer-motion"
 
 
 
@@ -205,7 +206,22 @@ useEffect(() => {
 });
 
 
-    // 2️⃣ Cierre / examen final de la unidad (solo 1)
+// 1️⃣ Introducción como primera lección (si tiene video o descripción)
+if (u.urlVideo || u.descripcion) {
+  lessons.unshift({
+    key: buildKey(unitId, "intro"),
+    id: "intro",
+    unitId,
+    title: `Introducción`,      // 👈 título fijo o podés usar u.titulo
+    description: u.descripcion || "",  // 👈 descripción real
+    videoUrl: u.introVideo || "",        // 👈 video de introducción
+    theory: "",                         // vacío
+    ejercicios: [],                     // vacío
+    pdfUrl: "",                         // vacío
+  });
+}
+
+
     // 2️⃣ Cierre / examen final de la unidad (solo 1)
 if (u.closing && (u.closing.examIntro || u.closing.examExercises?.length || u.closing.pdfUrl)) {
   lessons.push({
@@ -224,11 +240,14 @@ if (u.closing && (u.closing.examIntro || u.closing.examExercises?.length || u.cl
 
 
     normalized.push({
-      id: unitId,
-      title: u.titulo || `Unidad ${idxU + 1}`,
-      description: u.descripcion || "",
-      lessons,
-    });
+  id: unitId,
+  title: u.titulo || `Unidad ${idxU + 1}`,
+  description: u.descripcion || "",
+  introVideo: u.introVideo || null,
+  lessons,
+  
+});
+
   });
 
   // 3️⃣ Cierre final del curso (video + mensaje final)
@@ -312,17 +331,6 @@ setProgress(normalized);
     [units, activeU, activeL]
   );
 
-const isClosingLesson = activeLesson?.id === "closing";
-
-const closingIsLocked = useMemo(() => {
-  if (!isClosingLesson) return false;
-
-  // si no hay video, no bloquear
-  if (!activeLesson?.videoUrl) return false;
-
-  // si el video no terminó, bloquear
-  return !progress?.[activeLesson.key]?.videoEnded;
-}, [isClosingLesson, activeLesson, progress]);
 
 function normalizeVimeo(url: string) {
   // ya viene embed
@@ -363,12 +371,7 @@ if (url.startsWith("http")) {
   load();
 }, [activeLesson?.videoUrl]);
 
-const lessonIsLocked = useMemo(() => {
-  if (!activeLesson) return false;
-  if (isClosingLesson) return false; // el closing tiene su propia regla
-  if (!activeLesson.videoUrl) return false;
-  return !progress?.[activeLesson.key]?.videoEnded;
-}, [activeLesson, progress]);
+
 
 
 
@@ -498,46 +501,6 @@ function computeStats(byLesson: any, totalLessons: number) {
 
 
 
-useEffect(() => {
-  if (!resolvedVideoUrl) return;
-  if (!resolvedVideoUrl.includes("player.vimeo.com")) return;
-
-  const iframe = document.querySelector("#vimeo-player") as HTMLIFrameElement;
-  if (!iframe) return;
-
-  const player = new Player(iframe);
-
-  console.log("🎬 Vimeo player inicializado");
-
-  player.on("ended", async () => {
-    console.log("🎬 Vimeo video ended");
-    setVideoEnded(true);
-
-    if (activeLesson?.key) {
-      toast.success("🎬 Video completado");
-
-      // Actualizar UI
-      setProgress((prev) => ({
-        ...prev,
-        [activeLesson.key]: {
-          ...(prev[activeLesson.key] || {}),
-          videoEnded: true,
-        },
-      }));
-
-      // Guardar progreso
-      if (user?.uid && saveCourseProgress) {
-        await saveCourseProgress(user.uid, courseId, {
-          [activeLesson.key]: { videoEnded: true },
-        });
-      }
-    }
-  });
-
-  return () => {
-    player.unload?.();
-  };
-}, [resolvedVideoUrl, activeLesson?.key, user?.uid]);
 
 /* =========================================================
    🧠 ExerciseRunner — versión avanzada completa (TSX)
@@ -563,6 +526,8 @@ function ExerciseRunner({
     null
   );
   const { user, saveCourseProgress } = useAuth();
+  
+
 
 
   // Manejar respuesta individual
@@ -572,8 +537,28 @@ function ExerciseRunner({
   };
 useEffect(() => {
   const prev = progress?.[lessonKey];
-  if (prev?.exSubmitted) setSubmitted(true);
+
+  // No sobreescribir si ya se envió en este render
+  if (submitted) return;
+
+  if (prev?.exSubmitted) {
+    setSubmitted(true);
+
+    // Restaurar la respuesta del usuario
+    if (prev.score?.answers) {
+      setAnswers(prev.score.answers);
+    }
+
+    // Restaurar feedback
+    setFeedback({
+      ok: prev.exPassed,
+      msg: prev.exPassed
+        ? "¡Correcto!"
+        : "Intento previo registrado."
+    });
+  }
 }, [lessonKey, progress]);
+
 
   const evalOne = (ex: any): boolean => {
     const a = answers[ex.id];
@@ -650,7 +635,7 @@ if (user?.uid && saveCourseProgress) {
     [lessonKeyParam]: {
       exSubmitted: true,
       exPassed: passed,
-      score: { correct, total },
+      score: { correct, total, answers },
     },
   });
 }
@@ -691,118 +676,218 @@ if (user?.uid && saveCourseProgress) {
   };
 
   return (
-    <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-lg mt-6 space-y-6">
-      <h3 className="text-lg font-bold text-yellow-400">Ejercicios</h3>
+  <motion.div
+    initial={{ opacity: 0, y: 15 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.35, ease: "easeOut" }}
+    className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6"
+  >
+    {/* HEADER */}
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.1 }}
+      className="flex items-center gap-3 mb-1"
+    >
+      <div className="w-10 h-10 rounded-xl bg-blue-600/10 text-blue-600 grid place-items-center text-xl">
+        🧠
+      </div>
+      <h3 className="text-xl font-semibold text-slate-900">
+        Ejercicio
+      </h3>
+    </motion.div>
 
-      {ejercicios.map((ex) => (
-        <div
-          key={ex.id}
-          className={`border rounded-lg p-3 space-y-2 ${
-            submitted && !feedback?.ok ? "opacity-70" : ""
-          }`}
-        >
-          <p className="font-semibold text-white mb-2">
-            {ex.question || ex.prompt || ex.statement}
-          </p>
+    {/* EXERCISE BLOCK */}
+    {ejercicios.map((ex, i) => (
+      <motion.div
+        key={ex.id}
+        initial={{ opacity: 0, y: 20, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ delay: 0.05 * i }}
+        className={`rounded-xl p-5 border ${
+  submitted
+    ? feedback?.ok
+      ? "bg-emerald-50 border-emerald-300"
+      : "bg-rose-50 border-rose-300"
+    : "bg-slate-50 border-slate-200"
+}`}
 
-          {/* OPCIÓN MÚLTIPLE */}
-          {ex.type === "multiple_choice" && (
-            <div className="space-y-1">
-              {ex.options.map((opt: string, idx: number) => (
-                <label
+      >
+        {/* TITLE */}
+        <h4 className="font-semibold text-slate-900 mb-4 text-lg">
+          {ex.question || ex.prompt || ex.statement}
+        </h4>
+
+        {/* MULTIPLE CHOICE */}
+        {ex.type === "multiple_choice" && (
+          <div className="flex flex-col gap-3">
+            {ex.options.map((opt: string, idx: number) => {
+              const isSelected = answers[ex.id] === idx;
+
+              return (
+                <motion.label
                   key={idx}
-                  className="flex items-center gap-2 text-sm text-slate-300"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className={`flex items-center gap-3 p-4 rounded-xl cursor-pointer transition border 
+                    ${
+                      isSelected
+                        ? "bg-blue-50 border-blue-300 text-blue-700 shadow-sm"
+                        : "bg-white border-slate-300 hover:bg-slate-100"
+                    }`}
                 >
                   <input
                     type="radio"
                     name={ex.id}
                     disabled={submitted}
-                    checked={answers[ex.id] === idx}
+                    checked={isSelected}
                     onChange={() => handleAnswer(ex.id, idx)}
                   />
-                  {opt}
-                </label>
-              ))}
-            </div>
-          )}
+                  <span className="text-sm">{opt}</span>
+                </motion.label>
+              );
+            })}
+          </div>
+        )}
 
-          {/* TRUE/FALSE */}
-          {ex.type === "true_false" && (
-            <div className="flex gap-4">
-              {["Verdadero", "Falso"].map((label, idx) => {
-                const val = idx === 0;
-                return (
-                  <label
-                    key={label}
-                    className="flex items-center gap-2 text-sm text-slate-300"
-                  >
-                    <input
-                      type="radio"
-                      name={ex.id}
-                      disabled={submitted}
-                      checked={answers[ex.id] === val}
-                      onChange={() => handleAnswer(ex.id, val)}
-                    />
-                    {label}
-                  </label>
-                );
-              })}
-            </div>
-          )}
+        {/* TRUE/FALSE */}
+        {ex.type === "true_false" && (
+          <div className="flex gap-4">
+            {["Verdadero", "Falso"].map((label, idx) => {
+              const val = idx === 0;
+              const isSelected = answers[ex.id] === val;
 
-          {/* RELLENAR ESPACIOS */}
-          {ex.type === "fill_blank" && (
-            <div className="flex flex-col gap-2">
-              {ex.answers.map((_: any, idx: number) => (
-                <input
-                  key={idx}
-                  type="text"
-                  disabled={submitted}
-                  placeholder={`Respuesta ${idx + 1}`}
-                  className="px-2 py-1 rounded bg-slate-800 border border-slate-700 text-white text-sm"
-                  value={answers[ex.id]?.[idx] || ""}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    const current = Array.isArray(answers[ex.id])
-                      ? [...answers[ex.id]]
-                      : [];
-                    current[idx] = val;
-                    handleAnswer(ex.id, current);
-                  }}
-                />
-              ))}
-            </div>
-          )}
+              return (
+                <motion.label
+                  key={label}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.96 }}
+                  className={`flex items-center gap-3 px-6 py-3 rounded-xl cursor-pointer border transition
+                    ${
+                      isSelected
+                        ? "bg-blue-50 border-blue-300 text-blue-700 shadow-sm"
+                        : "bg-white border-slate-300 hover:bg-slate-100"
+                    }`}
+                >
+                  <input
+                    type="radio"
+                    name={ex.id}
+                    disabled={submitted}
+                    checked={isSelected}
+                    onChange={() => handleAnswer(ex.id, val)}
+                  />
+                  <span className="font-medium">{label}</span>
+                </motion.label>
+              );
+            })}
+          </div>
+        )}
 
-          {/* Mostrar solución si falló */}
-          {submitted && !feedback?.ok && renderSolution(ex)}
-        </div>
-      ))}
+        {/* FILL BLANK */}
+        {ex.type === "fill_blank" && (
+          <div className="flex flex-col gap-3">
+            {ex.answers.map((_: any, idx: number) => (
+              <motion.input
+                key={idx}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                type="text"
+                disabled={submitted}
+                placeholder={`Respuesta ${idx + 1}`}
+                className="px-4 py-2 rounded-xl bg-white border border-slate-300 text-slate-800 text-sm
+                  focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition"
+                value={answers[ex.id]?.[idx] || ""}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const current = Array.isArray(answers[ex.id])
+                    ? [...answers[ex.id]]
+                    : [];
+                  current[idx] = val;
+                  handleAnswer(ex.id, current);
+                }}
+              />
+            ))}
+          </div>
+        )}
 
-      {/* BOTÓN DE ENVÍO */}
-      <button
-        disabled={submitted}
-        onClick={evaluate}
-        className={`px-4 py-2 font-semibold rounded ${
+        {/* 🔎 SOLUCIÓN SI FALLÓ */}
+        {submitted && !feedback?.ok && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="mt-3 text-sm text-rose-600"
+          >
+            {renderSolution(ex)}
+          </motion.div>
+        )}
+      </motion.div>
+    ))}
+
+    {/* BTN -> Comprobar Respuestas */}
+    <motion.button
+      onClick={evaluate}
+      disabled={submitted}
+      whileHover={!submitted ? { scale: 1.03 } : {}}
+      whileTap={!submitted ? { scale: 0.97 } : {}}
+      className={`w-full py-3 rounded-xl font-semibold transition shadow-sm
+        ${
           submitted
-            ? "bg-slate-700 text-gray-400 cursor-not-allowed"
-            : "bg-yellow-400 text-black hover:bg-yellow-300"
+            ? "bg-slate-300 text-slate-500 cursor-not-allowed"
+            : "bg-blue-600 text-white hover:bg-blue-700"
         }`}
-      >
-        {submitted ? "Intento registrado" : "Comprobar respuestas"}
-      </button>
+    >
+      {submitted ? "Intento registrado" : "Comprobar respuestas"}
+    </motion.button>
 
-      {feedback && (
-        <div
-          className={`text-sm ${
-            feedback.ok ? "text-emerald-400" : "text-rose-400"
-          }`}
-        >
-          {feedback.msg}
-        </div>
-      )}
-    </div>
-  );
+    {/* FEEDBACK */}
+    {/* FEEDBACK PERSONALIZADO */}
+{submitted && (
+  <motion.div
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    className={`p-5 rounded-xl mt-4 border ${
+      feedback?.ok
+        ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+        : "bg-rose-50 border-rose-200 text-rose-700"
+    }`}
+  >
+    <h3 className="text-lg font-semibold mb-2">
+      {feedback?.ok ? "🎉 ¡Correcto!" : "❌ Incorrecto"}
+    </h3>
+
+    {/* Tu respuesta */}
+    <p className="text-sm mb-2">
+      <b>Tu respuesta:</b>{" "}
+      <span className="font-medium">
+        {JSON.stringify(answers[ejercicios[0].id])}
+      </span>
+    </p>
+
+    {/* Respuesta correcta cuando falló */}
+    {!feedback?.ok && (
+      <p className="text-sm mb-2">
+        <b>Respuesta correcta:</b>{" "}
+        {ejercicios[0].type === "multiple_choice" &&
+          ejercicios[0].options[ejercicios[0].correctIndex]}
+        {ejercicios[0].type === "true_false" &&
+          (ejercicios[0].answer ? "Verdadero" : "Falso")}
+        {ejercicios[0].type === "fill_blank" &&
+          ejercicios[0].answers.join(", ")}
+      </p>
+    )}
+
+    {/* Mensaje motivacional */}
+    <p className="text-sm mt-2 italic">
+      {feedback?.ok
+        ? "¡Excelente trabajo! Seguí así 🚀"
+        : "No pasa nada, seguimos practicando. ¡Vas súper bien! 💪"}
+    </p>
+  </motion.div>
+)}
+
+  </motion.div>
+);
+
 
   
 }
@@ -903,6 +988,7 @@ function CapstoneForm({
   );
 }
 
+const currentUnit = units[activeU];
 
   /* =========================================================
      🔹 UI inicial (básica)
@@ -924,12 +1010,7 @@ function CapstoneForm({
       <div className="p-4 border-b border-slate-200">
         <h1 className="text-lg font-bold text-slate-900 line-clamp-1">{curso.titulo}</h1>
         <p className="text-xs text-slate-500 line-clamp-2">{curso.descripcion}</p>
-        <div className="mt-3 h-2 bg-slate-200 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-blue-600 rounded-full transition-all duration-500"
-            style={{ width: `${progressPercent}%` }}
-          />
-        </div>
+        
       </div>
 
       <nav className="p-3 space-y-2">
@@ -1012,7 +1093,14 @@ function CapstoneForm({
                         }`}
                       >
                         <div className="flex items-center justify-between">
-                          <span className="truncate">{l.title}</span>
+                          <span className="truncate">
+  {l.id !== "intro" && l.id !== "closing"
+    ? `Lesson ${lIdx} — ${l.title}`
+    : l.id === "intro"
+    ? "Introducción"
+    : "🧠 Cierre de la unidad"}
+</span>
+
                           {done && (
                             <FiCheckCircle size={12} className="text-emerald-500" />
                           )}
@@ -1031,171 +1119,156 @@ function CapstoneForm({
     {/* ======================= CONTENIDO PRINCIPAL ======================= */}
     <main className="flex-1 p-8 overflow-y-auto bg-white">
       <div className="max-w-5xl mx-auto space-y-6">
+       
+
         <h1 className="text-2xl font-bold text-slate-900">
           {activeLesson?.title || "Lección actual"}
         </h1>
 
-        {resolvedVideoUrl && (
-          <div className="aspect-video rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
-            <iframe
-            id="vimeo-player"
-              src={resolvedVideoUrl}
-              className="w-full h-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          </div>
-        )}
+          <>
 
-        {activeLesson?.pdfUrl && (
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-            <h3 className="text-blue-600 font-semibold mb-3 flex items-center gap-2">
-              <FiFileText /> Resumen de la unidad
-            </h3>
-            <iframe
-              src={toEmbedPdfUrl(activeLesson.pdfUrl)}
-              className="w-full h-[500px] rounded-lg border border-slate-200"
-              title="Resumen PDF"
-            />
-          </div>
-        )}
+          {activeLesson?.description && (
+              <p className="text-slate-600 mb-2">{activeLesson.description}</p>
+            )}
+            {/* VIDEO */}
+            {resolvedVideoUrl && (
+              <div className="aspect-video rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
+                <iframe
+                  id="vimeo-player"
+                  src={resolvedVideoUrl}
+                  className="w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            )}
 
-        {activeLesson?.description && (
-          <p className="text-slate-600 mb-2">{activeLesson.description}</p>
-        )}
+            {/* PDF */}
+            {activeLesson?.pdfUrl && (
+              <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                <h3 className="text-blue-600 font-semibold mb-3 flex items-center gap-2">
+                  <FiFileText /> Resumen de la unidad
+                </h3>
+                <iframe
+                  src={toEmbedPdfUrl(activeLesson.pdfUrl)}
+                  className="w-full h-[500px] rounded-lg border border-slate-200"
+                  title="Resumen PDF"
+                />
+              </div>
+            )}
 
-        {activeLesson?.theory && (
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-            <article className="prose max-w-none">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {activeLesson.theory}
-              </ReactMarkdown>
-            </article>
-          </div>
-        )}
+            
 
-        {/* ======= EJERCICIOS (bloqueados hasta terminar video) ======= */}
-{Array.isArray(activeLesson?.ejercicios) &&
-  activeLesson.ejercicios.length > 0 && (
-    <>
-      {lessonIsLocked || closingIsLocked ? (
-        // 🔒 EJERCICIOS BLOQUEADOS
-        <div className="bg-slate-100 p-6 rounded-2xl border border-slate-300 shadow-inner text-center">
-          <div className="mx-auto w-14 h-14 bg-slate-200 rounded-full grid place-items-center mb-3">
-            <FiLock className="text-slate-500" size={26} />
-          </div>
-          <h3 className="text-lg font-semibold text-slate-700">
-            Completa el video para habilitar los ejercicios
-          </h3>
-          <p className="text-sm text-slate-500 mt-1">
-            Los ejercicios se desbloquearán automáticamente cuando hayas visto el video completo.
-          </p>
+            {/* TEORÍA */}
+            {activeLesson?.theory && (
+              <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                <article className="prose max-w-none">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {activeLesson.theory}
+                  </ReactMarkdown>
+                </article>
+              </div>
+            )}
 
-          <button
-            disabled
-            className="mt-4 px-4 py-2 rounded-lg bg-slate-300 text-white font-semibold cursor-not-allowed"
-          >
-            🔒 Ejercicios bloqueados
-          </button>
-        </div>
-      ) : (
-        // ✅ EJERCICIOS DESBLOQUEADOS
-        <section className="bg-white p-6 rounded-2xl border border-slate-200 space-y-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-600">
-              {currentExercise + 1} / {activeLesson.ejercicios.length}
-            </span>
-          </div>
+            {/* EJERCICIOS */}
+            {Array.isArray(activeLesson?.ejercicios) &&
+              activeLesson.ejercicios.length > 0 && (
+                <>
+                    <section className="bg-white p-6 rounded-2xl border border-slate-200 space-y-6 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-slate-600">
+                          {currentExercise + 1} / {activeLesson.ejercicios.length}
+                        </span>
+                      </div>
 
-          <ExerciseRunner
-            ejercicios={[activeLesson.ejercicios[currentExercise]]}
-            lessonKey={activeLesson.key}
-            batchId={userProfile?.batchId}
-            userKey={userProfile?.userKey}
-            courseId={courseId}
-            onSubmit={async ({ correct, total }) => {
-              const passed = correct === total;
+                      <ExerciseRunner
+                        ejercicios={[activeLesson.ejercicios[currentExercise]]}
+                        lessonKey={activeLesson.key}
+                        batchId={userProfile?.batchId}
+                        userKey={userProfile?.userKey}
+                        courseId={courseId}
+                        onSubmit={async ({ correct, total }) => {
+                          const passed = correct === total;
 
-              if (!user?.uid) {
-                toast.error("Inicia sesión para guardar tu progreso");
-                return;
-              }
-              if (!activeLesson?.key) {
-                console.error("No hay activeLesson.key");
-                return;
-              }
+                          if (!user?.uid) {
+                            toast.error("Inicia sesión para guardar tu progreso");
+                            return;
+                          }
+                          if (!activeLesson?.key) {
+                            console.error("No hay activeLesson.key");
+                            return;
+                          }
 
-              try {
-                await saveCourseProgress(user.uid, courseId, {
-                  [activeLesson.key]: {
-                    exSubmitted: true,
-                    exPassed: passed,
-                    score: { correct, total },
-                  },
-                });
+                          try {
+                            await saveCourseProgress(user.uid, courseId, {
+                              [activeLesson.key]: {
+                                exSubmitted: true,
+                                exPassed: passed,
+                                score: { correct, total },
+                              },
+                            });
 
-                setProgress((prev) => ({
-                  ...prev,
-                  [activeLesson.key]: {
-                    ...(prev[activeLesson.key] || {}),
-                    exSubmitted: true,
-                    exPassed: passed,
-                    score: { correct, total },
-                  },
-                }));
+                            setProgress((prev) => ({
+                              ...prev,
+                              [activeLesson.key]: {
+                                ...(prev[activeLesson.key] || {}),
+                                exSubmitted: true,
+                                exPassed: passed,
+                                score: { correct, total },
+                              },
+                            }));
 
-                toast[passed ? "success" : "info"](
-                  passed
-                    ? "🎉 ¡Ejercicio aprobado!"
-                    : "❌ Fallaste. Tu intento quedó guardado."
-                );
-              } catch (error) {
-                console.error("🔥 Error guardando progreso:", error);
-                toast.error("No se pudo guardar tu progreso");
-              }
-            }}
-          />
+                            toast[passed ? "success" : "info"](
+                              passed
+                                ? "🎉 ¡Ejercicio aprobado!"
+                                : "❌ Fallaste. Tu intento quedó guardado."
+                            );
+                          } catch (error) {
+                            console.error("🔥 Error guardando progreso:", error);
+                            toast.error("No se pudo guardar tu progreso");
+                          }
+                        }}
+                      />
 
-          <div className="flex justify-between items-center pt-2 border-t border-slate-200">
-            <button
-              onClick={prevExercise}
-              disabled={currentExercise === 0}
-              className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:opacity-50 text-sm font-medium transition-all"
-            >
-              ← Anterior
-            </button>
-            <button
-              onClick={nextExercise}
-              disabled={
-                currentExercise >= activeLesson.ejercicios.length - 1
-              }
-              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition-all"
-            >
-              Siguiente →
-            </button>
-          </div>
-        </section>
-      )}
-    </>
-  )}
+                      <div className="flex justify-between items-center pt-2 border-t border-slate-200">
+                        <button
+                          onClick={prevExercise}
+                          disabled={currentExercise === 0}
+                          className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:opacity-50 text-sm font-medium transition-all"
+                        >
+                          ← Anterior
+                        </button>
+                        <button
+                          onClick={nextExercise}
+                          disabled={
+                            currentExercise >= activeLesson.ejercicios.length - 1
+                          }
+                          className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition-all"
+                        >
+                          Siguiente →
+                        </button>
+                      </div>
+                    </section>
+               
+                </>
+              )}
 
+            {activeLesson?.finalMessage && (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-6 text-emerald-700">
+                {activeLesson.finalMessage}
+              </div>
+            )}
 
-
-        {activeLesson?.finalMessage && (
-          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-6 text-emerald-700">
-            {activeLesson.finalMessage}
-          </div>
-        )}
-
-        <div className="mt-6 flex justify-end">
-          <button
-            onClick={goNextLesson}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold shadow bg-blue-600 text-white hover:bg-blue-700"
-          >
-            Siguiente lección
-            <FiChevronRight />
-          </button>
-        </div>
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={goNextLesson}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold shadow bg-blue-600 text-white hover:bg-blue-700"
+              >
+                Siguiente lección
+                <FiChevronRight />
+              </button>
+            </div>
+          </>
       </div>
     </main>
 
@@ -1208,21 +1281,7 @@ function CapstoneForm({
         {curso?.descripcion || "Sin descripción disponible"}
       </p>
 
-      <div className="space-y-2 mb-6">
-        <div className="flex items-center justify-between text-xs text-slate-600">
-          <span>Progreso total</span>
-          <span className="font-semibold text-slate-900">{progressPercent}%</span>
-        </div>
-        <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-blue-600 rounded-full transition-all duration-500"
-            style={{ width: `${progressPercent}%` }}
-          />
-        </div>
-        <div className="text-xs text-slate-600">
-          {completedCount} de {totalLessons} lecciones completadas
-        </div>
-      </div>
+      
 
       <div className="border-t border-slate-200 pt-4 space-y-1 text-sm">
         <p className="text-slate-600">Lección actual</p>
@@ -1236,6 +1295,7 @@ function CapstoneForm({
     </aside>
   </div>
 );
+
 
 
 }

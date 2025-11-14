@@ -25,7 +25,7 @@ import {
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { toast } from "sonner";
 import { db } from "@/lib/firebase";
-import { doc, deleteDoc, setDoc } from "firebase/firestore";
+import { doc, updateDoc, deleteField } from "firebase/firestore";
 import { addProfesorToBatch } from "@/lib/profesorBatches";
 
 export default function ProfesoresPage() {
@@ -45,6 +45,7 @@ export default function ProfesoresPage() {
     email: "",
     idioma: "",
     nivel: "",
+    createdAt: "",
   });
 
   useEffect(() => {
@@ -70,58 +71,85 @@ export default function ProfesoresPage() {
      🔹 CRUD Actions
   ========================================================= */
   const handleDelete = async (id: string) => {
-    try {
-      const confirmDelete = confirm(
-        "¿Seguro que deseas eliminar este profesor?"
-      );
-      if (!confirmDelete) return;
-      await deleteDoc(doc(db, "profesores", "batch_1", "profesores", id));
-      toast.success("Profesor eliminado correctamente");
-      await loadProfesores?.();
-    } catch (err) {
-      console.error("❌ Error eliminando profesor:", err);
-      toast.error("Error al eliminar profesor");
-    }
-  };
+  try {
+    const confirmDelete = confirm("¿Seguro que deseas eliminar este profesor?");
+    if (!confirmDelete) return;
 
+    const ref = doc(db, "profesores", "batch_1");
+
+    await updateDoc(ref, {
+      [id]: deleteField(),
+    });
+
+    toast.success("Profesor eliminado correctamente");
+    await loadProfesores?.();
+  } catch (err) {
+    console.error("❌ Error eliminando profesor:", err);
+    toast.error("Error al eliminar profesor");
+  }
+};
   const handleSave = async () => {
-    const { nombre, apellido, email, idioma, nivel } = formData;
+  const { nombre, apellido, email, idioma, nivel, createdAt } = formData;
 
-    if (!email || !nombre || !apellido || !idioma || !nivel) {
-      toast.error("Completa todos los campos del formulario");
-      return;
-    }
+  if (!email || !nombre || !apellido || !idioma || !nivel) {
+    toast.error("Completa todos los campos del formulario");
+    return;
+  }
 
-    try {
-      await addProfesorToBatch({
-  nombre: formData.nombre,
-  apellido: formData.apellido,
-  email: formData.email,
-  idioma: formData.idioma,
-  nivel: formData.nivel,
-});
+  try {
+    const ref = doc(db, "profesores", "batch_1");
 
-      toast.success(
-        editingProfesor
-          ? "Profesor actualizado correctamente"
-          : "Profesor creado correctamente"
-      );
-
-      setIsModalOpen(false);
-      setEditingProfesor(null);
-      setFormData({
-        nombre: "",
-        apellido: "",
-        email: "",
-        idioma: "",
-        nivel: "",
+    // EDITANDO EXISTENTE
+    if (editingProfesor) {
+      await updateDoc(ref, {
+        [`${editingProfesor.id}`]: {
+          ...editingProfesor,
+          nombre,
+          apellido,
+          email,
+          idioma,
+          nivel,
+          createdAt: createdAt
+            ? new Date(createdAt).toISOString()
+            : new Date().toISOString(),
+        },
       });
-      await loadProfesores?.();
-    } catch (err) {
-      console.error("❌ Error guardando profesor:", err);
-      toast.error("Error al guardar profesor");
+
+      toast.success("Profesor actualizado correctamente");
+    } else {
+      // CREANDO NUEVO
+      await addProfesorToBatch({
+        nombre,
+        apellido,
+        email,
+        idioma,
+        nivel,
+        createdAt: createdAt
+          ? new Date(createdAt).toISOString()
+          : new Date().toISOString(),
+      });
+
+      toast.success("Profesor creado correctamente");
     }
-  };
+
+    setIsModalOpen(false);
+    setEditingProfesor(null);
+    setFormData({
+      nombre: "",
+      apellido: "",
+      email: "",
+      idioma: "",
+      nivel: "",
+      createdAt: "",
+    });
+
+    await loadProfesores?.();
+  } catch (err) {
+    console.error("❌ Error guardando profesor:", err);
+    toast.error("Error al guardar profesor");
+  }
+};
+
 
   const openModalForCreate = () => {
     setEditingProfesor(null);
@@ -131,6 +159,7 @@ export default function ProfesoresPage() {
       email: "",
       idioma: "",
       nivel: "",
+      createdAt: "",
     });
     setIsModalOpen(true);
   };
@@ -143,6 +172,12 @@ export default function ProfesoresPage() {
       email: profesor.email || "",
       idioma: profesor.idioma || "",
       nivel: profesor.nivel || "",
+      createdAt: profesor.createdAt
+    ? profesor.createdAt?.toDate
+      ? profesor.createdAt.toDate().toISOString().slice(0, 10) // Timestamp → yyyy-mm-dd
+      : profesor.createdAt.slice(0, 10) // string ISO → yyyy-mm-dd
+    : "",
+      
     });
     setIsModalOpen(true);
   };
@@ -249,9 +284,20 @@ export default function ProfesoresPage() {
 <td className="px-5 py-4 text-gray-600">
   <span className="inline-flex items-center gap-1">
     <FiCalendar size={12} className="text-gray-400" />
-    {p.createdAt
-      ? new Date(p.createdAt).toLocaleDateString("es-AR")
-      : "N/A"}
+    {p.createdAt ? (
+  <span>
+    {
+      new Date(
+        p.createdAt?.toDate
+          ? p.createdAt.toDate()      // Timestamp → Date
+          : p.createdAt               // string ISO → Date
+      ).toLocaleDateString("es-AR")
+    }
+  </span>
+) : (
+  "N/A"
+)}
+
   </span>
 </td>
 
@@ -265,7 +311,7 @@ export default function ProfesoresPage() {
             <FiEdit2 size={12} /> Editar
           </button>
           <button
-            onClick={() => handleDelete(p.uid)}
+            onClick={() => handleDelete(p.id)}
             className="flex items-center gap-1 text-red-600 hover:text-red-800 text-xs font-semibold"
           >
             <FiTrash2 size={12} /> Eliminar
@@ -352,18 +398,39 @@ export default function ProfesoresPage() {
     />
   </div>
 
+  {/* Fecha de Alta */}
+<div className="flex flex-col">
+  <label className="text-sm font-medium text-gray-600 mb-1">Fecha de alta</label>
+  <input
+    type="date"
+    value={formData.createdAt || ""}
+    onChange={(e) =>
+      setFormData({ ...formData, createdAt: e.target.value })
+    }
+    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+  />
+</div>
+
   {/* IDIOMA / NIVEL */}
   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
     <div className="flex flex-col">
-      <label className="text-sm font-medium text-gray-600 mb-1">Idioma</label>
-      <input
-        type="text"
-        placeholder="Ej: English"
-        value={formData.idioma}
-        onChange={(e) => setFormData({ ...formData, idioma: e.target.value })}
-        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-      />
-    </div>
+  <label className="text-sm font-medium text-gray-600 mb-1">Idioma</label>
+  <select
+    value={formData.idioma}
+    onChange={(e) => setFormData({ ...formData, idioma: e.target.value })}
+    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white"
+  >
+    <option value="" disabled hidden>
+      Seleccionar idioma
+    </option>
+    <option value="English">English</option>
+    <option value="Spanish">Spanish</option>
+    <option value="Portuguese">Portuguese</option>
+    <option value="Italian">Italian</option>
+    <option value="French">French</option>
+  </select>
+</div>
+
 
     <div className="flex flex-col">
       <label className="text-sm font-medium text-gray-600 mb-1">Nivel</label>
@@ -372,7 +439,8 @@ export default function ProfesoresPage() {
         onChange={(e) => setFormData({ ...formData, nivel: e.target.value })}
         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white"
       >
-        <option value="">Seleccionar nivel</option>
+        <option value="" disabled hidden>
+      Seleccionar nivel </option>
         <option value="A1">A1 - Beginner</option>
         <option value="A2">A2 - Elementary</option>
         <option value="B1">B1 - Intermediate</option>
