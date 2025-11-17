@@ -9,35 +9,51 @@ import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import MessageBubble from "./MessageBubble";
 import TypingIndicator from "./TypingIndicator";
 
+/* =============================================
+   🔤 Markdown => HTML (negrita, cursiva)
+============================================= */
+function formatMarkdown(text: string) {
+  if (!text) return "";
+  return text
+    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>") // **bold**
+    .replace(/\*(.*?)\*/g, "<em>$1</em>");            // *italic*
+}
+
+/* =============================================
+   🧠 Mensaje inicial según idioma del perfil
+============================================= */
+const initialMessagesByLanguage: Record<string, string> = {
+  english: `Hi! I'm your language tutor.
+What topic would you like to talk about today?
+(Travel, business, hobbies, food, job interviews...)`,
+
+  spanish: `¡Hola! Soy tu tutor de idiomas.
+¿Sobre qué tema te gustaría hablar hoy?
+(Viajes, negocios, pasatiempos, comida, entrevistas de trabajo...)`,
+
+  portuguese: `Olá! Eu sou o seu tutor de idiomas.
+Sobre qual assunto você gostaria de conversar hoje?
+(Viagens, negócios, hobbies, comida, entrevistas de emprego...)`,
+
+  italian: `Ciao! Sono il tuo tutor linguistico.
+Di quale argomento ti piacerebbe parlare oggi?
+(Viaggi, lavoro, hobby, cibo, colloqui di lavoro...)`,
+
+  french: `Bonjour ! Je suis ton tuteur linguistique.
+De quel sujet aimerais-tu parler aujourd’hui ?
+(Voyages, affaires, loisirs, nourriture, entretiens d'embauche...)`,
+};
 
 export default function ChatBox() {
   const { userProfile, user } = useAuth();
 
-  // Idioma y nivel desde el perfil del usuario
-  const language = userProfile?.learningLanguage;
+  // Extraemos idioma y nivel del perfil
+  const language = userProfile?.learningLanguage || "english";
   const level = userProfile?.learningLevel;
 
-  const saveConversationToFirestore = async (summary) => {
-  if (!user) return;
-
-  const sessionId = Date.now().toString();
-
-  await setDoc(
-    doc(db, "conversaciones", user.uid, "sessions", sessionId),
-    {
-      userId: user.uid,
-      language,
-      level,
-      messages,
-      summary,
-      startedAt: messages[0]?.timestamp || serverTimestamp(),
-      endedAt: serverTimestamp(),
-    },
-    { merge: true }
-  );
-};
-
-  // 🔥 Evitar crash si se renderiza antes de cargar el perfil
+  /* =============================================
+     ⏳ Carga de perfil
+  ============================================= */
   if (!userProfile) {
     return (
       <div className="p-6 text-gray-500 text-center">
@@ -46,7 +62,6 @@ export default function ChatBox() {
     );
   }
 
-  // 🔥 Si el usuario NO completó el perfil aún
   if (!language || !level) {
     return (
       <div className="p-6 text-gray-500 text-center">
@@ -55,13 +70,14 @@ export default function ChatBox() {
     );
   }
 
-  // 🔥 El resto del chat funciona igual
+  /* =============================================
+     💬 Mensajes del chat
+  ============================================= */
   const [messages, setMessages] = useState([
     {
       role: "assistant",
-      content: `Hi! I'm your language tutor.  
-What topic would you like to talk about today?  
-(Travel, business, hobbies, food, job interviews...)`,
+      content: initialMessagesByLanguage[language] 
+        || initialMessagesByLanguage["english"],
     },
   ]);
 
@@ -73,74 +89,96 @@ What topic would you like to talk about today?
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
-  // ENVIAR MENSAJE
-  const handleSend = async () => {
-  if (!input.trim()) return;
+  /* =============================================
+     💾 Guardar session → SOLO summary
+  ============================================= */
+  const saveConversationToFirestore = async (summary: any) => {
+    if (!user) return;
 
-  const userMsg = { role: "user", content: input };
-  const newMessages = [...messages, userMsg];
+    const sessionId = Date.now().toString();
 
-  setMessages(newMessages);
-  setInput("");
-  setIsTyping(true);
-
-  try {
-    const res = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        messages: newMessages,
-        level,
-        language,
-      }),
-    });
-
-    if (!res.body) {
-      throw new Error("No stream received");
-    }
-
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-
-    let partial = "";
-    let assistantAlreadyAdded = false;
-
-    // STREAM LOOP
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      partial += decoder.decode(value, { stream: true });
-
-      if (!assistantAlreadyAdded) {
-        assistantAlreadyAdded = true;
-        setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
-      }
-
-      setMessages((prev) => {
-        const updated = [...prev];
-        updated[updated.length - 1] = {
-          role: "assistant",
-          content: partial,
-        };
-        return updated;
-      });
-    }
-  } catch (err) {
-    console.error("🔥 Error en streaming:", err);
-    setMessages((prev) => [
-      ...prev,
+    await setDoc(
+      doc(db, "conversaciones", user.uid, "sessions", sessionId),
       {
-        role: "assistant",
-        content:
-          "⚠️ There was a connection issue. Please try again in a moment.",
+        userId: user.uid,
+        language,
+        level,
+        summary, // 👈 SOLO guardamos summary
+        startedAt: serverTimestamp(),
+        endedAt: serverTimestamp(),
       },
-    ]);
-  } finally {
-    setIsTyping(false);
-  }
-};
+      { merge: true }
+    );
+  };
 
+  /* =============================================
+     🚀 Enviar mensaje → API de streaming
+  ============================================= */
+  const handleSend = async () => {
+    if (!input.trim()) return;
+
+    const userMsg = { role: "user", content: input };
+    const newMessages = [...messages, userMsg];
+
+    setMessages(newMessages);
+    setInput("");
+    setIsTyping(true);
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: newMessages,
+          level,
+          language,
+        }),
+      });
+
+      if (!res.body) throw new Error("No stream received");
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let partial = "";
+      let assistantAdded = false;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        partial += decoder.decode(value, { stream: true });
+
+        if (!assistantAdded) {
+          assistantAdded = true;
+          setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+        }
+
+        setMessages((prev) => {
+          const updated = [...prev];
+          updated[updated.length - 1] = {
+            role: "assistant",
+            content: partial,
+          };
+          return updated;
+        });
+      }
+    }
+    catch (err) {
+  console.error("🔥 Streaming error:", err);
+  // NO bloquees la conversación nunca
+  setMessages(prev => [
+    ...prev,
+    {
+      role: "assistant",
+      content:
+        "The tutor had a small connection issue but you can continue normally.",
+    },
+  ]);
+}
+finally {
+      setIsTyping(false);
+    }
+  };
 
   const handleKey = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -149,9 +187,39 @@ What topic would you like to talk about today?
     }
   };
 
-  const finishConversation = async () => {
+  /* =============================================
+     🧾 Finalizar conversación → pedir summary
+  ============================================= */
+ const finishConversation = async () => {
   setIsTyping(true);
 
+  // ============================================
+  // 🛑 VALIDACIÓN FRONTEND — conversación corta
+  // ============================================
+  const studentMessages = messages.filter((m) => m.role === "user");
+  const totalUserText = studentMessages.map((m) => m.content).join(" ");
+
+  if (studentMessages.length < 2 || totalUserText.trim().length < 20) {
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "assistant",
+        content: `
+<div style="color:#b91c1c; background:#fee2e2; padding:12px; border-radius:8px; border:1px solid #fecaca;">
+<strong>⚠️ Conversation too short</strong><br/>
+You need to chat a little more before requesting a summary.<br/>
+Try sending a few more messages!
+</div>
+        `,
+      },
+    ]);
+    setIsTyping(false);
+    return;
+  }
+
+  // ============================================
+  // 🔥 LLAMAR AL BACKEND
+  // ============================================
   try {
     const res = await fetch("/api/chat/summary", {
       method: "POST",
@@ -163,16 +231,58 @@ What topic would you like to talk about today?
       }),
     });
 
-    if (!res.ok) {
-      throw new Error("Summary endpoint returned an error");
-    }
-
-    // Ya no usamos res.text() — AHORA siempre es JSON
     const summary = await res.json();
-
     console.log("📘 SUMMARY OBJETO:", summary);
 
-    // Mostrar feedback final en el chat
+    // ============================================
+    // 🛑 VALIDACIÓN BACKEND — conversación corta
+    // ============================================
+    if (summary.error === "conversation-too-short") {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: `
+<div style="color:#b91c1c; background:#fee2e2; padding:12px; border-radius:8px; border:1px solid #fecaca;">
+<strong>⚠️ Conversation too short</strong><br/>
+The system needs more content to generate useful feedback.<br/>
+Try chatting a bit more before finishing.
+</div>
+          `,
+        },
+      ]);
+
+      setIsTyping(false);
+      return;
+    }
+
+    // ============================================
+    // 🛑 VALIDACIÓN — SUMMARY INCOMPLETO
+    // (no guardamos en Firestore)
+    // ============================================
+    if (summary.incomplete) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: `
+<div style="color:#92400e; background:#fef3c7; padding:12px; border-radius:8px; border:1px solid #fde68a;">
+<strong>⚠️ Partial Summary</strong><br/>
+The model was overloaded and could not generate a full summary.<br/>
+Please try again in a moment.
+</div>
+          `,
+        },
+      ]);
+
+      console.warn("⛔ Summary incomplete — NOT saving to DB");
+      setIsTyping(false);
+      return;
+    }
+
+    // ============================================
+    // 🟩 RENDER NORMAL DEL SUMMARY
+    // ============================================
     setMessages((prev) => [
       ...prev,
       {
@@ -183,56 +293,47 @@ What topic would you like to talk about today?
 
 <h4 class="mt-3 font-semibold">Strengths</h4>
 <ul>
-${(summary.strengths ?? [])
-  .map((s: string) => `<li>• ${s}</li>`)
-  .join("")}
+${(summary.strengths ?? []).map((s) => `<li>• ${s}</li>`).join("")}
 </ul>
 
 <h4 class="mt-3 font-semibold">Weak Points</h4>
 <ul>
-${(summary.weakPoints ?? [])
-  .map((w: string) => `<li>• ${w}</li>`)
-  .join("")}
+${(summary.weakPoints ?? []).map((w) => `<li>• ${w}</li>`).join("")}
 </ul>
 
 <h4 class="mt-3 font-semibold">Common Mistakes</h4>
 <ul>
 ${(summary.commonMistakes ?? [])
   .map(
-    (m: any) =>
+    (m) =>
       `<li><mark>${m.error}</mark> → <b>${m.correction}</b> (${m.explanation})</li>`
   )
   .join("")}
 </ul>
 
-<h4 class="mt-3 font-semibold">Suggested Exercises</h4>
-<ul>
-${(summary.suggestedExercises ?? [])
-  .map((e: string) => `<li>• ${e}</li>`)
-  .join("")}
-</ul>
-
-<h4 class="mt-3 font-semibold">Suggested Games</h4>
-<ul>
-${(summary.suggestedGames ?? [])
-  .map((g: string) => `<li>• ${g}</li>`)
-  .join("")}
-</ul>
-`,
+<h4 class="mt-3 font-semibold">Improvement Plan</h4>
+<p>${summary.improvementPlan ?? ""}</p>
+        `,
       },
     ]);
 
-    // Guardar sesión en Firestore
+    // Guardar summary SOLO si es válido
     await saveConversationToFirestore(summary);
 
   } catch (err) {
     console.error("🔥 Error finishing conversation:", err);
+
     setMessages((prev) => [
       ...prev,
       {
         role: "assistant",
-        content:
-          "⚠️ There was a problem generating the summary. Please try again.",
+        content: `
+<div style="color:#b91c1c; background:#fee2e2; padding:12px; border-radius:8px; border:1px solid #fecaca;">
+<strong>⚠️ Error</strong><br/>
+Something went wrong while generating your summary.<br/>
+Please try again.
+</div>
+        `,
       },
     ]);
   } finally {
@@ -241,17 +342,15 @@ ${(summary.suggestedGames ?? [])
 };
 
 
-
-
-
+  /* =============================================
+     UI Final
+  ============================================= */
   return (
     <div className="w-full max-w-3xl mx-auto bg-white rounded-xl shadow-lg border flex flex-col h-[80vh]">
       {/* HEADER */}
       <div className="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-xl">
         <div>
-          <h2 className="text-lg font-semibold text-gray-800">
-            Language Tutor
-          </h2>
+          <h2 className="text-lg font-semibold text-gray-800">Language Tutor</h2>
           <p className="text-xs text-gray-500">
             {language.toUpperCase()} · Level {level}
           </p>
@@ -266,14 +365,17 @@ ${(summary.suggestedGames ?? [])
         </button>
       </div>
 
-      {/* CHAT */}
+      {/* CHAT AREA */}
       <div className="flex-1 p-4 overflow-y-auto space-y-4">
         {messages.map((msg, idx) => (
-          <MessageBubble key={idx} role={msg.role} content={msg.content} />
+          <MessageBubble
+            key={idx}
+            role={msg.role}
+            content={formatMarkdown(msg.content)}
+          />
         ))}
 
         {isTyping && <TypingIndicator />}
-
         <div ref={chatEndRef}></div>
       </div>
 

@@ -11,7 +11,10 @@ import {
   setDoc,
   updateDoc,
   arrayUnion,
+  deleteDoc,
 } from "firebase/firestore";
+import { query, orderBy } from "firebase/firestore";
+
 import {
   fetchUserFromBatchesByUid,
   addUserToBatch,
@@ -95,6 +98,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const [profesores, setProfesores] = useState<any[]>([]);
   const [loadingProfesores, setLoadingProfesores] = useState(false);
+
+  const [chatSessions, setChatSessions] = useState<any[]>([]);
+  const [loadingChatSessions, setLoadingChatSessions] = useState(false);
 
 
   /* ==========================================================
@@ -271,6 +277,50 @@ const loadProfesores = async () => {
 };
 
 
+/* ==========================================================
+     🔹 Cargar todas las sesiones de los chats
+     ========================================================== */
+
+const loadChatSessions = async (uid: string) => {
+  setLoadingChatSessions(true);
+
+  try {
+    const ref = collection(db, "conversaciones", uid, "sessions");
+    const q = query(ref, orderBy("endedAt", "desc"));
+    const snap = await getDocs(q);
+
+    const now = Date.now();
+    const sevenDays = 7 * 24 * 60 * 60 * 1000; // 7 dias
+
+    const list: any[] = [];
+
+    for (const d of snap.docs) {
+      const data = d.data();
+      
+      const endedAt = data.endedAt?.toDate?.() ?? null;
+
+      if (endedAt) {
+        const diff = now - endedAt.getTime();
+
+        // 🔥 Si pasaron más de 2 minutos → borrar
+        if (diff > sevenDays) {
+          await deleteDoc(doc(db, "conversaciones", uid, "sessions", d.id));
+          console.log("🗑️ Deleted session for test:", d.id);
+          continue; // No la agregamos al array final
+        }
+      }
+
+      // Sesión válida → agregar al listado
+      list.push({ id: d.id, ...data });
+    }
+
+    setChatSessions(list);
+  } catch (err) {
+    console.error("❌ Error loading chat sessions:", err);
+  } finally {
+    setLoadingChatSessions(false);
+  }
+};
 
 
 
@@ -399,6 +449,7 @@ const getCourseProgress = async (uid: string, courseId: string) => {
     if (firebaseUser) {
       console.log("👤 Usuario detectado:", firebaseUser.email);
       setUser(firebaseUser);
+      await loadChatSessions(firebaseUser.uid);
 
       let profile = await fetchUserFromBatchesByUid(firebaseUser.uid);
 
@@ -494,6 +545,9 @@ const value = useMemo(
 
     logout,
     setUserProfile,
+    chatSessions,
+    loadingChatSessions,
+    loadChatSessions,
 
     // --- Firestore & storage (opcional) ---
     firestore: db,

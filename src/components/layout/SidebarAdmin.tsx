@@ -11,6 +11,7 @@ import {
   FiLogOut,
   FiTarget,
   FiMessageSquare,
+  FiClock,
 } from "react-icons/fi";
 
 export default function SidebarAdmin() {
@@ -48,6 +49,11 @@ export default function SidebarAdmin() {
       label: "Chat Conversacional",
       icon: <FiMessageSquare size={16} />,
     },
+    {
+    id: "chat-history",
+    label: "Historial",
+    icon: <FiClock size={16} />,
+  },
   ];
 
   // 👤 Cuenta

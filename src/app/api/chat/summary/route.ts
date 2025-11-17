@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { retry } from "@/lib/retry";
 
 export const runtime = "nodejs";
 
@@ -39,6 +40,9 @@ Adapt everything to CEFR level {{LEVEL}} and target language {{LANGUAGE}}.
 If you are missing information, still return a valid JSON with empty arrays/short text.
 `;
 
+// =============================================================
+// 🧩 SUMMARY ENDPOINT — 100% BLINDAJE
+// =============================================================
 export async function POST(req: NextRequest) {
   try {
     const { messages, level, language } = await req.json();
@@ -52,7 +56,9 @@ export async function POST(req: NextRequest) {
 
     const model = genAI.getGenerativeModel({ model: MODEL_ID });
 
-    // 🔹 Transcribimos el chat a texto plano
+    // -------------------------------------------------------------
+    // 📝 Transcribir conversación
+    // -------------------------------------------------------------
     const transcript = messages
       .map((m: any) => {
         const speaker = m.role === "user" ? "Student" : "Tutor";
@@ -68,47 +74,84 @@ export async function POST(req: NextRequest) {
       transcript +
       "\n=== CONVERSATION END ===";
 
-    // 🔥 Llamada simple: un solo prompt string
-    const result = await model.generateContent(prompt);
+    // -------------------------------------------------------------
+    // 🚀 GENERACIÓN CON RETRIES + BACKOFF
+    // -------------------------------------------------------------
+    const result = await retry(
+      () => model.generateContent(prompt),
+      3,        // 3 intentos
+      400       // delay inicial
+    );
+
     const raw = result.response.text() || "";
 
     console.log("🔍 RAW SUMMARY RESPONSE:\n", raw);
 
-    // -------------------------
-    // Parsing robusto de JSON
-    // -------------------------
+    // -------------------------------------------------------------
+    // 🧩 Parsing robusto
+    // -------------------------------------------------------------
     let clean: any = null;
 
+    // intento directo
     try {
       clean = JSON.parse(raw);
-    } catch {
+    } catch {}
+
+    // intentar extraer el primer JSON válido
+    if (!clean) {
       const match = raw.match(/\{[\s\S]*\}/);
       if (match) {
         try {
           clean = JSON.parse(match[0]);
-        } catch {
-          // ignore
-        }
+        } catch {}
       }
     }
 
+    // -------------------------------------------------------------
+    // ❗ Si sigue fallando → devolver summary vacío + incomplete
+    // -------------------------------------------------------------
     if (!clean) {
+      console.warn("⚠️ SUMMARY INCOMPLETE: no fue posible parsear JSON");
       clean = {
-        feedbackSummary: "Summary parsing failed",
+        feedbackSummary: "",
         strengths: [],
         weakPoints: [],
         commonMistakes: [],
         improvementPlan: "",
         suggestedExercises: [],
         suggestedGames: [],
+        incomplete: true, // 👈 importante para tu frontend
       };
     }
 
+    // si vino sin incomplete, asegurarlo cuando falte contenido
+    if (!clean.feedbackSummary) {
+      clean.incomplete = true;
+    }
+
+    // -------------------------------------------------------------
+    // 📤 devolver al frontend
+    // -------------------------------------------------------------
     return new Response(JSON.stringify(clean), {
       headers: { "Content-Type": "application/json" },
     });
+
   } catch (err) {
-    console.error("🔥 Summary API error:", err);
-    return new Response("Internal Server Error", { status: 500 });
+    console.error("🔥 Summary API error (fatal):", err);
+
+    // ⚠️ JAMÁS romper el frontend
+    return new Response(
+      JSON.stringify({
+        feedbackSummary: "",
+        strengths: [],
+        weakPoints: [],
+        commonMistakes: [],
+        improvementPlan: "",
+        suggestedExercises: [],
+        suggestedGames: [],
+        incomplete: true, // 👈 SIEMPRE
+      }),
+      { status: 200 }
+    );
   }
 }

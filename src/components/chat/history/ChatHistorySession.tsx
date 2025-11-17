@@ -1,98 +1,124 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
-import { useAuth } from "@/contexts/AuthContext";
 import { useDashboardUI } from "@/stores/useDashboardUI";
-import MessageBubble from "../MessageBubble";
+import { useAuth } from "@/contexts/AuthContext";
+import MessageBubble from "./MessageBubble";
+import { FiArrowLeft } from "react-icons/fi";
 
 export default function ChatHistorySession() {
-  const { user } = useAuth();
+  const { chatSessions } = useAuth();
   const { sessionId, setSection } = useDashboardUI();
 
-  const [session, setSession] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!user || !sessionId) return;
-
-    async function load() {
-      const ref = doc(db, "conversaciones", user.uid, "sessions", sessionId);
-      const snap = await getDoc(ref);
-
-      if (snap.exists()) {
-        setSession(snap.data());
-      }
-      setLoading(false);
-    }
-
-    load();
-  }, [user, sessionId]);
-
-  if (loading)
-    return <div className="p-6 text-gray-500">Loading session…</div>;
-
+  // Buscar sesión cargada en memoria
+  const session = chatSessions.find((s) => s.id === sessionId);
   if (!session)
     return <div className="p-6 text-gray-500">Session not found.</div>;
 
+  const summary = session.summary || {};
+
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6">
+    <div className="p-6 w-full max-w-4xl mx-auto space-y-8">
+
+      {/* Back Button */}
       <button
         onClick={() => setSection("chat-history")}
-        className="text-blue-600 underline text-sm"
+        className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition"
       >
-        ← Back
+        <FiArrowLeft size={18} />
+        <span className="text-sm font-medium">Back to History</span>
       </button>
 
-      <h2 className="text-xl font-bold">Conversation #{sessionId}</h2>
+      {/* HEADER */}
+      <div className="bg-white rounded-2xl shadow border p-6 space-y-3">
+        <h1 className="text-2xl font-bold text-gray-900">
+          Conversation #{sessionId}
+        </h1>
 
-      <div className="bg-white border rounded-xl shadow p-4 space-y-4">
-        {session.messages.map((m: any, idx: number) => (
-          <MessageBubble key={idx} role={m.role} content={m.content} />
-        ))}
+        <div className="flex flex-wrap gap-2 items-center text-sm">
+          <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full">
+            Language: {session.language?.toUpperCase()}
+          </span>
+          <span className="bg-purple-50 text-purple-700 px-3 py-1 rounded-full">
+            Level: {session.level}
+          </span>
+          <span className="text-gray-500">
+            {session.endedAt?.toDate?.().toLocaleString()}
+          </span>
+        </div>
       </div>
 
-      {/* FEEDBACK */}
-      <div className="bg-white border rounded-xl shadow p-4">
-        <h3 className="text-lg font-semibold mb-3">Feedback Summary</h3>
+      {/* SUMMARY → Beautiful Card */}
+      <div className="bg-white rounded-2xl shadow border p-6 space-y-6">
+        <h2 className="text-xl font-semibold text-gray-800">
+          Feedback Summary
+        </h2>
 
-        <div
-          dangerouslySetInnerHTML={{
-            __html: `
-              <p>${session.summary?.feedbackSummary ?? ""}</p>
+        <div className="space-y-6">
 
-              <h4 class="font-semibold mt-3">Strengths</h4>
-              <ul>${(session.summary?.strengths ?? [])
-                .map((s: string) => `<li>• ${s}</li>`)
-                .join("")}</ul>
+          {/* General Summary */}
+          <div className="bg-gray-50 rounded-xl p-4 border">
+            <h3 className="font-semibold text-gray-800 mb-2">Overall Assessment</h3>
+            <p className="text-gray-700 leading-relaxed">
+              {summary.feedbackSummary ?? ""}
+            </p>
+          </div>
 
-              <h4 class="font-semibold mt-3">Weak Points</h4>
-              <ul>${(session.summary?.weakPoints ?? [])
-                .map((s: string) => `<li>• ${s}</li>`)
-                .join("")}</ul>
+          {/* STRENGTHS */}
+          <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+            <h3 className="font-semibold text-green-800 mb-2">Strengths</h3>
+            <ul className="text-green-900 space-y-1 ml-4">
+              {(summary.strengths ?? []).map((s: string, i: number) => (
+                <li key={i}>• {s}</li>
+              ))}
+            </ul>
+          </div>
 
-              <h4 class="font-semibold mt-3">Common Mistakes</h4>
-              <ul>${(session.summary?.commonMistakes ?? [])
-                .map(
-                  (m: any) =>
-                    `<li><mark>${m.error}</mark> → <b>${m.correction}</b> (${m.explanation})</li>`
-                )
-                .join("")}</ul>
+          {/* WEAK POINTS */}
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+            <h3 className="font-semibold text-red-800 mb-2">Weak Points</h3>
+            <ul className="text-red-900 space-y-1 ml-4">
+              {(summary.weakPoints ?? []).map((w: string, i: number) => (
+                <li key={i}>• {w}</li>
+              ))}
+            </ul>
+          </div>
 
-              <h4 class="font-semibold mt-3">Suggested Exercises</h4>
-              <ul>${(session.summary?.suggestedExercises ?? [])
-                .map((e: string) => `<li>• ${e}</li>`)
-                .join("")}</ul>
+          {/* COMMON MISTAKES */}
+          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+            <h3 className="font-semibold text-yellow-800 mb-2">Common Mistakes</h3>
+            <ul className="text-yellow-900 space-y-2 ml-4">
+              {(summary.commonMistakes ?? []).map((m: any, i: number) => (
+                <li key={i}>
+                  <mark className="bg-yellow-200 px-1 rounded">{m.error}</mark>{" "}
+                  → <b>{m.correction}</b>  
+                  <span className="text-gray-700">({m.explanation})</span>
+                </li>
+              ))}
+            </ul>
+          </div>
 
-              <h4 class="font-semibold mt-3">Suggested Games</h4>
-              <ul>${(session.summary?.suggestedGames ?? [])
-                .map((g: string) => `<li>• ${g}</li>`)
-                .join("")}</ul>
-            `,
-          }}
-        />
+          {/* EXERCISES */}
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <h3 className="font-semibold text-blue-800 mb-2">Suggested Exercises</h3>
+            <ul className="text-blue-900 space-y-1 ml-4">
+              {(summary.suggestedExercises ?? []).map((e: string, i: number) => (
+                <li key={i}>• {e}</li>
+              ))}
+            </ul>
+          </div>
+
+          {/* GAMES */}
+          <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
+            <h3 className="font-semibold text-indigo-800 mb-2">Suggested Games</h3>
+            <ul className="text-indigo-900 space-y-1 ml-4">
+              {(summary.suggestedGames ?? []).map((g: string, i: number) => (
+                <li key={i}>• {g}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
       </div>
+
     </div>
   );
 }
