@@ -160,8 +160,8 @@ export default function WordScramble() {
 
   if (loadingWord) {
     return (
-      <div className="py-20 text-center text-slate-700">
-        <p className="text-xl">Cargando palabra...</p>
+      <div className="w-full h-full flex items-center justify-center py-32">
+        <div className="animate-spin h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full" />
       </div>
     );
   }
