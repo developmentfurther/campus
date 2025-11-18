@@ -3,7 +3,10 @@
 import { useState, useEffect } from "react";
 import WordleTile from "@/components/ui/WordleTile";
 import { useAuth } from "@/contexts/AuthContext";
-
+import {
+  userPlayedToday,
+  updateUserGameAttempt,
+} from "@/lib/games/attempts";
 
 type LetterState = "correct" | "present" | "absent" | "";
 
@@ -12,10 +15,10 @@ interface GuessResult {
   state: LetterState;
 }
 
-export default function Wordle() {
-  const GAME_KEY = "wordle_last_play";
-  
+const GAME_ID = "wordle";
 
+export default function Wordle() {
+  const { user, role } = useAuth();
 
   const MAX_TRIES = 6;
 
@@ -24,139 +27,168 @@ export default function Wordle() {
   const [currentInput, setCurrentInput] = useState("");
   const [status, setStatus] = useState<"playing" | "won" | "lost">("playing");
   const [hint, setHint] = useState<string | null>(null);
-  const [loadingWord, setLoadingWord] = useState(false);
-  const { user, role } = useAuth();
-  const [locked, setLocked] = useState(false);
 
+  // === estados para control de intentos (idéntico a Hangman) ===
+  const [blocked, setBlocked] = useState(false);
+  const [checkingAttempt, setCheckingAttempt] = useState(true);
+  const [loadingWord, setLoadingWord] = useState(true);
 
   const WORD_LENGTH = word.length;
 
   // ======================================================
-  // API: obtener palabra
+  // VERIFICAR INTENTO DIARIO (FireStore)
+  // ======================================================
+  useEffect(() => {
+    const check = async () => {
+      if (!user) {
+        setCheckingAttempt(false);
+        return;
+      }
+
+      // Admin y profesor → siempre pueden jugar
+      if (role === "admin" || role === "profesor") {
+        setBlocked(false);
+        setCheckingAttempt(false);
+        return;
+      }
+
+      // Alumno → verificar Firestore
+      const played = await userPlayedToday(user.uid, GAME_ID);
+      if (played) setBlocked(true);
+
+      setCheckingAttempt(false);
+    };
+
+    void check();
+  }, [user, role]);
+
+  // ======================================================
+  // FETCH PALABRA SOLO SI PUEDE JUGAR
   // ======================================================
   const fetchWord = async () => {
-  try {
-    setLoadingWord(true);
+    try {
+      setLoadingWord(true);
+      setGuesses([]);
+      setCurrentInput("");
+      setHint(null);
+      setStatus("playing");
 
-    const res = await fetch("/api/games/wordle");
-    const data = await res.json();
+      const res = await fetch("/api/games/wordle");
+      const data = await res.json();
 
-    const w = data.word.toLowerCase().trim();
-    setWord(w);
-
-    setHint(null);
-    setGuesses([]);
-    setCurrentInput("");
-    setStatus("playing");
-  } catch (err) {
-    console.error(err);
-  } finally {
-    setLoadingWord(false);
-  }
-};
-
+      setWord(data.word.toLowerCase().trim());
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingWord(false);
+    }
+  };
 
   useEffect(() => {
-  if (!user) return;
-
-  // ADMIN → siempre puede jugar
-  if (user.role === "admin") {
-    setLocked(false);
-    fetchWord();
-    return;
-  }
-
-  // ALUMNO → 1 intento por día
-  const lastPlay = localStorage.getItem(GAME_KEY);
-  const today = new Date().toDateString();
-
-  if (lastPlay === today) {
-    setLocked(true);
-  } else {
-    setLocked(false);
-    fetchWord();
-  }
-}, [user]);
-
+    if (!checkingAttempt && !blocked) {
+      void fetchWord();
+    }
+  }, [checkingAttempt, blocked]);
 
   // ======================================================
-  // Validar intento
+  // SUBMIT DEL INTENTO
   // ======================================================
   const submitGuess = () => {
-  if (currentInput.length !== WORD_LENGTH) return;
+    if (currentInput.length !== WORD_LENGTH) return;
 
-  const attempt = currentInput.toLowerCase();
-  const result: GuessResult[] = [];
+    const attempt = currentInput.toLowerCase();
+    const result: GuessResult[] = [];
 
-  // ======================================================
-  // Registrar el intento del alumno (solo si NO es admin)
-  // ======================================================
-  if (user?.role !== "admin") {
-    const today = new Date().toDateString();
-    localStorage.setItem(GAME_KEY, today);
-  }
-
-  // ======================================================
-  // LÓGICA WORDLE (igual a la tuya)
-  // ======================================================
-
-  // Conteo de letras de la palabra objetivo
-  const letterCount: Record<string, number> = {};
-  for (const char of word) {
-    letterCount[char] = (letterCount[char] || 0) + 1;
-  }
-
-  // Paso 1: marcar CORRECT
-  for (let i = 0; i < WORD_LENGTH; i++) {
-    const letter = attempt[i];
-
-    if (letter === word[i]) {
-      result[i] = { letter, state: "correct" };
-      letterCount[letter] -= 1;
-    } else {
-      result[i] = { letter, state: "" };
+    // Conteo de letras
+    const letterCount: Record<string, number> = {};
+    for (const char of word) {
+      letterCount[char] = (letterCount[char] || 0) + 1;
     }
-  }
 
-  // Paso 2: marcar PRESENT / ABSENT
-  for (let i = 0; i < WORD_LENGTH; i++) {
-    const letter = attempt[i];
-
-    if (result[i].state === "correct") continue;
-
-    if (letterCount[letter] > 0) {
-      result[i].state = "present";
-      letterCount[letter] -= 1;
-    } else {
-      result[i].state = "absent";
+    // Paso 1: correct
+    for (let i = 0; i < WORD_LENGTH; i++) {
+      const letter = attempt[i];
+      if (letter === word[i]) {
+        result[i] = { letter, state: "correct" };
+        letterCount[letter] -= 1;
+      } else {
+        result[i] = { letter, state: "" };
+      }
     }
+
+    // Paso 2: present / absent
+    for (let i = 0; i < WORD_LENGTH; i++) {
+      const letter = attempt[i];
+
+      if (result[i].state === "correct") continue;
+
+      if (letterCount[letter] > 0) {
+        result[i].state = "present";
+        letterCount[letter] -= 1;
+      } else {
+        result[i].state = "absent";
+      }
+    }
+
+    const updated = [...guesses, result];
+    setGuesses(updated);
+    setCurrentInput("");
+
+    // Ganar o perder
+    if (attempt === word) {
+      setStatus("won");
+      return;
+    } else if (updated.length >= MAX_TRIES) {
+      setStatus("lost");
+      return;
+    }
+
+    // Hints
+    if (updated.length === 3)
+      setHint("Pista: empieza con " + word[0].toUpperCase());
+    if (updated.length === 5)
+      setHint("Pista final: es un sustantivo común");
+  };
+
+  // ======================================================
+  // AL TERMINAR → GUARDAR INTENTO (FireStore)
+  // ======================================================
+  useEffect(() => {
+    const mark = async () => {
+      if (!user) return;
+      if (role !== "alumno") return; 
+      if (status === "playing") return;
+
+      await updateUserGameAttempt(user.uid, GAME_ID);
+      setBlocked(true);
+    };
+
+    void mark();
+  }, [status, user, role]);
+
+  // ======================================================
+  // UI ESTADOS (igual Hangman)
+  // ======================================================
+  if (checkingAttempt) {
+    return (
+      <div className="py-20 text-center text-slate-600">
+        Verificando intentos de hoy...
+      </div>
+    );
   }
 
-  // Guardar intento
-  const updated = [...guesses, result];
-  setGuesses(updated);
-  setCurrentInput("");
-
-  // Win / lose
-  if (attempt === word) {
-    setStatus("won");
-    return;
-  }
-  if (updated.length >= MAX_TRIES) {
-    setStatus("lost");
-    return;
+  if (blocked && role === "alumno") {
+    return (
+      <div className="py-20 text-center text-slate-600">
+        <h2 className="text-2xl font-bold mb-3">Ya jugaste hoy Wordle 🎮</h2>
+        <p className="text-slate-500">
+          Tenés 1 partida por día. Volvé mañana ✨
+        </p>
+      </div>
+    );
   }
 
-  // Hints
-  if (updated.length === 3)
-    setHint("Pista: La palabra empieza con " + word[0].toUpperCase());
-  if (updated.length === 5)
-    setHint("Pista final: Es un tipo de sustantivo común");
-};
-
-
-  // Si todavía no cargó palabra, evitar errores
-  if (!WORD_LENGTH) {
+  if (loadingWord || WORD_LENGTH === 0) {
     return (
       <div className="w-full h-full flex items-center justify-center py-32">
         <div className="animate-spin h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full" />
@@ -164,23 +196,8 @@ export default function Wordle() {
     );
   }
 
- 
-
-
-  if (locked) {
-  return (
-    <div className="max-w-md mx-auto py-16 text-center space-y-4">
-      <h1 className="text-3xl font-bold text-slate-800">Wordle (Further Edition)</h1>
-      <p className="text-slate-500">Ya utilizaste tu intento diario.</p>
-      <p className="text-slate-600 text-sm">
-        Vuelve mañana para jugar nuevamente ✨
-      </p>
-    </div>
-  );
-}
-
   // ======================================================
-  // UI
+  // UI PRINCIPAL
   // ======================================================
   return (
     <div className="max-w-md mx-auto py-10 text-center space-y-6">
@@ -203,15 +220,12 @@ export default function Wordle() {
             >
               {Array.from({ length: WORD_LENGTH }).map((_, col) => {
                 const cell = guessRow[col];
-                const letter = cell?.letter || "";
-
-                const delay =
-                  row === guesses.length - 1 ? col * 0.15 : 0;
+                const delay = row === guesses.length - 1 ? col * 0.15 : 0;
 
                 return (
                   <WordleTile
                     key={col}
-                    letter={letter}
+                    letter={cell?.letter || ""}
                     state={cell?.state ?? ""}
                     delay={delay}
                   />
@@ -228,9 +242,7 @@ export default function Wordle() {
             maxLength={WORD_LENGTH}
             value={currentInput}
             onChange={(e) =>
-              setCurrentInput(
-                e.target.value.replace(/[^a-zA-Z]/g, "")
-              )
+              setCurrentInput(e.target.value.replace(/[^a-zA-Z]/g, ""))
             }
             className="border p-2 rounded-lg text-center tracking-widest uppercase mt-4"
           />
@@ -256,52 +268,14 @@ export default function Wordle() {
         </p>
       )}
 
-      <button
-  onClick={() => {
-  if (user?.role !== "admin") return;
-  fetchWord();
-}}
-disabled={user?.role !== "admin" || loadingWord}
-
-  className={`
-    mt-6 px-6 py-3 rounded-xl font-semibold shadow-md transition
-    flex items-center justify-center gap-2 mx-auto
-    ${
-      loadingWord
-        ? "bg-slate-300 text-slate-500 cursor-not-allowed"
-        : "bg-blue-600 text-white hover:bg-blue-700 active:scale-95"
-    }
-  `}
->
-  {loadingWord ? (
-    <>
-      <svg
-        className="animate-spin h-5 w-5 text-white"
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        <circle
-          className="opacity-25"
-          cx="12"
-          cy="12"
-          r="10"
-          stroke="currentColor"
-          strokeWidth="4"
-        ></circle>
-        <path
-          className="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-        ></path>
-      </svg>
-      Cargando...
-    </>
-  ) : (
-    "Nueva palabra"
-  )}
-</button>
-
+      {(role === "admin" || role === "profesor") && (
+        <button
+          onClick={fetchWord}
+          className="mt-6 px-6 py-3 rounded-xl bg-slate-200 text-slate-800 hover:bg-slate-300"
+        >
+          Nueva palabra
+        </button>
+      )}
     </div>
   );
 }

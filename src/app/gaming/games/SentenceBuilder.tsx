@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-
+import {
+  userPlayedToday,
+  updateUserGameAttempt,
+} from "@/lib/games/attempts";
 
 type GameStatus = "playing" | "won" | "lost";
 
@@ -11,23 +14,27 @@ interface DragItem {
   from: "pool" | "sentence";
 }
 
+const GAME_ID = "sentence_builder";
+
 export default function SentenceBuilder() {
-    const GAME_KEY = "sentence_builder_last_play";
+  const { user, role } = useAuth();
 
   const [original, setOriginal] = useState<string[]>([]);
   const [pool, setPool] = useState<string[]>([]);
   const [sentence, setSentence] = useState<string[]>([]);
+
   const [status, setStatus] = useState<GameStatus>("playing");
   const [loading, setLoading] = useState(true);
 
+  // === control de intentos diario (idéntico a Hangman)
+  const [blocked, setBlocked] = useState(false);
+  const [checkingAttempt, setCheckingAttempt] = useState(true);
+
   const [dragItem, setDragItem] = useState<DragItem | null>(null);
-  const { user } = useAuth(); // 👈 tu sistema ya lo usa
-  const [locked, setLocked] = useState(false);
 
-
-  // -------------------------------------------
-  // Fetch sentence
-  // -------------------------------------------
+  // ======================================================
+  // FETCH EJERCICIO (solo si puede jugar)
+  // ======================================================
   const fetchSentence = async () => {
     try {
       setLoading(true);
@@ -46,92 +53,72 @@ export default function SentenceBuilder() {
     }
   };
 
-useEffect(() => {
-  if (!user) return; // esperamos al user
+  // ======================================================
+  // CONTROL DE INTENTOS — Firestore
+  // ======================================================
+  useEffect(() => {
+    const check = async () => {
+      if (!user) {
+        setCheckingAttempt(false);
+        return;
+      }
 
-  // ADMIN → siempre desbloqueado
-  if (user.role === "admin") {
-    setLocked(false);
-    fetchSentence();
-    return;
-  }
+      // Admin & Profesor → sin límites
+      if (role === "admin" || role === "profesor") {
+        setBlocked(false);
+        setCheckingAttempt(false);
+        return;
+      }
 
-  // STUDENT (alumno) → check intento diario
-  const lastPlay = localStorage.getItem(GAME_KEY);
-  const today = new Date().toDateString();
+      // Alumno → verificar Firestore
+      const played = await userPlayedToday(user.uid, GAME_ID);
+      if (played) setBlocked(true);
 
-  if (lastPlay === today) {
-    setLocked(true);
-  } else {
-    setLocked(false);
-    fetchSentence();
-  }
-}, [user]);
+      setCheckingAttempt(false);
+    };
 
+    void check();
+  }, [user, role]);
 
+  // ======================================================
+  // SI NO ESTÁ BLOQUEADO → cargar ejercicio
+  // ======================================================
+  useEffect(() => {
+    if (!checkingAttempt && !blocked) {
+      void fetchSentence();
+    }
+  }, [checkingAttempt, blocked]);
 
-  // -------------------------------------------
-  // CLICK actions
-  // -------------------------------------------
-  const selectWord = (word: string, i: number) => {
-    if (status !== "playing") return;
-
-    setSentence((prev) => [...prev, word]);
-    setPool((prev) => prev.filter((_, idx) => idx !== i));
-  };
-
-  const removeWord = (i: number) => {
-    if (status !== "playing") return;
-
-    const word = sentence[i];
-    setSentence((prev) => prev.filter((_, idx) => idx !== i));
-    setPool((prev) => [...prev, word]);
-  };
-
-  // -------------------------------------------
-  // DRAG START
-  // -------------------------------------------
+  // ======================================================
+  // DRAG & DROP
+  // ======================================================
   const onDragStart = (index: number, from: "pool" | "sentence") => {
     if (status !== "playing") return;
     setDragItem({ index, from });
   };
 
-  // -------------------------------------------
-  // DROP on SENTENCE (add or reorder)
-  // -------------------------------------------
   const onDropInSentence = (dropIndex: number | null) => {
     if (!dragItem || status !== "playing") return;
 
     if (dragItem.from === "pool") {
       const word = pool[dragItem.index];
 
-      // remove from pool
       const newPool = [...pool];
       newPool.splice(dragItem.index, 1);
 
-      // add to sentence at the dropIndex
       const newSentence = [...sentence];
 
-      if (dropIndex === null) {
-        newSentence.push(word);
-      } else {
-        newSentence.splice(dropIndex, 0, word);
-      }
+      if (dropIndex === null) newSentence.push(word);
+      else newSentence.splice(dropIndex, 0, word);
 
       setPool(newPool);
       setSentence(newSentence);
-    }
-
-    if (dragItem.from === "sentence") {
+    } else {
       const newSentence = [...sentence];
-
       const [moved] = newSentence.splice(dragItem.index, 1);
 
-      if (dropIndex === null) {
-        newSentence.push(moved);
-      } else {
-        newSentence.splice(dropIndex, 0, moved);
-      }
+      if (dropIndex === null) newSentence.push(moved);
+      else newSentence.splice(dropIndex, 0, moved);
 
       setSentence(newSentence);
     }
@@ -139,9 +126,6 @@ useEffect(() => {
     setDragItem(null);
   };
 
-  // -------------------------------------------
-  // DROP on POOL → return word to pool
-  // -------------------------------------------
   const onDropInPool = () => {
     if (!dragItem || status !== "playing") return;
 
@@ -156,25 +140,58 @@ useEffect(() => {
     setDragItem(null);
   };
 
-  // -------------------------------------------
+  // ======================================================
   // CHECK ANSWER
-  // -------------------------------------------
+  // ======================================================
   const check = () => {
-    if (user?.role !== "admin") {
-  const today = new Date().toDateString();
-  localStorage.setItem(GAME_KEY, today);
-}
+    if (status !== "playing") return;
 
-    if (sentence.join(" ") === original.join(" ")) {
-      setStatus("won");
-    } else {
-      setStatus("lost");
-    }
+    const isCorrect =
+      sentence.join(" ").trim() === original.join(" ").trim();
+
+    setStatus(isCorrect ? "won" : "lost");
   };
 
-  // -------------------------------------------
-  // LOADING
-  // -------------------------------------------
+  // ======================================================
+  // MARCAR INTENTO AL TERMINAR
+  // ======================================================
+  useEffect(() => {
+    const update = async () => {
+      if (!user) return;
+      if (role !== "alumno") return; // solo alumnos limitados
+      if (status === "playing") return; // aún no terminó
+
+      await updateUserGameAttempt(user.uid, GAME_ID);
+      setBlocked(true);
+    };
+
+    void update();
+  }, [status, user, role]);
+
+  // ======================================================
+  // UI STATES
+  // ======================================================
+  if (checkingAttempt) {
+    return (
+      <div className="py-20 text-center text-slate-600">
+        Verificando intentos de hoy...
+      </div>
+    );
+  }
+
+  if (blocked && role === "alumno") {
+    return (
+      <div className="py-20 text-center text-slate-600 max-w-xl mx-auto">
+        <h2 className="text-2xl font-bold mb-3">
+          Ya jugaste hoy Sentence Builder 🎮
+        </h2>
+        <p className="text-slate-500">
+          Tenés 1 intento por día. Volvé mañana ✨
+        </p>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="w-full h-full flex items-center justify-center py-32">
@@ -183,30 +200,15 @@ useEffect(() => {
     );
   }
 
-  if (locked) {
-  return (
-    <div className="max-w-xl mx-auto py-16 text-center space-y-4">
-      <h1 className="text-3xl font-bold text-slate-800">Sentence Builder</h1>
-      <p className="text-slate-500">Ya utilizaste tu intento diario.</p>
-      <p className="text-slate-600 text-sm">
-        Vuelve mañana para jugar otra vez ✨
-      </p>
-    </div>
-  );
-}
-
-
-  // -------------------------------------------
-  // UI
-  // -------------------------------------------
+  // ======================================================
+  // UI PRINCIPAL
+  // ======================================================
   return (
     <div className="max-w-xl mx-auto py-10 text-center space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-800">Sentence Builder</h1>
-        <p className="text-slate-500 text-sm mt-1">
-          Drag the words to build the correct sentence.
-        </p>
-      </div>
+      <h1 className="text-3xl font-bold text-slate-800">Sentence Builder</h1>
+      <p className="text-slate-500 text-sm">
+        Drag the words to build the correct sentence.
+      </p>
 
       {/* Sentence area */}
       <div
@@ -219,35 +221,16 @@ useEffect(() => {
             key={i}
             draggable={status === "playing"}
             onDragStart={() => onDragStart(i, "sentence")}
-            onClick={() => removeWord(i)}
-            onDragOver={(e) => {
-              e.preventDefault();
-            }}
+            onDragOver={(e) => e.preventDefault()}
             onDrop={() => onDropInSentence(i)}
-           className="
-  px-3 
-  py-1
-  rounded-xl
-  bg-blue-600 
-  text-white 
-  shadow-sm 
-  cursor-grab 
-  active:scale-95
-  text-sm
-  font-medium
-  flex
-  items-center
-  justify-center
-  leading-none
-"
-
+            className="px-3 py-1 rounded-xl bg-blue-600 text-white shadow-sm cursor-grab active:scale-95 text-sm font-medium"
           >
             {word}
           </div>
         ))}
       </div>
 
-      {/* Word pool */}
+      {/* Pool */}
       <div
         onDragOver={(e) => e.preventDefault()}
         onDrop={onDropInPool}
@@ -258,14 +241,14 @@ useEffect(() => {
             key={i}
             draggable={status === "playing"}
             onDragStart={() => onDragStart(i, "pool")}
-            onClick={() => selectWord(word, i)}
-            className="px-4 py-2 rounded-full bg-slate-200 text-slate-900 shadow cursor-grab active:scale-95"
+            className="px-4 py-2 rounded-full bg-slate-200 text-slate-900 shadow cursor-grab active:scale-95 text-sm font-medium"
           >
             {word}
           </div>
         ))}
       </div>
 
+      {/* Buttons */}
       {status === "playing" && (
         <button
           onClick={check}
@@ -277,9 +260,7 @@ useEffect(() => {
       )}
 
       {status === "won" && (
-        <p className="text-emerald-600 font-semibold text-xl">
-          🎉 Correct!
-        </p>
+        <p className="text-emerald-600 font-semibold text-xl">🎉 Correct!</p>
       )}
 
       {status === "lost" && (
@@ -288,21 +269,14 @@ useEffect(() => {
         </p>
       )}
 
-     <button
-  onClick={() => {
-    if (user?.role !== "admin") return; // alumnos no pueden reiniciar
-    fetchSentence();
-  }}
-  disabled={user?.role !== "admin"}
-  className={`px-5 py-2 rounded-xl text-sm shadow transition
-    ${user?.role !== "admin"
-      ? "bg-slate-200 text-slate-400 cursor-not-allowed"
-      : "bg-slate-200 hover:bg-slate-300 text-slate-800"}
-  `}
->
-  New sentence
-</button>
-
+      {(role === "admin" || role === "profesor") && (
+        <button
+          onClick={fetchSentence}
+          className="px-5 py-2 rounded-xl shadow bg-slate-200 hover:bg-slate-300 text-slate-800"
+        >
+          New sentence
+        </button>
+      )}
     </div>
   );
 }

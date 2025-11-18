@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  userPlayedToday,
+  updateUserGameAttempt,
+} from "@/lib/games/attempts";
 
 type GameStatus = "selecting" | "correcting" | "won" | "lost";
 
@@ -12,21 +16,26 @@ interface ErrorData {
   correctWord: string;
 }
 
-const GAME_KEY = "error_finder_last_play";
+const GAME_ID = "error_finder";
 
 export default function ErrorFinder() {
   const { user, role } = useAuth();
 
   const [data, setData] = useState<ErrorData | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  const [locked, setLocked] = useState(false);
-  const [errorWordSelected, setErrorWordSelected] = useState<string | null>(null);
-  const [correctionInput, setCorrectionInput] = useState("");
+  const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<GameStatus>("selecting");
 
+  // Control de intentos
+  const [blocked, setBlocked] = useState(false);
+  const [checkingAttempt, setCheckingAttempt] = useState(true);
+
+  // UI
+  const [errorWordSelected, setErrorWordSelected] = useState<string | null>(null);
+  const [correctionInput, setCorrectionInput] = useState("");
+
   // ======================================================
-  // Obtener frase desde IA
+  // FETCH EJERCICIO
   // ======================================================
   const fetchSentence = async () => {
     try {
@@ -46,81 +55,110 @@ export default function ErrorFinder() {
   };
 
   // ======================================================
-  // Intento diario (igual que Hangman)
+  // CHECK INTENTOS — FIRESTORE
   // ======================================================
   useEffect(() => {
-    if (!user) return;
+    const check = async () => {
+      if (!user) {
+        setCheckingAttempt(false);
+        return;
+      }
 
-    if (role === "admin" || role === "profesor") {
-      setLocked(false);
-      fetchSentence();
-      return;
-    }
+      // Admin/profesor → sin límite
+      if (role === "admin" || role === "profesor") {
+        setBlocked(false);
+        setCheckingAttempt(false);
+        return;
+      }
 
-    const last = localStorage.getItem(GAME_KEY);
-    const today = new Date().toDateString();
+      // Alumno → revisar Firestore
+      const played = await userPlayedToday(user.uid, GAME_ID);
+      if (played) setBlocked(true);
 
-    if (last === today) {
-      setLocked(true);
-    } else {
-      setLocked(false);
-      fetchSentence();
-    }
+      setCheckingAttempt(false);
+    };
+
+    void check();
   }, [user, role]);
 
   // ======================================================
-  // Lógica de selección y verificación
+  // CARGAR EJERCICIO SI SE PUEDE JUGAR
+  // ======================================================
+  useEffect(() => {
+    if (!checkingAttempt && !blocked) {
+      void fetchSentence();
+    }
+  }, [checkingAttempt, blocked]);
+
+  // ======================================================
+  // CLICK DE PALABRA — SELECCIÓN
   // ======================================================
   const handleWordClick = (word: string) => {
-    if (status !== "selecting" || locked) return;
+    if (status !== "selecting" || blocked) return;
 
     setErrorWordSelected(word);
 
-    // Si seleccionó la palabra incorrecta → pedir corrección
     if (word === data?.wrongWord) {
       setStatus("correcting");
     } else {
-      // Marca intento del día si es alumno
-      if (role === "alumno") {
-        localStorage.setItem(GAME_KEY, new Date().toDateString());
-        setLocked(true);
-      }
+      // palabra incorrecta elegida → pierde
       setStatus("lost");
     }
   };
 
+  // ======================================================
+  // VERIFICAR CORRECCIÓN
+  // ======================================================
   const checkCorrection = () => {
     if (!data) return;
 
-    // Guardar intento
-    if (role === "alumno") {
-      localStorage.setItem(GAME_KEY, new Date().toDateString());
-      setLocked(true);
-    }
+    const correct =
+      correctionInput.toLowerCase().trim() ===
+      data.correctWord.toLowerCase().trim();
 
-    if (correctionInput.toLowerCase().trim() === data.correctWord.toLowerCase()) {
-      setStatus("won");
-    } else {
-      setStatus("lost");
-    }
+    setStatus(correct ? "won" : "lost");
   };
 
   // ======================================================
-  // PANTALLA BLOQUEADA
+  // GUARDAR INTENTO CUANDO TERMINA
   // ======================================================
-  if (locked && role === "alumno") {
+  useEffect(() => {
+    const mark = async () => {
+      if (!user) return;
+      if (role !== "alumno") return;
+      if (status === "selecting" || status === "correcting") return;
+
+      await updateUserGameAttempt(user.uid, GAME_ID);
+      setBlocked(true);
+    };
+
+    void mark();
+  }, [status, user, role]);
+
+  // ======================================================
+  // UI — ESTADOS
+  // ======================================================
+
+  if (checkingAttempt) {
     return (
-      <div className="max-w-lg mx-auto py-16 text-center space-y-4">
-        <h1 className="text-3xl font-bold text-slate-800">Error Finder</h1>
-        <p className="text-slate-500">Ya jugaste hoy este ejercicio.</p>
-        <p className="text-slate-600 text-sm">Vuelve mañana para seguir practicando ✨</p>
+      <div className="py-20 text-center text-slate-600">
+        Verificando intentos de hoy...
       </div>
     );
   }
 
-  // ======================================================
-  // LOADING
-  // ======================================================
+  if (blocked && role === "alumno") {
+    return (
+      <div className="max-w-lg mx-auto py-16 text-center space-y-4">
+        <h1 className="text-3xl font-bold text-slate-800">Error Finder</h1>
+        <p className="text-slate-500">Ya jugaste hoy este ejercicio.</p>
+        <p className="text-slate-600 text-sm">
+          Volvé mañana para seguir practicando ✨
+        </p>
+      </div>
+    );
+  }
+
   if (loading || !data) {
     return (
       <div className="py-24 text-center text-slate-700">
@@ -137,32 +175,36 @@ export default function ErrorFinder() {
 
   return (
     <div className="max-w-xl mx-auto py-10 text-center space-y-8">
-      {/* Title */}
-      <div>
-        <h1 className="text-3xl font-bold text-slate-800">Error Finder</h1>
-        <p className="text-slate-500 text-sm mt-1">
-          Tocá la palabra incorrecta y luego corrígela.
-        </p>
-      </div>
+      <h1 className="text-3xl font-bold text-slate-800">Error Finder</h1>
+      <p className="text-slate-500 text-sm mt-1">
+        Tocá la palabra incorrecta y luego corrígela.
+      </p>
 
-      {/* Sentence display (Duolingo-style) */}
+      {/* Sentence */}
       <div className="p-6 rounded-3xl bg-white shadow-lg border border-slate-100">
         <div className="flex flex-wrap justify-center gap-2 text-lg font-medium">
           {words.map((word, i) => {
             const isSelected = word === errorWordSelected;
-            const isWrong = word === data.wrongWord && status === "lost";
+            const isWrongChoice =
+              word === errorWordSelected &&
+              word !== data.wrongWord &&
+              status === "lost";
 
             return (
               <motion.button
                 key={i}
                 onClick={() => handleWordClick(word)}
-                className={`px-3 py-1 rounded-xl transition font-semibold
-                  ${isSelected ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-800"}
+                className={`px-3 py-1 rounded-xl font-semibold transition
+                  ${
+                    isSelected
+                      ? "bg-blue-600 text-white"
+                      : "bg-slate-100 text-slate-800"
+                  }
                 `}
                 whileTap={{ scale: 0.9 }}
                 animate={
-                  isWrong
-                    ? { x: [-4, 4, -4, 4, 0] } // shake
+                  isWrongChoice
+                    ? { x: [-4, 4, -4, 4, 0] }
                     : {}
                 }
               >
@@ -174,7 +216,7 @@ export default function ErrorFinder() {
         </div>
       </div>
 
-      {/* Step 2: Correction input */}
+      {/* Correction input */}
       <AnimatePresence>
         {status === "correcting" && (
           <motion.div
@@ -201,7 +243,7 @@ export default function ErrorFinder() {
         )}
       </AnimatePresence>
 
-      {/* FEEDBACK FINAL */}
+      {/* Result */}
       {status === "won" && (
         <motion.p
           initial={{ scale: 0.5 }}
@@ -222,7 +264,6 @@ export default function ErrorFinder() {
         </motion.p>
       )}
 
-      {/* NEW SENTENCE (solo admin/profesor) */}
       {(role === "admin" || role === "profesor") && (
         <button
           onClick={fetchSentence}
