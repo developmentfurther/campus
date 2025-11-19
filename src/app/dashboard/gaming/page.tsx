@@ -11,9 +11,11 @@ import {
   FiAperture,
 } from "react-icons/fi";
 import { GAMES_MAP } from "@/app/gaming/games";
+import { useI18n } from "@/contexts/I18nContext";
 
 export default function GamingHub() {
   const router = useRouter();
+  const { t } = useI18n();
 
   // META DE JUEGOS: todos en un solo lugar
   const META: Record<
@@ -21,35 +23,35 @@ export default function GamingHub() {
     { title: string; description: string; icon: React.ReactElement }
   > = {
     hangman: {
-      title: "Hangman",
-      description: "Adiviná la palabra antes de que sea demasiado tarde.",
-      icon: <FiTarget className="text-blue-600 text-2xl" />,
-    },
-    wordScramble: {
-      title: "Word Scramble",
-      description: "Ordená las letras y descubrí la palabra.",
-      icon: <FiZap className="text-indigo-600 text-2xl" />,
-    },
-    wordle: {
-      title: "Wordle",
-      description: "Adiviná la palabra en 6 intentos.",
-      icon: <FiAperture className="text-green-600 text-2xl" />,
-    },
-    emojiIdioms: {
-      title: "Emoji Idioms",
-      description: "Interpretá idioms usando solo emojis.",
-      icon: <FiBookOpen className="text-yellow-600 text-2xl" />,
-    },
-    sentenceBuilder: {
-      title: "Sentence Builder",
-      description: "Arrastrá palabras para formar la oración correcta.",
-      icon: <FiEdit className="text-orange-600 text-2xl" />,
-    },
-    errorFinder: {
-      title: "Error Finder",
-      description: "Encontrá y corregí el error gramatical.",
-      icon: <FiAlertTriangle className="text-red-600 text-2xl" />,
-    },
+    title: t("gaming.games.hangman.title"),
+    description: t("gaming.games.hangman.description"),
+    icon: <FiTarget className="text-blue-600 text-2xl" />,
+  },
+  wordScramble: {
+    title: t("gaming.games.wordScramble.title"),
+    description: t("gaming.games.wordScramble.description"),
+    icon: <FiZap className="text-indigo-600 text-2xl" />,
+  },
+  wordle: {
+    title: t("gaming.games.wordle.title"),
+    description: t("gaming.games.wordle.description"),
+    icon: <FiAperture className="text-green-600 text-2xl" />,
+  },
+  emojiIdioms: {
+    title: t("gaming.games.emojiIdioms.title"),
+    description: t("gaming.games.emojiIdioms.description"),
+    icon: <FiBookOpen className="text-yellow-600 text-2xl" />,
+  },
+  sentenceBuilder: {
+    title: t("gaming.games.sentenceBuilder.title"),
+    description: t("gaming.games.sentenceBuilder.description"),
+    icon: <FiEdit className="text-orange-600 text-2xl" />,
+  },
+  errorFinder: {
+    title: t("gaming.games.errorFinder.title"),
+    description: t("gaming.games.errorFinder.description"),
+    icon: <FiAlertTriangle className="text-red-600 text-2xl" />,
+  }
   };
 
   // Generar lista de juegos desde GAMES_MAP
@@ -64,10 +66,10 @@ export default function GamingHub() {
       {/* HEADER */}
       <header className="mb-10 text-center">
         <h1 className="text-3xl font-bold  bg-clip-text">
-          Further Gaming 🎮
+          {t("gaming.headerTitle")}
         </h1>
         <p className="text-slate-600 mt-1 text-sm">
-          Practicá inglés con juegos interactivos.
+          {t("gaming.headerSubtitle")}
         </p>
       </header>
 
@@ -93,7 +95,7 @@ export default function GamingHub() {
               onClick={() => router.push(`/gaming/${game.slug}`)}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition active:scale-95"
             >
-              <FiPlay size={16} /> Jugar
+              <FiPlay size={16} /> {t("gaming.play")}
             </button>
           </div>
         ))}

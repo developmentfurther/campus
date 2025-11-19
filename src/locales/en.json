@@ -1,0 +1,135 @@
+{
+  "common": {},
+  "sidebar": {
+    "headerTitle": "Further Campus",
+    "headerSubtitle": "Student Portal",
+    "campusSection": "My Campus",
+    "accountSection": "My Account",
+    "home": "Campus",
+    "learning": "My Learning",
+    "certificates": "Certificates",
+    "gaming": "Gaming",
+    "profile": "Profile",
+    "events": "Events",
+    "messages": "Messages",
+    "logout": "Log out",
+    "chatSection": "Chat",
+  "chatbot": "Conversational Chat",
+  "chatHistory": "History"
+  },
+  "profile": {
+  "title": "My Profile",
+  "save": "Save changes",
+
+  "personalHeader": "Personal information",
+  "firstName": "First name",
+  "lastName": "Last name",
+  "dni": "ID number",
+  "email": "Email",
+
+  "learningHeader": "Learning settings",
+  "languageLabel": "Language you study",
+  "levelLabel": "CEFR Level",
+
+  "placeholderFirstName": "First name",
+  "placeholderLastName": "Last name",
+  "placeholderDni": "ID number",
+
+  "selectPlaceholder": "Select…",
+
+  "languages": {
+    "en": "English",
+    "es": "Spanish",
+    "pt": "Portuguese",
+    "it": "Italian",
+    "fr": "French"
+  },
+
+  "levels": {
+    "A1": "A1 – Beginner",
+    "A2": "A2 – Elementary",
+    "B1": "B1 – Intermediate",
+    "B2": "B2 – Upper Intermediate",
+    "C1": "C1 – Advanced",
+    "C2": "C2 – Proficient"
+  },
+
+  "updatedSuccess": "Profile updated successfully"
+  },
+  "dashboard": {
+    "hello": "Hello {{name}}! 👋",
+    "welcome": "Welcome to your virtual campus.",
+    "activeCourses": "Active courses",
+    "certificates": "Certificates earned",
+    "recentActivity": "Recent activity",
+    "noActivity": "No activity recorded yet.",
+    "announcements": "News and announcements",
+    "noAnnouncements": "No announcements yet.",
+    "loading": "Loading your information..."
+  },
+  "courses": {
+    "loading": "Loading your courses...",
+  "title": "My Courses",
+  "subtitle": "Here you can view your active modules, your progress, and academic history.",
+  "emptyMessage": "You are not enrolled in any course yet.",
+  "emptyHint": "Once you enroll, your courses will appear here.",
+
+  "untitled": "Untitled course",
+  "generalCategory": "General",
+
+  "units": "Units",
+  "duration": "Duration",
+  "progress": "Progress",
+  "teacher": "Teacher",
+  "noTeacher": "N/A",
+
+  "lessonsCompleted": "{{done}} of {{total}} lessons completed",
+
+  "continue": "Continue",
+  "review": "Review course",
+  "viewDetails": "View details"
+  },
+  "certificates": {
+  "title": "Certificates",
+  "subtitle": "Your certificates will appear here once you finish a course. Complete all lessons and required assessments to unlock your downloadable certificate.",
+
+  "emptyPreview": "Certificate preview will be available after completion.",
+  
+  "ctaPrefix": "Ready to earn one?",
+  "ctaLink": "Go to My Courses"
+},
+  "gaming": {
+  "headerTitle": "Further Gaming 🎮",
+  "headerSubtitle": "Practice English with interactive games.",
+
+  "play": "Play",
+
+  "games": {
+    "hangman": {
+      "title": "Hangman",
+      "description": "Guess the word before it's too late."
+    },
+    "wordScramble": {
+      "title": "Word Scramble",
+      "description": "Rearrange the letters and discover the word."
+    },
+    "wordle": {
+      "title": "Wordle",
+      "description": "Guess the word in 6 attempts."
+    },
+    "emojiIdioms": {
+      "title": "Emoji Idioms",
+      "description": "Interpret idioms using only emojis."
+    },
+    "sentenceBuilder": {
+      "title": "Sentence Builder",
+      "description": "Drag the words to form the correct sentence."
+    },
+    "errorFinder": {
+      "title": "Error Finder",
+      "description": "Find and correct the grammatical error."
+    }
+  }
+  },
+  "auth": {}
+}

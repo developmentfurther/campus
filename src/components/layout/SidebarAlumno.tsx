@@ -12,9 +12,13 @@ import {
   FiCalendar,
   FiMessageSquare,
   FiTarget,
+  FiClock,
 } from "react-icons/fi";
+import { useI18n } from "@/contexts/I18nContext";
+
 
 export default function SidebarAlumno() {
+  const { t } = useI18n();
   const { section, setSection } = useDashboardUI();
   const { user, logout } = useAuth();
   const router = useRouter();
@@ -25,32 +29,48 @@ export default function SidebarAlumno() {
     router.push("/login");
   };
 
-  const menuCampus = [
-    { id: "home", label: "Campus", icon: <FiHome size={16} /> },
-    { id: "miscursos", label: "Mi aprendizaje", icon: <FiBookOpen size={16} /> },
-    { id: "certificados", label: "Certificados", icon: <FiAward size={16} /> },
-    { id: "gaming", label: "Gaming", icon: <FiTarget size={16} /> },
-  ];
 
-  const menuPersonal = [
-    { id: "perfil", label: "Perfil", icon: <FiUser size={16} /> },
-    { id: "eventos", label: "Eventos", icon: <FiCalendar size={16} /> },
-    { id: "mensajes", label: "Mensajes", icon: <FiMessageSquare size={16} /> },
-  ];
+const menuCampus = [
+  { id: "home", label: t("sidebar.home"), icon: <FiHome size={16} /> },
+  { id: "miscursos", label: t("sidebar.learning"), icon: <FiBookOpen size={16} /> },
+  { id: "certificados", label: t("sidebar.certificates"), icon: <FiAward size={16} /> },
+  { id: "gaming", label: t("sidebar.gaming"), icon: <FiTarget size={16} /> },
+];
+
+const chatSection = [
+  {
+    id: "chatbot",
+    label: t("sidebar.chatbot"),
+    icon: <FiMessageSquare size={16} />,
+  },
+  {
+    id: "chat-history",
+    label: t("sidebar.chatHistory"),
+    icon: <FiClock size={16} />,
+  },
+];
+
+
+const menuPersonal = [
+  { id: "perfil", label: t("sidebar.profile"), icon: <FiUser size={16} /> },
+  { id: "eventos", label: t("sidebar.events"), icon: <FiCalendar size={16} /> },
+  { id: "mensajes", label: t("sidebar.messages"), icon: <FiMessageSquare size={16} /> },
+];
+
 
   return (
     <aside className="w-64 bg-white border-r border-gray-200 flex flex-col h-screen">
       {/* HEADER */}
       <div className="p-6 border-b border-gray-200">
         <h1 className="text-xl font-bold text-gray-800 tracking-tight">
-          Further Campus
+          {t("sidebar.headerTitle")}
         </h1>
         <p className="text-xs text-gray-500 mt-1">Portal del alumno</p>
       </div>
 
       {/* NAVIGATION */}
       <nav className="flex-1 px-3 py-5 overflow-y-auto">
-        <SectionTitle>Mi Campus</SectionTitle>
+        <SectionTitle>{t("sidebar.campusSection")}</SectionTitle>
         <ul className="space-y-1 mb-6">
           {menuCampus.map((item) => (
             <SidebarButton
@@ -64,7 +84,22 @@ export default function SidebarAlumno() {
           ))}
         </ul>
 
-        <SectionTitle>Mi Cuenta</SectionTitle>
+        {/* CHAT */}
+        <SectionTitle>{t("sidebar.chatSection")} </SectionTitle>
+        <ul className="space-y-1 mb-6">
+          {chatSection.map((item) => (
+            <SidebarButton
+              key={item.id}
+              {...item}
+              active={section === item.id}
+              onClick={() => setSection(item.id as any)}
+            />
+          ))}
+        </ul>
+
+
+        {/* PERSONAL */}
+        <SectionTitle>{t("sidebar.accountSection")}</SectionTitle>
         <ul className="space-y-1">
           {menuPersonal.map((item) => (
             <SidebarButton
@@ -98,7 +133,8 @@ export default function SidebarAlumno() {
           className="flex items-center justify-center gap-2 w-full px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium text-sm transition"
         >
           <FiLogOut size={16} />
-          Cerrar sesión
+          {t("sidebar.logout")}
+
         </button>
 
         <p className="text-xs text-gray-400 text-center mt-5">

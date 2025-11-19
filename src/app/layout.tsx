@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { I18nProvider } from "@/contexts/I18nContext";
 import { UsersProvider } from '@/contexts/UserContext';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -20,12 +21,13 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className={inter.className}>
-        {/* ✅ AuthProvider en el nivel global */}
+        <I18nProvider>
         <AuthProvider>
           <UsersProvider>
             <main className="min-h-screen bg-gray-50">{children}</main>
           </UsersProvider>
         </AuthProvider>
+        </I18nProvider>
       </body>
     </html>
   );

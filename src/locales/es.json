@@ -1,0 +1,135 @@
+{
+  "common": {},
+  "sidebar": {
+    "headerTitle": "Further Campus",
+    "headerSubtitle": "Portal del alumno",
+    "campusSection": "Mi Campus",
+    "accountSection": "Mi Cuenta",
+    "home": "Campus",
+    "learning": "Mi aprendizaje",
+    "certificates": "Certificados",
+    "gaming": "Gaming",
+    "profile": "Perfil",
+    "events": "Eventos",
+    "messages": "Mensajes",
+    "logout": "Cerrar sesión",
+    "chatSection": "Chat",
+  "chatbot": "Chat Conversacional",
+  "chatHistory": "Historial"
+  },
+  "profile": {
+  "title": "Mi Perfil",
+  "save": "Guardar cambios",
+
+  "personalHeader": "Datos personales",
+  "firstName": "Nombre",
+  "lastName": "Apellido",
+  "dni": "DNI",
+  "email": "Correo electrónico",
+
+  "learningHeader": "Configuración de aprendizaje",
+  "languageLabel": "Idioma que estudiás",
+  "levelLabel": "Nivel CEFR",
+
+  "placeholderFirstName": "Nombre",
+  "placeholderLastName": "Apellido",
+  "placeholderDni": "DNI",
+
+  "selectPlaceholder": "Seleccionar…",
+
+  "languages": {
+    "en": "Inglés",
+    "es": "Español",
+    "pt": "Portugués",
+    "it": "Italiano",
+    "fr": "Francés"
+  },
+
+  "levels": {
+    "A1": "A1 – Principiante",
+    "A2": "A2 – Básico",
+    "B1": "B1 – Intermedio",
+    "B2": "B2 – Intermedio alto",
+    "C1": "C1 – Avanzado",
+    "C2": "C2 – Experto"
+  },
+
+  "updatedSuccess": "Perfil actualizado correctamente"
+  },
+  "dashboard": {
+    "hello": "¡Hola {{name}}! 👋",
+    "welcome": "Bienvenido a tu campus virtual.",
+    "activeCourses": "Cursos activos",
+    "certificates": "Certificados obtenidos",
+    "recentActivity": "Actividad reciente",
+    "noActivity": "No hay actividad registrada todavía.",
+    "announcements": "Noticias y anuncios",
+    "noAnnouncements": "No hay anuncios por ahora.",
+    "loading": "Cargando tu información..."
+  },
+  "courses": {
+    "loading": "Cargando tus cursos...",
+  "title": "Mis Cursos",
+  "subtitle": "Aquí puedes ver tus módulos activos, tu progreso y tu historial académico.",
+  "emptyMessage": "Todavía no estás inscripto en ningún curso.",
+  "emptyHint": "Cuando te inscribas, tus cursos aparecerán aquí.",
+  
+  "untitled": "Curso sin título",
+  "generalCategory": "General",
+
+  "units": "Unidades",
+  "duration": "Duración",
+  "progress": "Progreso",
+  "teacher": "Profesor",
+  "noTeacher": "N/A",
+
+  "lessonsCompleted": "{{done}} de {{total}} lecciones completadas",
+
+  "continue": "Continuar",
+  "review": "Revisar curso",
+  "viewDetails": "Ver detalles"
+  },
+  "certificates": {
+  "title": "Certificados",
+  "subtitle": "Tus certificados aparecerán aquí una vez que completes un curso. Completa todas las lecciones y evaluaciones requeridas para desbloquear tu certificado descargable.",
+
+  "emptyPreview": "La vista previa del certificado estará disponible después de completar el curso.",
+  
+  "ctaPrefix": "¿Listo para obtener uno?",
+  "ctaLink": "Ir a Mis Cursos"
+},
+  "gaming": {
+  "headerTitle": "Further Gaming 🎮",
+  "headerSubtitle": "Practicá inglés con juegos interactivos.",
+
+  "play": "Jugar",
+
+  "games": {
+    "hangman": {
+      "title": "Ahorcado",
+      "description": "Adiviná la palabra antes de que sea demasiado tarde."
+    },
+    "wordScramble": {
+      "title": "Word Scramble",
+      "description": "Ordená las letras y descubrí la palabra."
+    },
+    "wordle": {
+      "title": "Wordle",
+      "description": "Adiviná la palabra en 6 intentos."
+    },
+    "emojiIdioms": {
+      "title": "Emoji Idioms",
+      "description": "Interpretá idioms usando solo emojis."
+    },
+    "sentenceBuilder": {
+      "title": "Sentence Builder",
+      "description": "Arrastrá palabras para formar la oración correcta."
+    },
+    "errorFinder": {
+      "title": "Error Finder",
+      "description": "Encontrá y corregí el error gramatical."
+    }
+  }
+  },
+  "auth": {}
+}

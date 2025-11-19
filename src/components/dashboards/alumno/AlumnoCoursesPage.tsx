@@ -4,15 +4,17 @@ import { useAuth } from "@/contexts/AuthContext";
 import { FiBookOpen, FiTrendingUp, FiClock, FiUser } from "react-icons/fi";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import { useI18n } from "@/contexts/I18nContext";
 
 export default function AlumnoCoursesPage() {
   const { misCursos, loadingCursos } = useAuth();
   const router = useRouter();
+  const { t } = useI18n();
 
   if (loadingCursos)
     return (
       <div className="p-8 text-slate-500 bg-gray-50 min-h-screen flex items-center justify-center">
-        Cargando tus cursos...
+        {t("courses.loading")}
       </div>
     );
 
@@ -21,9 +23,11 @@ export default function AlumnoCoursesPage() {
       {/* HEADER */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">My Courses</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {t("courses.title")}
+          </h1>
           <p className="text-gray-500 mt-1">
-            Here you can see your active modules, your progress, and academic history.
+            {t("courses.subtitle")}
           </p>
         </div>
       </div>
@@ -32,10 +36,10 @@ export default function AlumnoCoursesPage() {
       {misCursos.length === 0 ? (
         <div className="border border-dashed border-gray-300 p-10 text-center bg-white rounded-xl shadow-sm">
           <p className="text-gray-500 mb-2 text-sm">
-            You are not enrolled in any course yet.
+            {t("courses.emptyMessage")}
           </p>
           <p className="text-gray-400 text-xs">
-            Once you enroll, your courses will appear here.
+            {t("courses.emptyHint")}
           </p>
         </div>
       ) : (
@@ -48,10 +52,10 @@ export default function AlumnoCoursesPage() {
               {/* HEADER */}
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-gray-100 pb-3">
                 <h2 className="text-xl font-semibold text-gray-800">
-                  {c.titulo || "Untitled course"}
+                  {c.titulo || t("courses.untitled")}
                 </h2>
                 <span className="text-xs font-medium bg-blue-50 text-blue-700 px-3 py-1 rounded-full">
-                  {c.categoria || "General"}
+                  {c.categoria || t("courses.generalCategory")}
                 </span>
               </div>
 
@@ -59,12 +63,12 @@ export default function AlumnoCoursesPage() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4 text-sm text-gray-600">
                 <InfoItem
                   icon={<FiBookOpen />}
-                  label="Units"
+                  label={t("courses.units")}
                   value={c.unidades?.length || 0}
                 />
                 <InfoItem
                   icon={<FiClock />}
-                  label="Duration"
+                  label={t("courses.duration")}
                   value={`${c.unidades?.reduce(
                     (acc: number, u: any) => acc + (u.duracion || 0),
                     0
@@ -72,13 +76,13 @@ export default function AlumnoCoursesPage() {
                 />
                 <InfoItem
                   icon={<FiTrendingUp />}
-                  label="Progress"
+                  label={t("courses.progress")}
                   value={`${c.progressPercent || 0}%`}
                 />
                 <InfoItem
                   icon={<FiUser />}
-                  label="Teacher"
-                  value={c.profesorNombre || "N/A"}
+                  label={t("courses.teacher")}
+                  value={c.profesorNombre || t("courses.noTeacher")}
                 />
               </div>
 
@@ -86,7 +90,10 @@ export default function AlumnoCoursesPage() {
               <div className="mt-5">
                 <div className="flex justify-between text-xs text-gray-500 mb-1">
                   <span>
-                    {c.completedCount}/{c.totalLessons} lessons completed
+                    {t("courses.lessonsCompleted", {
+                      done: c.completedCount,
+                      total: c.totalLessons,
+                    })}
                   </span>
                   <span>{c.progressPercent}%</span>
                 </div>
@@ -104,14 +111,17 @@ export default function AlumnoCoursesPage() {
                   onClick={() => router.push(`/material-academico/${c.id}`)}
                   className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg px-6 py-2 text-sm"
                 >
-                  {c.progressPercent >= 100 ? "Review Course" : "Continue"}
+                  {c.progressPercent >= 100
+                    ? t("courses.review")
+                    : t("courses.continue")}
                 </Button>
+
                 <Button
                   variant="outline"
                   onClick={() => router.push(`/material-academico/${c.id}`)}
                   className="border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg px-6 py-2 text-sm"
                 >
-                  View Details
+                  {t("courses.viewDetails")}
                 </Button>
               </div>
             </div>

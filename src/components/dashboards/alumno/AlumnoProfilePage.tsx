@@ -8,9 +8,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import SuccessModal from "@/components/ui/SuccessModal";
+import { useI18n } from "@/contexts/I18nContext";
+
 
 export default function AlumnoProfilePage() {
   const { user, userProfile, authReady, setUserProfile  } = useAuth();
+  const { setLang, t } = useI18n();
+
   const [loading, setLoading] = useState(true);
   const [showSuccess, setShowSuccess] = useState(false);
 
@@ -93,13 +97,18 @@ export default function AlumnoProfilePage() {
       { merge: true }
     );
 
-    // 2) Actualizar userProfile en memoria (MUY IMPORTANTE)
+    // 2) Actualizar userProfile en memoria
     setUserProfile((prev: any) => ({
       ...prev,
       ...form,
     }));
 
-    // 3) Modal de éxito
+    // ⭐⭐⭐ 3) ACTUALIZAR IDIOMA DE i18n (posición correcta)
+    if (form.learningLanguage) {
+      setLang(form.learningLanguage);   // ← ESTO ERA LO QUE FALTABA
+    }
+
+    // 4) Modal
     setShowSuccess(true);
     setTimeout(() => setShowSuccess(false), 2000);
 
@@ -110,6 +119,7 @@ export default function AlumnoProfilePage() {
 };
 
 
+
   if (!authReady || loading)
     return <div className="p-8 text-gray-500">Cargando perfil…</div>;
 
@@ -117,19 +127,19 @@ export default function AlumnoProfilePage() {
     <>
       <div className="min-h-screen bg-gray-50 p-8 space-y-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-xl font-bold">Mi Perfil</h1>
+          <h1 className="text-xl font-bold">{t("profile.title")}</h1>
           <Button
             onClick={handleSave}
             className="bg-blue-600 text-white flex items-center gap-2"
           >
-            <FiEdit2 /> Guardar cambios
+            <FiEdit2 />{t("profile.save")}
           </Button>
         </div>
 
         {/* CARD DATOS PERSONALES */}
         <div className="bg-white rounded-xl shadow p-6 space-y-4">
           <h2 className="font-semibold text-gray-700 flex items-center gap-2">
-            <FiUser /> Datos personales
+            <FiUser /> {t("profile.personalHeader")}
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -137,21 +147,21 @@ export default function AlumnoProfilePage() {
               name="firstName"
               value={form.firstName}
               onChange={handleChange}
-              placeholder="Nombre"
+              placeholder={t("profile.placeholderFirstName")}
               className="border p-2 rounded"
             />
             <input
               name="lastName"
               value={form.lastName}
               onChange={handleChange}
-              placeholder="Apellido"
+              placeholder={t("profile.placeholderLastName")}
               className="border p-2 rounded"
             />
             <input
               name="dni"
               value={form.dni}
               onChange={handleChange}
-              placeholder="DNI"
+              placeholder={t("profile.placeholderDni")}
               className="border p-2 rounded"
             />
 
@@ -165,38 +175,39 @@ export default function AlumnoProfilePage() {
         {/* CARD APRENDIZAJE */}
         <div className="bg-white rounded-xl shadow p-6 space-y-4">
           <h2 className="font-semibold text-gray-700">
-            Configuración de aprendizaje
+            {t("profile.learningHeader")}
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Idioma */}
           <div>
-            <label className="text-sm text-gray-600">Idioma que estudiás</label>
+            <label className="text-sm text-gray-600">{t("profile.languageLabel")}</label>
             <select
               name="learningLanguage"
               value={form.learningLanguage}
               onChange={handleChange}
               className="w-full border p-2 rounded mt-1"
             >
-              <option value="" disabled hidden>Seleccionar…</option>
-              <option value="english">English</option>
-              <option value="portuguese">Portuguese</option>
-              <option value="spanish">Spanish</option>
-              <option value="italian">Italian</option>
-              <option value="french">French</option>
+              <option value="" disabled hidden>{t("profile.selectPlaceholder")}</option>
+              <option value="en">English</option>
+<option value="pt">Portuguese</option>
+<option value="es">Spanish</option>
+<option value="it">Italian</option>
+<option value="fr">French</option>
+
             </select>
           </div>
 
           {/* Nivel */}
           <div>
-            <label className="text-sm text-gray-600">Nivel CEFR</label>
+            <label className="text-sm text-gray-600">{t("profile.levelLabel")} </label>
             <select
               name="learningLevel"
               value={form.learningLevel}
               onChange={handleChange}
               className="w-full border p-2 rounded mt-1"
             >
-              <option value="" disabled hidden>Seleccionar…</option>
+              <option value="" disabled hidden>{t("profile.selectPlaceholder")}</option>
               <option value="A1">A1 – Beginner</option>
               <option value="A2">A2 – Elementary</option>
               <option value="B1">B1 – Intermediate</option>
@@ -210,7 +221,7 @@ export default function AlumnoProfilePage() {
       </div>
 
       {/* MODAL */}
-      <SuccessModal open={showSuccess} message="Perfil actualizado correctamente" />
+      <SuccessModal open={showSuccess}message={t("profile.updatedSuccess")} />
     </>
   );
 }

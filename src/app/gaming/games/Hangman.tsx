@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   userPlayedToday,
@@ -8,9 +9,111 @@ import {
 } from "@/lib/games/attempts";
 
 type GameStatus = "playing" | "won" | "lost";
+const GAME_ID = "hangman";
 
-const GAME_ID = "hangman"; // 👈 importantísimo que sea siempre el mismo string
+// ===============================
+// 🪢 COMPONENTE HANGMAN ANIMADO
+// ===============================
+const HangmanDrawing = ({ wrongGuesses }: { wrongGuesses: number }) => {
+  return (
+    <div className="relative w-52 h-64 mx-auto">
 
+      {/* Poste */}
+      <motion.div
+        className="absolute left-4 top-0 w-1 h-56 bg-slate-700"
+        initial={{ height: 0 }}
+        animate={{ height: "14rem" }}
+        transition={{ duration: 0.6 }}
+      />
+
+      {/* Barra superior */}
+      <motion.div
+        className="absolute left-4 top-0 w-28 h-1 bg-slate-700"
+        initial={{ width: 0 }}
+        animate={{ width: "7rem" }}
+        transition={{ duration: 0.6, delay: 0.3 }}
+      />
+
+      {/* Soga */}
+      <motion.div
+        className="absolute left-[7.5rem] top-0 w-1 h-10 bg-slate-500"
+        initial={{ height: 0 }}
+        animate={{ height: "2.5rem" }}
+        transition={{ duration: 0.5, delay: 0.5 }}
+      />
+
+      {/* Cabeza */}
+      {wrongGuesses >= 1 && (
+        <motion.div
+          className="absolute left-[6.6rem] top-10 w-12 h-12 rounded-full bg-yellow-200 border-4 border-yellow-600"
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 200 }}
+        />
+      )}
+
+      {/* Cuerpo (con respiración 👇) */}
+      {wrongGuesses >= 2 && (
+        <motion.div
+          className="absolute left-[7.4rem] top-[4.7rem] w-1 h-16 bg-yellow-600"
+          animate={{ scaleY: [1, 1.05, 1] }}
+          transition={{ repeat: Infinity, duration: 2 }}
+        />
+      )}
+
+      {/* Brazos */}
+      {wrongGuesses >= 3 && (
+        <>
+          <motion.div
+            className="absolute left-[7.4rem] top-[5rem] w-1 h-10 bg-yellow-600 origin-top"
+            initial={{ rotate: -90 }}
+            animate={{ rotate: -40 }}
+            transition={{ type: "spring", stiffness: 150 }}
+          />
+          <motion.div
+            className="absolute left-[7.4rem] top-[5rem] w-1 h-10 bg-yellow-600 origin-top"
+            initial={{ rotate: 90 }}
+            animate={{ rotate: 40 }}
+            transition={{ type: "spring", stiffness: 150 }}
+          />
+        </>
+      )}
+
+      {/* Piernas */}
+      {wrongGuesses >= 5 && (
+        <>
+          <motion.div
+            className="absolute left-[7.4rem] top-[8.5rem] w-1 h-10 bg-yellow-600 origin-top"
+            initial={{ rotate: -90 }}
+            animate={{ rotate: -30 }}
+            transition={{ type: "spring", stiffness: 150 }}
+          />
+          <motion.div
+            className="absolute left-[7.4rem] top-[8.5rem] w-1 h-10 bg-yellow-600 origin-top"
+            initial={{ rotate: 90 }}
+            animate={{ rotate: 30 }}
+            transition={{ type: "spring", stiffness: 150 }}
+          />
+        </>
+      )}
+
+      {/* Carita muerte */}
+      {wrongGuesses >= 7 && (
+        <motion.div
+          className="absolute left-[6.7rem] top-10 text-4xl"
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+        >
+          💀
+        </motion.div>
+      )}
+    </div>
+  );
+};
+
+// ===============================
+// 🎮 COMPONENTE PRINCIPAL
+// ===============================
 export default function Hangman() {
   const { user, role } = useAuth();
 
@@ -22,11 +125,12 @@ export default function Hangman() {
   const [loadingWord, setLoadingWord] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
 
-  // 👇 nuevo: control de intentos
   const [blocked, setBlocked] = useState(false);
   const [checkingAttempt, setCheckingAttempt] = useState(true);
 
-  // 🔹 Al montar, si es alumno, revisar si ya jugó hoy
+  // ===============================
+  // 🔍 REVIEW INTENTO DIARIO
+  // ===============================
   useEffect(() => {
     const check = async () => {
       if (!user) {
@@ -34,14 +138,12 @@ export default function Hangman() {
         return;
       }
 
-      // admin y profesor → pueden jugar siempre
       if (role === "admin" || role === "profesor") {
         setBlocked(false);
         setCheckingAttempt(false);
         return;
       }
 
-      // alumno → mirar en Firestore
       const played = await userPlayedToday(user.uid, GAME_ID);
       if (played) setBlocked(true);
       setCheckingAttempt(false);
@@ -50,7 +152,9 @@ export default function Hangman() {
     void check();
   }, [user, role]);
 
-  // 👉 Función IA
+  // ===============================
+  // 📡 Pedir palabra IA
+  // ===============================
   const fetchWord = async () => {
     try {
       setLoadingWord(true);
@@ -63,9 +167,7 @@ export default function Hangman() {
       if (!res.ok) throw new Error("Request failed");
 
       const data: { word: string } = await res.json();
-
       if (!data.word) throw new Error("No word returned");
-
       setWord(data.word.toLowerCase());
     } catch (err) {
       console.error(err);
@@ -75,15 +177,15 @@ export default function Hangman() {
     }
   };
 
-  // cargar palabra inicial (solo si no está bloqueado)
   useEffect(() => {
-  if (!checkingAttempt && !blocked) {
-    void fetchWord();
-  }
-}, [checkingAttempt, blocked]);
+    if (!checkingAttempt && !blocked) {
+      void fetchWord();
+    }
+  }, [checkingAttempt, blocked]);
 
-
-  // estado del juego
+  // ===============================
+  // 🧠 Chequeo win/lose
+  // ===============================
   useEffect(() => {
     if (!word) return;
 
@@ -96,7 +198,7 @@ export default function Hangman() {
 
   const handleGuess = (letter: string) => {
     if (status !== "playing" || guessedLetters.includes(letter)) return;
-    if (blocked) return; // por las dudas
+    if (blocked) return;
 
     if (word.includes(letter)) {
       setGuessedLetters((prev) => [...prev, letter]);
@@ -105,22 +207,24 @@ export default function Hangman() {
     }
   };
 
-  // 🔹 Cuando termina la partida, si es alumno, marcamos el intento y bloqueamos
+  // ===============================
+  // 📝 Guardar intento cuando termina
+  // ===============================
   useEffect(() => {
     const markAttempt = async () => {
       if (!user) return;
-      if (role !== "alumno") return; // solo alumnos limitados
+      if (role !== "alumno") return;
       if (status === "playing") return;
 
       await updateUserGameAttempt(user.uid, GAME_ID);
-      setBlocked(true); // 👈 importante: bloqueamos también en el front
+      setBlocked(true);
     };
-
     void markAttempt();
   }, [status, user, role]);
 
-  // === UI ===
-
+  // ===============================
+  // LOADING + BLOQUEOS
+  // ===============================
   if (checkingAttempt) {
     return (
       <div className="w-full h-full flex items-center justify-center py-32">
@@ -133,9 +237,7 @@ export default function Hangman() {
     return (
       <div className="py-20 text-center text-slate-600">
         <h2 className="text-2xl font-bold mb-3">Ya jugaste hoy a Hangman 🎮</h2>
-        <p className="text-slate-500">
-          Tenés 1 partida por día. Podés volver a jugar mañana.
-        </p>
+        <p className="text-slate-500">Volvé mañana para seguir jugando.</p>
       </div>
     );
   }
@@ -162,17 +264,9 @@ export default function Hangman() {
     );
   }
 
-  const stages = [
-    "",
-    "🪢",
-    "🪢\n😐",
-    "🪢\n😐\n | ",
-    "🪢\n😐\n/| ",
-    "🪢\n😐\n/|\\",
-    "🪢\n😵\n/|\\\n/ ",
-    "🪢\n😵\n/|\\\n/ \\",
-  ];
-
+  // ===============================
+  // UI
+  // ===============================
   const displayWord =
     word &&
     word
@@ -181,28 +275,48 @@ export default function Hangman() {
       .join(" ");
 
   return (
-    <div className="flex flex-col items-center justify-center space-y-8 text-center">
-      <div className="whitespace-pre text-4xl leading-tight text-slate-800 font-mono">
-        {stages[wrongGuesses]}
-      </div>
+    <div className="flex flex-col items-center justify-center space-y-8 p-8 bg-white/60 backdrop-blur-xl rounded-3xl shadow-xl border border-slate-200 max-w-xl mx-auto">
 
-      <h2 className="text-3xl font-bold">{displayWord}</h2>
-      <p className="text-slate-500 text-sm">Errores: {wrongGuesses} / 7</p>
+      {/* HANGMAN */}
+      <HangmanDrawing wrongGuesses={wrongGuesses} />
 
+      {/* PALABRA */}
+      <motion.h2
+        className="text-4xl font-bold tracking-widest font-mono"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+      >
+        {displayWord}
+      </motion.h2>
+
+      <p className="text-slate-500 text-sm mt-1">
+        ❌ {wrongGuesses} / 7 errores
+      </p>
+
+      {/* MENSAJES */}
       {status === "won" && (
-        <p className="text-emerald-600 font-semibold text-lg">
+        <motion.p
+          className="text-emerald-500 font-semibold text-xl"
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+        >
           🎉 ¡Ganaste! La palabra era "{word}".
-        </p>
+        </motion.p>
       )}
 
       {status === "lost" && (
-        <p className="text-red-600 font-semibold text-lg">
+        <motion.p
+          className="text-red-500 font-semibold text-xl"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
           💀 Perdiste. La palabra era "{word}".
-        </p>
+        </motion.p>
       )}
 
+      {/* TECLADO */}
       {status === "playing" ? (
-        <div className="grid grid-cols-9 gap-2 max-w-xs">
+        <div className="grid grid-cols-9 gap-2 max-w-lg">
           {"abcdefghijklmnopqrstuvwxyz".split("").map((letter) => {
             const isGuessed = guessedLetters.includes(letter);
 
@@ -211,13 +325,14 @@ export default function Hangman() {
                 key={letter}
                 onClick={() => handleGuess(letter)}
                 disabled={isGuessed}
-                className={`rounded-lg border px-2 py-1 text-sm font-medium transition ${
-                  isGuessed
-                    ? "bg-slate-200 text-slate-400 cursor-not-allowed"
-                    : "bg-blue-600 text-white hover:bg-blue-700"
-                }`}
+                className={
+                  "px-3 py-2 rounded-lg text-lg font-semibold transition-all shadow-sm " +
+                  (isGuessed
+                    ? "bg-slate-300 text-slate-500 cursor-not-allowed"
+                    : "bg-blue-600 text-white hover:bg-blue-700 hover:scale-105")
+                }
               >
-                {letter}
+                {letter.toUpperCase()}
               </button>
             );
           })}

@@ -14,6 +14,8 @@ import {
   deleteDoc,
 } from "firebase/firestore";
 import { query, orderBy } from "firebase/firestore";
+import { useI18n } from "@/contexts/I18nContext";
+
 
 import {
   fetchUserFromBatchesByUid,
@@ -101,6 +103,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const [chatSessions, setChatSessions] = useState<any[]>([]);
   const [loadingChatSessions, setLoadingChatSessions] = useState(false);
+  const { setLang } = useI18n();
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [loadingActivity, setLoadingActivity] = useState(true);
+
 
 
   /* ==========================================================
@@ -147,6 +153,94 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+
+  async function loadRecentActivity(uid: string, profile: any, cursos: any[]) {
+  setLoadingActivity(true);
+
+  const final: any[] = [];
+
+  /* ------------------------------
+     1) ACTIVIDAD DE CURSOS
+  ------------------------------ */
+  for (const curso of cursos) {
+    const progreso = curso?.progreso?.byLesson || {};
+
+    Object.entries(progreso).forEach(([key, data]: any) => {
+      if (!data?.completedAt) return;
+
+      const [unitRaw, lessonRaw] = key.split("::");
+      const unit = unitRaw.replace("unit", "");
+      const lesson = lessonRaw.replace("lesson", "");
+
+      final.push({
+        type: "lesson",
+        message: `Completaste la lección ${lesson} de la unidad ${unit} del curso "${curso.titulo}"`,
+        date: new Date(data.completedAt),
+      });
+    });
+
+    if (Object.keys(progreso).length === 0) {
+      final.push({
+        type: "start",
+        message: `Iniciaste el curso "${curso.titulo}"`,
+        date: new Date(curso.createdAt || Date.now()),
+      });
+    }
+  }
+
+  /* ------------------------------
+     2) ACTIVIDAD DE JUEGOS
+  ------------------------------ */
+  try {
+    const batchRef = doc(db, "alumnos", profile.batchId);
+    const snap = await getDoc(batchRef);
+
+    if (snap.exists()) {
+      const data = snap.data();
+      const userData = data[profile.userKey];
+
+      if (userData?.gamingAttempts) {
+        const attempts = Object.entries(userData.gamingAttempts);
+
+        if (attempts.length > 0) {
+          const formattedNames = attempts.map(([raw]) =>
+            raw
+              .replace(/_/g, " ")
+              .split(" ")
+              .map(p => p.charAt(0).toUpperCase() + p.slice(1))
+              .join(" ")
+          );
+
+          const mostRecentDate = new Date(
+            Math.max(
+              ...attempts.map(([_, date]) => new Date(date).getTime())
+            )
+          );
+
+          final.push({
+            type: "gaming",
+            message: `
+              <span class="font-semibold text-blue-600">🎮 Gaming:</span>
+              Jugaste a ${formattedNames.join(", ")}
+            `,
+            date: mostRecentDate,
+          });
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Error leyendo gamingAttempts:", err);
+  }
+
+  /* ------------------------------
+     3) ordenar
+  ------------------------------ */
+  final.sort((a, b) => b.date.getTime() - a.date.getTime());
+
+  setRecentActivity(final);
+  setLoadingActivity(false);
+}
+
   /* ==========================================================
      🔹 Cargar cursos del alumno logueado
      ========================================================== */
@@ -155,6 +249,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
    ========================================================== */
 const loadMisCursos = async (uid: string) => {
   setLoadingCursos(true);
+
   try {
     const profile = await fetchUserFromBatchesByUid(uid);
     if (!profile) {
@@ -180,40 +275,40 @@ const loadMisCursos = async (uid: string) => {
     const cursosIds = alumno?.cursosAdquiridos || [];
     const progreso = alumno?.progreso || {};
 
+    // ⚠️ Importante: permitir gaming incluso si no tiene cursos
     if (!Array.isArray(cursosIds) || cursosIds.length === 0) {
-      setMisCursos([]);
+      setMisCursos([]);  // alumno nuevo sin cursos
       return;
     }
 
+    // Obtener todos los cursos
     const snapCursos = await getDocs(collection(db, "cursos"));
     const allCursos = snapCursos.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-    // Calcular progreso real por curso usando helper global
-const cursosAlumno: any[] = [];
+    const cursosAlumno: any[] = [];
 
-for (const id of cursosIds) {
-  const cursoSnap = await getDoc(doc(db, "cursos", id));
-  if (!cursoSnap.exists()) continue;
+    for (const id of cursosIds) {
+      const cursoSnap = await getDoc(doc(db, "cursos", id));
+      if (!cursoSnap.exists()) continue;
 
-  const curso = { id, ...cursoSnap.data() };
-  const prog = progreso?.[id]?.byLesson || {};
+      const curso = { id, ...cursoSnap.data() };
+      const prog = progreso?.[id]?.byLesson || {};
 
-  const { totalLessons, completedCount, progressPercent } =
-    getCourseProgressStats(prog, curso.unidades || curso.lecciones || []);
+      const { totalLessons, completedCount, progressPercent } =
+        getCourseProgressStats(prog, curso.unidades || curso.lecciones || []);
 
-  cursosAlumno.push({
-    ...curso,
-    progreso: { byLesson: prog },
-    progressPercent,
-    completedCount,
-    totalLessons,
-  });
-}
+      cursosAlumno.push({
+        ...curso,
+        progreso: { byLesson: prog },
+        progressPercent,
+        completedCount,
+        totalLessons,
+      });
+    }
 
-setMisCursos(cursosAlumno);
-
-
+    // ✔️ Establecer SOLO una vez
     setMisCursos(cursosAlumno);
+
   } catch (err) {
     console.error("❌ Error cargando cursos del alumno:", err);
     toast.error("Error cargando tus cursos");
@@ -221,6 +316,7 @@ setMisCursos(cursosAlumno);
     setLoadingCursos(false);
   }
 };
+
 
 
   /* ==========================================================
@@ -442,35 +538,41 @@ const getCourseProgress = async (uid: string, courseId: string) => {
      🔹 Listener de Auth
      ========================================================== */
   useEffect(() => {
-  console.log("[AuthContext] Montando listener...");
   const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
     setLoading(true);
 
     if (firebaseUser) {
-      console.log("👤 Usuario detectado:", firebaseUser.email);
       setUser(firebaseUser);
       await loadChatSessions(firebaseUser.uid);
 
       let profile = await fetchUserFromBatchesByUid(firebaseUser.uid);
 
       if (profile?.batchId && profile?.userKey) {
-  const batchRef = doc(db, "alumnos", profile.batchId);
-  const snap = await getDoc(batchRef);
+        const batchRef = doc(db, "alumnos", profile.batchId);
+        const snap = await getDoc(batchRef);
 
-  if (snap.exists()) {
-    const data = snap.data()[profile.userKey] || {};
+        if (snap.exists()) {
+          const data = snap.data()[profile.userKey] || {};
+          profile = {
+            ...profile,
+            ...data,
+          };
+        }
+      }
 
-    profile = {
-      ...profile,
-      ...data, // acá vienen firstName, lastName, lenguaje, nivel, DNI, lo que sea
-    };
-  }
+      // GUARDO EL PERFIL
+      setUserProfile(profile);
+
+      // ⬇️⬇️⬇️ **ESTE ES EL LUGAR CORRECTO**
+     if (profile?.learningLanguage) {
+  setLang(profile.learningLanguage);
+} else {
+  setLang("en");
 }
 
-setUserProfile(profile);
+      // ⬆️⬆️⬆️ ESTE EXACTO LUGAR
 
       if (!profile) {
-        console.warn("⚠️ Usuario no encontrado en batches, creando...");
         await addUserToBatch(firebaseUser, "alumno");
         profile = await fetchUserFromBatchesByUid(firebaseUser.uid);
       }
@@ -479,24 +581,24 @@ setUserProfile(profile);
       setRole(resolvedRole);
       setUserProfile(profile);
 
-      // 🔹 Carga base
       await loadAlumnos();
 
       if (resolvedRole === "alumno") {
         await loadMisCursos(firebaseUser.uid);
       } else {
-        // 🔹 Admin o profesor: cargamos cursos y profesores
         await Promise.all([
           loadAllCursos(),
           loadProfesores(),
         ]);
       }
     } else {
-      // 🔹 Logout
       setUser(null);
       setRole(null);
       setMisCursos([]);
       setUserProfile(null);
+
+      // En logout → forzar idioma default
+      setLang("en");
     }
 
     setLoading(false);
@@ -505,6 +607,31 @@ setUserProfile(profile);
 
   return () => unsubscribe();
 }, []);
+
+/* ==========================================================
+   🔥 Paso 3 — Cargar actividad cuando TODO esté listo
+========================================================== */
+useEffect(() => {
+  console.log("DEBUG → dependencia cambió", {
+    authReady,
+    user: !!user,
+    userProfile: !!userProfile,
+    role,
+    misCursos: misCursos.length,
+    loadingCursos
+  });
+
+  if (!authReady) return;
+  if (!user) return;
+  if (!userProfile?.batchId || !userProfile?.userKey) return;
+  if (role !== "alumno") return;
+  if (loadingCursos) return;
+
+  console.log("➡️ Ejecutando loadRecentActivity()");
+
+  void loadRecentActivity(user.uid, userProfile, misCursos);
+
+}, [authReady, user, userProfile, role, misCursos, loadingCursos]);
 
 
 
@@ -548,6 +675,14 @@ const value = useMemo(
     chatSessions,
     loadingChatSessions,
     loadChatSessions,
+    recentActivity,
+loadingActivity,
+reloadActivity: () => {
+  if (!user || !userProfile) return;
+  return loadRecentActivity(user.uid, userProfile, misCursos);
+},
+
+
 
     // --- Firestore & storage (opcional) ---
     firestore: db,
@@ -565,6 +700,8 @@ const value = useMemo(
     loadingCursos,
     loadingAllCursos,
     loadingProfesores,
+    recentActivity,
+    loadingActivity,
   ]
 );
 
