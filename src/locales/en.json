@@ -103,31 +103,111 @@
   "headerSubtitle": "Practice English with interactive games.",
 
   "play": "Play",
+  "backToHub": "Back to hub",
 
   "games": {
     "hangman": {
       "title": "Hangman",
-      "description": "Guess the word before it's too late."
+      "description": "Guess the word before it's too late.",
+       "loadingProfile": "Loading student language...",
+    "checkingAttempts": "Checking today's attempts...",
+    "alreadyPlayedTitle": "You already played today 🕹️",
+    "alreadyPlayedText": "Come back tomorrow to keep playing.",
+    "loadingWord": "Loading word...",
+    "errorFetching": "Couldn't fetch a word. Try again.",
+    "retry": "Retry",
+    "errorsCounter": "{{count}} / 7 errors",
+    "won": "🎉 You won! The word was \"{{word}}\".",
+    "lost": "💀 You lost. The word was \"{{word}}\".",
+    "playAgain": "Play again (AI)"
     },
     "wordScramble": {
       "title": "Word Scramble",
-      "description": "Rearrange the letters and discover the word."
+      "description": "Rearrange the letters and discover the word.",
+       "checking": "Checking today's attempts...",
+        "alreadyPlayedTitle": "You've already played today 🚫",
+        "alreadyPlayedText": "You get 1 game per day. Come back tomorrow 🙌",
+        "errorLoading": "Failed to fetch a word. Try again.",
+        "inputPlaceholder": "Type the correct word...",
+        "verify": "Check",
+        "incorrect": "❌ Incorrect. Try again.",
+        "won": "🎉 Correct! The word was: {{word}}",
+        "newWord": "New word (AI)",
+        "hintsTitle": "Hints",
+        "hints": {
+          "length": "📏 Length: {{count}} letters",
+          "firstLetter": "🔤 First letter: {{letter}}",
+          "lastLetter": "🔡 Last letter: {{letter}}",
+          "correctPositions": "🧩 Correct letters in place: {{pattern}}"
+        }
     },
     "wordle": {
       "title": "Wordle",
-      "description": "Guess the word in 6 attempts."
+      "description": "Guess the word in 6 attempts.",
+       "checking": "Checking today's attempts...",
+        "alreadyPlayedTitle": "You already played today 🎮",
+        "alreadyPlayedText": "You have 1 attempt per day. Come back tomorrow ✨",
+        "submit": "Submit",
+        "new": "New word",
+        "won": "🎉 Correct! The word was \"{{word}}\".",
+        "lost": "💀 You lost. The word was \"{{word}}\".",
+        "hint1": "Hint: it starts with {{letter}}",
+        "hint2": "Final hint: it's a common noun"
     },
     "emojiIdioms": {
       "title": "Emoji Idioms",
-      "description": "Interpret idioms using only emojis."
+      "description": "Interpret idioms using only emojis.",
+      "alreadyPlayedTitle": "You already played today 🎮",
+  "alreadyPlayedText": "Come back tomorrow to keep practicing.",
+  
+  "initialHint": "Initial hint",
+  "inputPlaceholder": "Type the idiom...",
+  "check": "Check",
+
+  "correct": "✔ Correct!",
+  "incorrect": "❌ Incorrect",
+
+  "answer": "Answer",
+  "tryAgain": "Keep trying… use the hints 👍",
+
+  "hints": "Hints",
+  "hintWords": "📏 Words: {{count}}",
+  "hintFirst": "🔤 First word: \"{{first}}\"",
+  "hintLast": "🔡 Last word: \"{{last}}\"",
+  "hintReveal": "🧩 In position: {{reveal}}"
     },
     "sentenceBuilder": {
       "title": "Sentence Builder",
-      "description": "Drag the words to form the correct sentence."
+      "description": "Drag the words to form the correct sentence.",
+       "instructions": "Drag the words to build the correct sentence.",
+  "checking": "Checking today’s attempts...",
+  "alreadyPlayedTitle": "You already played Sentence Builder today 🎮",
+  "alreadyPlayedText": "You have 1 attempt per day. Come back tomorrow ✨",
+  "check": "Check",
+  "correct": "🎉 Correct!",
+  "incorrect": "❌ Incorrect. Try again.",
+  "newSentence": "New sentence"
     },
     "errorFinder": {
       "title": "Error Finder",
-      "description": "Find and correct the grammatical error."
+      "description": "Find and correct the grammatical error.",
+      "checking": "Checking today's attempts...",
+    "alreadyPlayed": "You already played this exercise today.",
+    "comeBack": "Come back tomorrow to keep practicing ✨",
+    "loading": "Generating exercise...",
+    "instruction": "Tap the incorrect word and then correct it.",
+    "removeInstruction": "This word must be removed to correct the sentence.",
+    "removeButton": "Remove word",
+    "writeCorrect": "How is it written correctly?",
+    "inputPlaceholder": "Write the correction",
+    "verify": "Verify",
+    "correctTitle": "Correct!",
+    "correctRemove": "You needed to remove the word",
+    "correctReplace": "The correct form is",
+    "wrongTitle": "Incorrect.",
+    "wrongRemove": "The correct solution was to remove the word",
+    "wrongReplace": "The correct correction was",
+    "newExercise": "New exercise"
     }
   }
   },

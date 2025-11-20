@@ -65,7 +65,7 @@ const menuPersonal = [
         <h1 className="text-xl font-bold text-gray-800 tracking-tight">
           {t("sidebar.headerTitle")}
         </h1>
-        <p className="text-xs text-gray-500 mt-1">Portal del alumno</p>
+        <p className="text-xs text-gray-500 mt-1">{t("sidebar.headerSubtitle")} </p>
       </div>
 
       {/* NAVIGATION */}

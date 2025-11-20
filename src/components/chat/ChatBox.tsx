@@ -44,11 +44,26 @@ De quel sujet aimerais-tu parler aujourd’hui ?
 (Voyages, affaires, loisirs, nourriture, entretiens d'embauche...)`,
 };
 
+
+const languageKeyMap: Record<string, keyof typeof initialMessagesByLanguage> = {
+  en: "english",
+  es: "spanish",
+  pt: "portuguese",
+  it: "italian",
+  fr: "french",
+};
+
 export default function ChatBox() {
   const { userProfile, user } = useAuth();
 
   // Extraemos idioma y nivel del perfil
-  const language = userProfile?.learningLanguage || "english";
+// Código del alumno: en/es/pt/it/fr
+const rawLang = userProfile?.learningLanguage?.toLowerCase() || "en";
+
+// Clave correcta dentro del objeto initialMessagesByLanguage
+const language =
+  languageKeyMap[rawLang] ?? "english";
+
   const level = userProfile?.learningLevel;
 
   /* =============================================
@@ -74,12 +89,12 @@ export default function ChatBox() {
      💬 Mensajes del chat
   ============================================= */
   const [messages, setMessages] = useState([
-    {
-      role: "assistant",
-      content: initialMessagesByLanguage[language] 
-        || initialMessagesByLanguage["english"],
-    },
-  ]);
+  {
+    role: "assistant",
+    content: initialMessagesByLanguage[language],
+  },
+]);
+
 
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);

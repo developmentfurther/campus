@@ -103,31 +103,111 @@
   "headerSubtitle": "Pratiquez l'anglais avec des jeux interactifs.",
 
   "play": "Jouer",
+  "backToHub": "Retour au hub",
 
   "games": {
     "hangman": {
       "title": "Pendu",
-      "description": "Devinez le mot avant qu’il ne soit trop tard."
+      "description": "Devinez le mot avant qu’il ne soit trop tard.",
+      "loadingProfile": "Chargement de la langue de l’étudiant...",
+        "checkingAttempts": "Vérification des tentatives d’aujourd’hui...",
+        "alreadyPlayedTitle": "Tu as déjà joué aujourd’hui 🕹️",
+        "alreadyPlayedText": "Reviens demain pour continuer à jouer.",
+        "loadingWord": "Chargement du mot...",
+        "errorFetching": "Impossible de récupérer un mot. Réessaie.",
+        "retry": "Réessayer",
+        "errorsCounter": "{{count}} / 7 erreurs",
+        "won": "🎉 Gagné ! Le mot était \"{{word}}\".",
+        "lost": "💀 Perdu. Le mot était \"{{word}}\".",
+        "playAgain": "Rejouer (IA)"
     },
     "wordScramble": {
       "title": "Mots Mélangés",
-      "description": "Réorganisez les lettres et découvrez le mot."
+      "description": "Réorganisez les lettres et découvrez le mot.",
+      "checking": "Vérification des tentatives d'aujourd'hui...",
+        "alreadyPlayedTitle": "Tu as déjà joué aujourd'hui 🚫",
+        "alreadyPlayedText": "Tu as 1 partie par jour. Reviens demain 🙌",
+        "errorLoading": "Impossible d’obtenir un mot. Réessaie.",
+        "inputPlaceholder": "Écris le mot correct...",
+        "verify": "Vérifier",
+        "incorrect": "❌ Incorrect. Réessaie.",
+        "won": "🎉 Correct ! Le mot était : {{word}}",
+        "newWord": "Nouveau mot (IA)",
+        "hintsTitle": "Indices",
+        "hints": {
+          "length": "📏 Longueur : {{count}} lettres",
+          "firstLetter": "🔤 Première lettre : {{letter}}",
+          "lastLetter": "🔡 Dernière lettre : {{letter}}",
+          "correctPositions": "🧩 Lettres correctes à leur place : {{pattern}}"
+        }
     },
     "wordle": {
       "title": "Wordle",
-      "description": "Devinez le mot en 6 essais."
+      "description": "Devinez le mot en 6 essais.",
+       "checking": "Vérification des tentatives du jour...",
+        "alreadyPlayedTitle": "Tu as déjà joué aujourd'hui 🎮",
+        "alreadyPlayedText": "Tu as 1 essai par jour. Reviens demain ✨",
+        "submit": "Valider",
+        "new": "Nouveau mot",
+        "won": "🎉 Correct ! Le mot était \"{{word}}\".",
+        "lost": "💀 Perdu. Le mot était \"{{word}}\".",
+        "hint1": "Indice : ça commence par {{letter}}",
+        "hint2": "Indice final : c'est un nom commun"
     },
     "emojiIdioms": {
       "title": "Idiomes Emoji",
-      "description": "Interprétez des idioms en utilisant uniquement des emojis."
+      "description": "Interprétez des idioms en utilisant uniquement des emojis.",
+       "alreadyPlayedTitle": "Tu as déjà joué aujourd’hui 🎮",
+  "alreadyPlayedText": "Reviens demain pour continuer à pratiquer.",
+  
+  "initialHint": "Indice initial",
+  "inputPlaceholder": "Écris l’idiome...",
+  "check": "Vérifier",
+
+  "correct": "✔ Correct !",
+  "incorrect": "❌ Incorrect",
+
+  "answer": "Réponse",
+  "tryAgain": "Continue d’essayer… utilise les indices 👍",
+
+  "hints": "Indices",
+  "hintWords": "📏 Mots : {{count}}",
+  "hintFirst": "🔤 Premier mot : \"{{first}}\"",
+  "hintLast": "🔡 Dernier mot : \"{{last}}\"",
+  "hintReveal": "🧩 À la position : {{reveal}}"
     },
     "sentenceBuilder": {
       "title": "Constructeur de Phrases",
-      "description": "Faites glisser les mots pour former la phrase correcte."
+      "description": "Faites glisser les mots pour former la phrase correcte.",
+      "instructions": "Faites glisser les mots pour former la phrase correcte.",
+  "checking": "Vérification des tentatives d’aujourd’hui...",
+  "alreadyPlayedTitle": "Vous avez déjà joué à Sentence Builder aujourd’hui 🎮",
+  "alreadyPlayedText": "Vous avez 1 tentative par jour. Revenez demain ✨",
+  "check": "Vérifier",
+  "correct": "🎉 Correct !",
+  "incorrect": "❌ Incorrect. Réessayez.",
+  "newSentence": "Nouvelle phrase"
     },
     "errorFinder": {
       "title": "Chercheur d’Erreurs",
-      "description": "Trouvez et corrigez l’erreur grammaticale."
+      "description": "Trouvez et corrigez l’erreur grammaticale.",
+      "checking": "Vérification des tentatives d'aujourd'hui...",
+    "alreadyPlayed": "Tu as déjà joué à cet exercice aujourd'hui.",
+    "comeBack": "Reviens demain pour continuer à pratiquer ✨",
+    "loading": "Génération de l'exercice...",
+    "instruction": "Appuie sur le mot incorrect puis corrige-le.",
+    "removeInstruction": "Ce mot doit être supprimé pour corriger la phrase.",
+    "removeButton": "Supprimer le mot",
+    "writeCorrect": "Comment s’écrit-il correctement ?",
+    "inputPlaceholder": "Écris la correction",
+    "verify": "Vérifier",
+    "correctTitle": "Correct !",
+    "correctRemove": "Tu devais supprimer le mot",
+    "correctReplace": "La forme correcte est",
+    "wrongTitle": "Incorrect.",
+    "wrongRemove": "La solution correcte était de supprimer le mot",
+    "wrongReplace": "La correction correcte était",
+    "newExercise": "Nouvel exercice"
     }
   }
   },

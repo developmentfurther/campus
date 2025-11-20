@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useI18n } from "@/contexts/I18nContext";
 import {
   userPlayedToday,
   updateUserGameAttempt,
@@ -17,6 +18,7 @@ interface DragItem {
 const GAME_ID = "sentence_builder";
 
 export default function SentenceBuilder() {
+  const { t } = useI18n();
   const { user, role } = useAuth();
 
   const [original, setOriginal] = useState<string[]>([]);
@@ -26,14 +28,14 @@ export default function SentenceBuilder() {
   const [status, setStatus] = useState<GameStatus>("playing");
   const [loading, setLoading] = useState(true);
 
-  // === control de intentos diario (idéntico a Hangman)
+  // === control de intentos diario
   const [blocked, setBlocked] = useState(false);
   const [checkingAttempt, setCheckingAttempt] = useState(true);
 
   const [dragItem, setDragItem] = useState<DragItem | null>(null);
 
   // ======================================================
-  // FETCH EJERCICIO (solo si puede jugar)
+  // FETCH SENTENCE (IA + idioma)
   // ======================================================
   const fetchSentence = async () => {
     try {
@@ -41,7 +43,7 @@ export default function SentenceBuilder() {
       setSentence([]);
       setStatus("playing");
 
-      const res = await fetch("/api/games/sentence-builder");
+      const res = await fetch(`/api/games/sentence-builder?lang=${role === "alumno" ? "en" : "en"}`);
       const data = await res.json();
 
       setOriginal(data.words);
@@ -70,7 +72,6 @@ export default function SentenceBuilder() {
         return;
       }
 
-      // Alumno → verificar Firestore
       const played = await userPlayedToday(user.uid, GAME_ID);
       if (played) setBlocked(true);
 
@@ -81,7 +82,7 @@ export default function SentenceBuilder() {
   }, [user, role]);
 
   // ======================================================
-  // SI NO ESTÁ BLOQUEADO → cargar ejercicio
+  // Cargar ejercicio si NO está bloqueado
   // ======================================================
   useEffect(() => {
     if (!checkingAttempt && !blocked) {
@@ -102,12 +103,10 @@ export default function SentenceBuilder() {
 
     if (dragItem.from === "pool") {
       const word = pool[dragItem.index];
-
       const newPool = [...pool];
       newPool.splice(dragItem.index, 1);
 
       const newSentence = [...sentence];
-
       if (dropIndex === null) newSentence.push(word);
       else newSentence.splice(dropIndex, 0, word);
 
@@ -146,20 +145,18 @@ export default function SentenceBuilder() {
   const check = () => {
     if (status !== "playing") return;
 
-    const isCorrect =
-      sentence.join(" ").trim() === original.join(" ").trim();
-
+    const isCorrect = sentence.join(" ").trim() === original.join(" ").trim();
     setStatus(isCorrect ? "won" : "lost");
   };
 
   // ======================================================
-  // MARCAR INTENTO AL TERMINAR
+  // SAVE ATTEMPT
   // ======================================================
   useEffect(() => {
     const update = async () => {
       if (!user) return;
-      if (role !== "alumno") return; // solo alumnos limitados
-      if (status === "playing") return; // aún no terminó
+      if (role !== "alumno") return;
+      if (status === "playing") return;
 
       await updateUserGameAttempt(user.uid, GAME_ID);
       setBlocked(true);
@@ -174,7 +171,7 @@ export default function SentenceBuilder() {
   if (checkingAttempt) {
     return (
       <div className="py-20 text-center text-slate-600">
-        Verificando intentos de hoy...
+        {t("gaming.games.sentenceBuilder.checking")}
       </div>
     );
   }
@@ -183,10 +180,10 @@ export default function SentenceBuilder() {
     return (
       <div className="py-20 text-center text-slate-600 max-w-xl mx-auto">
         <h2 className="text-2xl font-bold mb-3">
-          Ya jugaste hoy Sentence Builder 🎮
+          {t("gaming.games.sentenceBuilder.alreadyPlayedTitle")}
         </h2>
         <p className="text-slate-500">
-          Tenés 1 intento por día. Volvé mañana ✨
+          {t("gaming.games.sentenceBuilder.alreadyPlayedText")}
         </p>
       </div>
     );
@@ -205,9 +202,12 @@ export default function SentenceBuilder() {
   // ======================================================
   return (
     <div className="max-w-xl mx-auto py-10 text-center space-y-8">
-      <h1 className="text-3xl font-bold text-slate-800">Sentence Builder</h1>
+      <h1 className="text-3xl font-bold text-slate-800">
+        {t("gaming.games.sentenceBuilder.title")}
+      </h1>
+
       <p className="text-slate-500 text-sm">
-        Drag the words to build the correct sentence.
+        {t("gaming.games.sentenceBuilder.instructions")}
       </p>
 
       {/* Sentence area */}
@@ -255,17 +255,19 @@ export default function SentenceBuilder() {
           disabled={sentence.length === 0}
           className="px-6 py-3 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-700 transition"
         >
-          Check
+          {t("gaming.games.sentenceBuilder.check")}
         </button>
       )}
 
       {status === "won" && (
-        <p className="text-emerald-600 font-semibold text-xl">🎉 Correct!</p>
+        <p className="text-emerald-600 font-semibold text-xl">
+          {t("gaming.games.sentenceBuilder.correct")}
+        </p>
       )}
 
       {status === "lost" && (
         <p className="text-red-500 font-semibold text-xl">
-          ❌ Incorrect. Try again.
+          {t("gaming.games.sentenceBuilder.incorrect")}
         </p>
       )}
 
@@ -274,7 +276,7 @@ export default function SentenceBuilder() {
           onClick={fetchSentence}
           className="px-5 py-2 rounded-xl shadow bg-slate-200 hover:bg-slate-300 text-slate-800"
         >
-          New sentence
+          {t("gaming.games.sentenceBuilder.newSentence")}
         </button>
       )}
     </div>

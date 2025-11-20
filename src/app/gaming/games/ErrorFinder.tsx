@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
+import { useI18n } from "@/contexts/I18nContext";
 import {
   userPlayedToday,
   updateUserGameAttempt,
@@ -19,18 +20,19 @@ interface ErrorData {
 const GAME_ID = "error_finder";
 
 export default function ErrorFinder() {
-  const { user, role } = useAuth();
+  const { userProfile, user, role } = useAuth();
+  const { t } = useI18n();
+
+  const lang = userProfile?.learningLanguage?.toLowerCase() || "en";
 
   const [data, setData] = useState<ErrorData | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<GameStatus>("selecting");
 
-  // Control de intentos
   const [blocked, setBlocked] = useState(false);
   const [checkingAttempt, setCheckingAttempt] = useState(true);
 
-  // UI
   const [errorWordSelected, setErrorWordSelected] = useState<string | null>(null);
   const [correctionInput, setCorrectionInput] = useState("");
 
@@ -44,7 +46,7 @@ export default function ErrorFinder() {
       setCorrectionInput("");
       setStatus("selecting");
 
-      const res = await fetch("/api/games/error-finder");
+      const res = await fetch(`/api/games/error-finder?lang=${lang}`);
       const json = await res.json();
       setData(json);
     } catch (err) {
@@ -55,7 +57,7 @@ export default function ErrorFinder() {
   };
 
   // ======================================================
-  // CHECK INTENTOS — FIRESTORE
+  // CHECK INTENTOS
   // ======================================================
   useEffect(() => {
     const check = async () => {
@@ -64,14 +66,12 @@ export default function ErrorFinder() {
         return;
       }
 
-      // Admin/profesor → sin límite
       if (role === "admin" || role === "profesor") {
         setBlocked(false);
         setCheckingAttempt(false);
         return;
       }
 
-      // Alumno → revisar Firestore
       const played = await userPlayedToday(user.uid, GAME_ID);
       if (played) setBlocked(true);
 
@@ -82,7 +82,7 @@ export default function ErrorFinder() {
   }, [user, role]);
 
   // ======================================================
-  // CARGAR EJERCICIO SI SE PUEDE JUGAR
+  // AUTO-CARGAR EJERCICIO
   // ======================================================
   useEffect(() => {
     if (!checkingAttempt && !blocked) {
@@ -91,7 +91,7 @@ export default function ErrorFinder() {
   }, [checkingAttempt, blocked]);
 
   // ======================================================
-  // CLICK DE PALABRA — SELECCIÓN
+  // SELECCIÓN DE PALABRA
   // ======================================================
   const handleWordClick = (word: string) => {
     if (status !== "selecting" || blocked) return;
@@ -101,7 +101,6 @@ export default function ErrorFinder() {
     if (word === data?.wrongWord) {
       setStatus("correcting");
     } else {
-      // palabra incorrecta elegida → pierde
       setStatus("lost");
     }
   };
@@ -120,7 +119,7 @@ export default function ErrorFinder() {
   };
 
   // ======================================================
-  // GUARDAR INTENTO CUANDO TERMINA
+  // GUARDAR INTENTO
   // ======================================================
   useEffect(() => {
     const mark = async () => {
@@ -136,13 +135,13 @@ export default function ErrorFinder() {
   }, [status, user, role]);
 
   // ======================================================
-  // UI — ESTADOS
+  // UI
   // ======================================================
 
   if (checkingAttempt) {
     return (
       <div className="py-20 text-center text-slate-600">
-        Verificando intentos de hoy...
+        {t("gaming.games.errorFinder.checking")}
       </div>
     );
   }
@@ -150,11 +149,11 @@ export default function ErrorFinder() {
   if (blocked && role === "alumno") {
     return (
       <div className="max-w-lg mx-auto py-16 text-center space-y-4">
-        <h1 className="text-3xl font-bold text-slate-800">Error Finder</h1>
-        <p className="text-slate-500">Ya jugaste hoy este ejercicio.</p>
-        <p className="text-slate-600 text-sm">
-          Volvé mañana para seguir practicando ✨
-        </p>
+        <h1 className="text-3xl font-bold text-slate-800">
+          {t("gaming.games.errorFinder.title")}
+        </h1>
+        <p className="text-slate-500">{t("gaming.games.errorFinder.alreadyPlayed")}</p>
+        <p className="text-slate-600 text-sm">{t("gaming.games.errorFinder.comeBack")}</p>
       </div>
     );
   }
@@ -163,21 +162,21 @@ export default function ErrorFinder() {
     return (
       <div className="py-24 text-center text-slate-700">
         <div className="animate-spin h-10 w-10 mx-auto border-4 border-blue-500 border-t-transparent rounded-full"></div>
-        <p className="mt-3">Generando ejercicio...</p>
+        <p className="mt-3">{t("gaming.games.errorFinder.loading")}</p>
       </div>
     );
   }
 
-  // ======================================================
-  // UI PRINCIPAL
-  // ======================================================
   const words = data.sentence.split(" ");
 
   return (
     <div className="max-w-xl mx-auto py-10 text-center space-y-8">
-      <h1 className="text-3xl font-bold text-slate-800">Error Finder</h1>
+      <h1 className="text-3xl font-bold text-slate-800">
+        {t("gaming.games.errorFinder.title")}
+      </h1>
+
       <p className="text-slate-500 text-sm mt-1">
-        Tocá la palabra incorrecta y luego corrígela.
+        {t("gaming.games.errorFinder.instruction")}
       </p>
 
       {/* Sentence */}
@@ -202,11 +201,7 @@ export default function ErrorFinder() {
                   }
                 `}
                 whileTap={{ scale: 0.9 }}
-                animate={
-                  isWrongChoice
-                    ? { x: [-4, 4, -4, 4, 0] }
-                    : {}
-                }
+                animate={isWrongChoice ? { x: [-4, 4, -4, 4, 0] } : {}}
               >
                 {word.replace(".", "")}
                 {word.endsWith(".") ? "." : ""}
@@ -216,60 +211,103 @@ export default function ErrorFinder() {
         </div>
       </div>
 
-      {/* Correction input */}
       <AnimatePresence>
-        {status === "correcting" && (
+        {status === "correcting" && data && (
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
             className="space-y-4"
           >
-            <p className="text-slate-700">¿Cómo se escribe correctamente?</p>
-            <input
-              value={correctionInput}
-              onChange={(e) => setCorrectionInput(e.target.value)}
-              className="block mx-auto border rounded-xl px-4 py-2 text-center"
-              placeholder="Escribe la corrección"
-            />
+            {/* Caso REMOVE */}
+            {data.correctWord === "remove" ? (
+              <>
+                <p className="text-slate-700">
+                  {t("gaming.games.errorFinder.removeInstruction")}
+                </p>
 
-            <button
-              onClick={checkCorrection}
-              className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition"
-            >
-              Verificar
-            </button>
+                <button
+                  onClick={() => setStatus("won")}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition"
+                >
+                  {t("gaming.games.errorFinder.removeButton")}
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-slate-700">
+                  {t("gaming.games.errorFinder.writeCorrect")}
+                </p>
+
+                <input
+                  value={correctionInput}
+                  onChange={(e) => setCorrectionInput(e.target.value)}
+                  className="block mx-auto border rounded-xl px-4 py-2 text-center"
+                  placeholder={t("gaming.games.errorFinder.inputPlaceholder") || ""}
+                />
+
+                <button
+                  onClick={checkCorrection}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition"
+                >
+                  {t("gaming.games.errorFinder.verify")}
+                </button>
+              </>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Result */}
+      {/* RESULTADO */}
       {status === "won" && (
-        <motion.p
+        <motion.div
           initial={{ scale: 0.5 }}
           animate={{ scale: 1 }}
           className="text-emerald-600 font-semibold text-xl"
         >
-          🎉 ¡Correcto! La palabra correcta era "{data.correctWord}".
-        </motion.p>
+          {t("gaming.games.errorFinder.correctTitle")} <br />
+
+          {data.correctWord === "remove" ? (
+            <>
+              {t("gaming.games.errorFinder.correctRemove")} <b>{data.wrongWord}</b>.
+            </>
+          ) : (
+            <>
+              {t("gaming.games.errorFinder.correctReplace")}{" "}
+              <b>{data.correctWord}</b>.
+            </>
+          )}
+        </motion.div>
       )}
 
       {status === "lost" && (
-        <motion.p
+        <motion.div
           initial={{ scale: 0.5 }}
           animate={{ scale: 1 }}
           className="text-red-500 font-semibold text-xl"
         >
-          ❌ Incorrecto. La corrección correcta era "{data.correctWord}".
-        </motion.p>
+          {t("gaming.games.errorFinder.wrongTitle")} <br />
+
+          {data.correctWord === "remove" ? (
+            <>
+              {t("gaming.games.errorFinder.wrongRemove")} <b>{data.wrongWord}</b>.
+            </>
+          ) : (
+            <>
+              {t("gaming.games.errorFinder.wrongReplace")}{" "}
+              <b>{data.correctWord}</b>.
+            </>
+          )}
+        </motion.div>
       )}
 
+      {/* BOTÓN ADMIN */}
       {(role === "admin" || role === "profesor") && (
         <button
           onClick={fetchSentence}
           className="mt-6 px-6 py-3 rounded-xl bg-slate-200 text-slate-800 hover:bg-slate-300"
         >
-          Nuevo ejercicio
+          {t("gaming.games.errorFinder.newExercise")}
         </button>
       )}
     </div>

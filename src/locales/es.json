@@ -103,31 +103,112 @@
   "headerSubtitle": "Practicá inglés con juegos interactivos.",
 
   "play": "Jugar",
+  "backToHub": "Volver al hub",
+  
 
   "games": {
     "hangman": {
       "title": "Ahorcado",
-      "description": "Adiviná la palabra antes de que sea demasiado tarde."
+      "description": "Adiviná la palabra antes de que sea demasiado tarde.",
+       "loadingProfile": "Cargando idioma del alumno...",
+        "checkingAttempts": "Verificando intentos de hoy...",
+        "alreadyPlayedTitle": "Ya jugaste hoy 🕹️",
+        "alreadyPlayedText": "Volvé mañana para seguir jugando.",
+        "loadingWord": "Cargando palabra...",
+        "errorFetching": "No se pudo obtener una palabra. Intenta nuevamente.",
+        "retry": "Reintentar",
+        "errorsCounter": "{{count}} / 7 errores",
+        "won": "🎉 ¡Ganaste! La palabra era \"{{word}}\".",
+        "lost": "💀 Perdiste. La palabra era \"{{word}}\".",
+        "playAgain": "Jugar de nuevo (IA)"
     },
     "wordScramble": {
       "title": "Word Scramble",
-      "description": "Ordená las letras y descubrí la palabra."
+      "description": "Ordená las letras y descubrí la palabra.",
+        "checking": "Verificando intentos de hoy...",
+        "alreadyPlayedTitle": "Ya jugaste hoy 🚫",
+        "alreadyPlayedText": "Tenés 1 partida por día. Volvé mañana 🙌",
+        "errorLoading": "No se pudo obtener una palabra. Intenta nuevamente.",
+        "inputPlaceholder": "Escribe la palabra correcta...",
+        "verify": "Verificar",
+        "incorrect": "❌ Incorrecto. Intentá otra vez.",
+        "won": "🎉 ¡Correcto! La palabra era: {{word}}",
+        "newWord": "Nueva palabra (IA)",
+        "hintsTitle": "Pistas",
+        "hints": {
+          "length": "📏 Longitud: {{count}} letras",
+          "firstLetter": "🔤 Primera letra: {{letter}}",
+          "lastLetter": "🔡 Última letra: {{letter}}",
+          "correctPositions": "🧩 Letras correctas en posición: {{pattern}}"
+        }
     },
     "wordle": {
       "title": "Wordle",
-      "description": "Adiviná la palabra en 6 intentos."
+      "description": "Adiviná la palabra en 6 intentos.",
+       "checking": "Verificando intentos de hoy...",
+        "alreadyPlayedTitle": "Ya jugaste hoy 🎮",
+        "alreadyPlayedText": "Tenés 1 partida por día. Volvé mañana ✨",
+        "submit": "Enviar",
+        "new": "Nueva palabra",
+        "won": "🎉 ¡Correcto! La palabra era \"{{word}}\".",
+        "lost": "💀 Perdiste. La palabra era \"{{word}}\".",
+        "hint1": "Pista: empieza con {{letter}}",
+        "hint2": "Pista final: es un sustantivo común"
     },
     "emojiIdioms": {
       "title": "Emoji Idioms",
-      "description": "Interpretá idioms usando solo emojis."
+      "description": "Interpretá idioms usando solo emojis.",
+      "alreadyPlayedTitle": "Ya jugaste hoy 🎮",
+  "alreadyPlayedText": "Volvé mañana para seguir practicando.",
+  
+  "initialHint": "Pista inicial",
+  "inputPlaceholder": "Escribe el idiom...",
+  "check": "Comprobar",
+
+  "correct": "✔ ¡Correcto!",
+  "incorrect": "❌ No es correcto",
+
+  "answer": "Respuesta",
+  "tryAgain": "Seguí intentando… usá las pistas 👍",
+
+  "hints": "Pistas",
+  "hintWords": "📏 Palabras: {{count}}",
+  "hintFirst": "🔤 Primera palabra: \"{{first}}\"",
+  "hintLast": "🔡 Última palabra: \"{{last}}\"",
+  "hintReveal": "🧩 En posición: {{reveal}}"
     },
     "sentenceBuilder": {
       "title": "Sentence Builder",
-      "description": "Arrastrá palabras para formar la oración correcta."
+      "description": "Arrastrá palabras para formar la oración correcta.",
+      "instructions": "Arrastrá las palabras para formar la oración correcta.",
+  "checking": "Verificando intentos de hoy...",
+  "alreadyPlayedTitle": "Ya jugaste hoy Sentence Builder 🎮",
+  "alreadyPlayedText": "Tenés 1 intento por día. Volvé mañana ✨",
+  "check": "Comprobar",
+  "correct": "🎉 ¡Correcto!",
+  "incorrect": "❌ Incorrecto. Intentá otra vez.",
+  "newSentence": "Nueva oración"
     },
     "errorFinder": {
       "title": "Error Finder",
-      "description": "Encontrá y corregí el error gramatical."
+      "description": "Encontrá y corregí el error gramatical.",
+      "checking": "Verificando intentos de hoy...",
+    "alreadyPlayed": "Ya jugaste hoy este ejercicio.",
+    "comeBack": "Volvé mañana para seguir practicando ✨",
+    "loading": "Generando ejercicio...",
+    "instruction": "Tocá la palabra incorrecta y luego corrígela.",
+    "removeInstruction": "Esta palabra debe eliminarse para corregir la frase.",
+    "removeButton": "Eliminar palabra",
+    "writeCorrect": "¿Cómo se escribe correctamente?",
+    "inputPlaceholder": "Escribe la corrección",
+    "verify": "Verificar",
+    "correctTitle": "¡Correcto!",
+    "correctRemove": "Tenías que eliminar la palabra",
+    "correctReplace": "La forma correcta es",
+    "wrongTitle": "Incorrecto.",
+    "wrongRemove": "La corrección adecuada era eliminar la palabra",
+    "wrongReplace": "La corrección correcta era",
+    "newExercise": "Nuevo ejercicio"
     }
   }
   },

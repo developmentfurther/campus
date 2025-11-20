@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FiCheck, FiX } from "react-icons/fi";
 import { useAuth } from "@/contexts/AuthContext";
+import { useI18n } from "@/contexts/I18nContext";
 import { userPlayedToday, updateUserGameAttempt } from "@/lib/games/attempts";
+import { getIdiomsBank, IdiomItem } from "@/lib/games/idioms";
 
 // Normaliza textos
 function norm(s: string) {
@@ -14,45 +15,16 @@ function norm(s: string) {
     .trim();
 }
 
-type Item = {
-  emojis: string;
-  answers: string[];
-  hint?: string;
-  explain?: string;
-};
-
-const BANK: Item[] = [
-  { emojis: "🌧️🐱🐶", answers: ["raining cats and dogs"], hint: "Lluvia muy fuerte", explain: "Lloviendo intensamente." },
-  { emojis: "🪙🗣️", answers: ["a penny for your thoughts"], hint: "¿Qué estás pensando?", explain: "Pedir opinión o pensamiento." },
-  { emojis: "🧊😄", answers: ["break the ice"], hint: "Romper la tensión", explain: "Empezar conversación." },
-  { emojis: "🧂🥚", answers: ["take it with a grain of salt", "take it with a pinch of salt"], hint: "No literal", explain: "Ser escéptico." },
-  { emojis: "🛶🌊", answers: ["in the same boat"], hint: "Misma situación", explain: "Compartir el mismo problema." },
-  { emojis: "🧁🍰", answers: ["piece of cake"], hint: "Muy fácil", explain: "Algo sencillo." },
-  { emojis: "🐘🛋️", answers: ["the elephant in the room"], hint: "Evidente pero ignorado", explain: "Problema que nadie discute." },
-  { emojis: "⏰💰", answers: ["time is money"], hint: "Tiempo valioso", explain: "El tiempo es oro." },
-  { emojis: "🧵🔙", answers: ["back to square one"], hint: "Empezar otra vez", explain: "Volver al inicio." },
-  { emojis: "🤐🗝️", answers: ["keep it under your hat"], hint: "No lo cuentes", explain: "Guardar un secreto." },
-  { emojis: "🌬️🔥", answers: ["add fuel to the fire"], hint: "Empeorar", explain: "Agravar la situación." },
-  { emojis: "📚🧠", answers: ["hit the books"], hint: "Estudiar fuerte", explain: "Ponerse a estudiar." },
-  { emojis: "🛏️🌙", answers: ["call it a night"], hint: "Terminar por hoy", explain: "Irse a descansar." },
-  { emojis: "🐦🐦🤏", answers: ["kill two birds with one stone"], hint: "2 en 1", explain: "Resolver dos cosas a la vez." },
-  { emojis: "🎭😐", answers: ["face the music"], hint: "Aceptar culpa", explain: "Enfrentar consecuencias." },
-  { emojis: "💤💡", answers: ["wake-up call"], hint: "Momento clave", explain: "Realización importante." },
-  { emojis: "🧱🛣️", answers: ["hit a wall"], hint: "Bloqueo", explain: "No poder avanzar." },
-  { emojis: "🔁🗣️", answers: ["get the ball rolling"], hint: "Empezar", explain: "Iniciar actividad." },
-  { emojis: "🩹💔", answers: ["break someone's heart"], hint: "Gran tristeza", explain: "Lastimar emocionalmente." },
-  { emojis: "😮‍💨🫥", answers: ["lose your touch"], hint: "Perder habilidad", explain: "Ya no sos tan bueno." },
-  { emojis: "🧠⚡", answers: ["think outside the box"], hint: "Creativo", explain: "Ideas nuevas." },
-  { emojis: "👀🧵", answers: ["keep an eye on"], hint: "Vigilar", explain: "Prestar atención." },
-  { emojis: "🦴🐶", answers: ["throw someone a bone"], hint: "Ayudar un poco", explain: "Dar concesión pequeña." },
-  { emojis: "🧗‍♂️💼", answers: ["climb the corporate ladder"], hint: "Progresar", explain: "Ascender profesionalmente." },
-  { emojis: "🫥🤝", answers: ["bend over backwards"], hint: "Gran esfuerzo", explain: "Sacrificio grande." },
-];
+type Item = IdiomItem;
 
 const GAME_ID = "idioms";
 
 export default function EmojiIdioms() {
-  const { user, role } = useAuth();
+  const { user, role, userProfile } = useAuth();
+  const { t } = useI18n();
+
+  const lang = userProfile?.learningLanguage?.toLowerCase() || "en";
+  const BANK = getIdiomsBank(lang);
 
   const [item, setItem] = useState<Item | null>(null);
   const [input, setInput] = useState("");
@@ -63,7 +35,7 @@ export default function EmojiIdioms() {
   const [checkingAttempt, setCheckingAttempt] = useState(true);
 
   // ===========================================
-  // 1️⃣ Verificación del intento diario
+  // Verificación de intento diario
   // ===========================================
   useEffect(() => {
     const check = async () => {
@@ -84,17 +56,20 @@ export default function EmojiIdioms() {
   }, [user, role]);
 
   // ===========================================
-  // 2️⃣ Generar idiom solo si NO está bloqueado
+  // Cargar idiom al cambiar idioma o estado
   // ===========================================
   useEffect(() => {
     if (!checkingAttempt && !blocked) {
       const random = BANK[Math.floor(Math.random() * BANK.length)];
       setItem(random);
+      setInput("");
+      setRevealed(false);
+      setWrongCount(0);
     }
-  }, [checkingAttempt, blocked]);
+  }, [checkingAttempt, blocked, lang]);
 
   // ===========================================
-  // 3️⃣ Handler principal
+  // Handler principal
   // ===========================================
   const correct =
     revealed && item && item.answers.some((a) => norm(a) === norm(input));
@@ -110,7 +85,7 @@ export default function EmojiIdioms() {
   };
 
   // ===========================================
-  // 4️⃣ Guardar intento si acertó
+  // Guardar intento si acierta
   // ===========================================
   useEffect(() => {
     const save = async () => {
@@ -129,20 +104,32 @@ export default function EmojiIdioms() {
   }, [revealed, item, user, role]);
 
   // ===========================================
-  // 5️⃣ Pistas progresivas
+  // Pistas progresivas
   // ===========================================
   const hints: string[] = [];
 
   if (item) {
     if (wrongCount >= 1)
-      hints.push(`📏 Palabras: ${item.answers[0].split(" ").length}`);
+      hints.push(
+        t("gaming.games.emojiIdioms.hintWords", {
+          count: item.answers[0].split(" ").length,
+        })
+      );
 
     if (wrongCount >= 2)
-      hints.push(`🔤 Primera palabra: "${item.answers[0].split(" ")[0]}"`);
+      hints.push(
+        t("gaming.games.emojiIdioms.hintFirst", {
+          first: item.answers[0].split(" ")[0],
+        })
+      );
 
     if (wrongCount >= 3) {
       const parts = item.answers[0].split(" ");
-      hints.push(`🔡 Última palabra: "${parts[parts.length - 1]}"`);
+      hints.push(
+        t("gaming.games.emojiIdioms.hintLast", {
+          last: parts[parts.length - 1],
+        })
+      );
     }
 
     if (wrongCount >= 4) {
@@ -155,41 +142,48 @@ export default function EmojiIdioms() {
         )
         .join(" ");
 
-      hints.push(`🧩 En posición: ${reveal}`);
+      hints.push(
+        t("gaming.games.emojiIdioms.hintReveal", {
+          reveal,
+        })
+      );
     }
   }
 
   // ===========================================
-  // 6️⃣ UI – Estados iniciales
+  // UI – Estados iniciales
   // ===========================================
-
   if (checkingAttempt) {
     return (
       <div className="w-full h-full flex items-center justify-center py-32">
         <div className="animate-spin h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full" />
       </div>
-    )
+    );
   }
 
   if (blocked && role === "alumno") {
     return (
       <div className="py-20 text-center">
-        <h2 className="text-2xl font-bold mb-3">Ya jugaste hoy 🎮</h2>
-        <p className="text-slate-500">Volvé mañana.</p>
+        <h2 className="text-2xl font-bold mb-3">
+          {t("gaming.games.emojiIdioms.alreadyPlayedTitle")}
+        </h2>
+        <p className="text-slate-500">
+          {t("gaming.games.emojiIdioms.alreadyPlayedText")}
+        </p>
       </div>
     );
   }
 
   if (!item) {
-    return(
+    return (
       <div className="w-full h-full flex items-center justify-center py-32">
         <div className="animate-spin h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full" />
       </div>
-    )
+    );
   }
 
   // ===========================================
-  // 7️⃣ UI – Juego principal
+  // UI – Juego principal
   // ===========================================
   return (
     <div className="max-w-2xl mx-auto px-6 py-8">
@@ -197,7 +191,7 @@ export default function EmojiIdioms() {
         <div className="text-5xl text-center mb-4">{item.emojis}</div>
 
         <p className="text-center text-sm text-slate-500 mb-4">
-          Pista inicial: {item.hint}
+          {t("gaming.games.emojiIdioms.initialHint")}: {item.hint}
         </p>
 
         <div className="flex gap-2">
@@ -205,7 +199,7 @@ export default function EmojiIdioms() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             disabled={correct}
-            placeholder="Escribe el idiom..."
+            placeholder={t("gaming.games.emojiIdioms.inputPlaceholder")}
             className="flex-1 border p-3 rounded-lg"
             onKeyDown={(e) => e.key === "Enter" && onCheck()}
           />
@@ -219,11 +213,10 @@ export default function EmojiIdioms() {
                 : "bg-blue-600 hover:bg-blue-700"
             }`}
           >
-            Comprobar
+            {t("gaming.games.emojiIdioms.check")}
           </button>
         </div>
 
-        {/* Resultado */}
         {revealed && (
           <div
             className={`mt-6 p-4 rounded-lg border ${
@@ -232,13 +225,15 @@ export default function EmojiIdioms() {
                 : "bg-rose-50 border-rose-300"
             }`}
           >
-            {correct ? "✔ ¡Correcto!" : "❌ No es correcto"}
+            {correct
+              ? t("gaming.games.emojiIdioms.correct")
+              : t("gaming.games.emojiIdioms.incorrect")}
 
-            {/* Respuesta solo si acierta */}
             {correct && (
               <>
                 <p className="mt-2 text-slate-700">
-                  Respuesta: {item.answers.join(", ")}
+                  {t("gaming.games.emojiIdioms.answer")}:{" "}
+                  {item.answers.join(", ")}
                 </p>
                 <p className="mt-2 text-slate-500">{item.explain}</p>
               </>
@@ -246,16 +241,17 @@ export default function EmojiIdioms() {
 
             {!correct && (
               <p className="mt-2 text-slate-500">
-                Seguí intentando… usá las pistas 👍
+                {t("gaming.games.emojiIdioms.tryAgain")}
               </p>
             )}
           </div>
         )}
 
-        {/* Pistas */}
         {hints.length > 0 && (
           <div className="mt-6 space-y-2">
-            <h4 className="font-semibold">Pistas</h4>
+            <h4 className="font-semibold">
+              {t("gaming.games.emojiIdioms.hints")}
+            </h4>
             {hints.map((h, i) => (
               <p key={i} className="bg-slate-100 p-2 rounded text-sm">
                 {h}

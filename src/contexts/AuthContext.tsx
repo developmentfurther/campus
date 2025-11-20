@@ -563,6 +563,29 @@ const getCourseProgress = async (uid: string, courseId: string) => {
       // GUARDO EL PERFIL
       setUserProfile(profile);
 
+  // =======================================================
+// UNIFICAR CAMPOS DE IDIOMA
+// =======================================================
+const resolvedLanguage =
+  profile?.learningLanguage || 
+  profile?.language ||
+  profile?.idioma ||
+  "en";
+
+profile = {
+  ...profile,
+  learningLanguage: resolvedLanguage,
+  language: resolvedLanguage,
+  idioma: resolvedLanguage,
+};
+setUserProfile(profile);
+setLang(resolvedLanguage);
+
+
+console.log("🌍 Idioma final del alumno:", resolvedLanguage);
+
+
+
       // ⬇️⬇️⬇️ **ESTE ES EL LUGAR CORRECTO**
      if (profile?.learningLanguage) {
   setLang(profile.learningLanguage);

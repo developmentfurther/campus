@@ -1,69 +1,59 @@
-// /app/api/games/scramble/route.ts
+import { NextResponse } from "next/server";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-export async function GET() {
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+
+export async function GET(req: Request) {
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const url = new URL(req.url);
+    const lang = (url.searchParams.get("lang") || "en").toLowerCase();
 
-    if (!apiKey) {
-      return Response.json(
-        { error: "Missing GEMINI_API_KEY" },
-        { status: 500 }
-      );
-    }
+    const MIN = 5;
+    const MAX = 12;
 
-    const model = "gemini-2.5-flash";
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `
-Generate ONE English word for a word scramble game.
+Generate ONE random word for a word scramble game.
 
 Rules:
-- Only one word
-- 5 to 12 letters
-- No spaces
-- No explanation
+- Language of the word: ${lang}
+- Word must have between ${MIN} and ${MAX} letters
+- It must be a common real word
+- No names, no slang, no verbs in conjugation (give dictionary base form if possible)
+- No explanations
 - Output ONLY the word in lowercase.
-`;
+    `;
 
-    const resp = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-      }),
-    });
+    const result = await model.generateContent(prompt);
 
-    const data: any = await resp.json();
+    let text = result.response.text().trim().toLowerCase();
 
-    const raw: string =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+    // Limpieza fuerte
+    text = text.replace(/[^a-záéíóúüñçàèìòùäëïöüœæ]/gi, ""); // soportar idiomas
 
-    // limpiar
-    let word =
-      raw
-        .toLowerCase()
-        .replace(/[^a-z\s]/g, "")
-        .split(/\s+/)
-        .find((w) => w.length >= 5 && w.length <= 12) || "";
-
-    // fallback
-    if (!word) {
-      const FALLBACK = [
-        "academy",
-        "teacher",
-        "learning",
-        "english",
-        "practice",
-        "student",
-        "language",
-      ];
-      word = FALLBACK[Math.floor(Math.random() * FALLBACK.length)];
-      console.warn("⚠️ Using fallback word for WordScramble:", word);
+    // Validar largo
+    if (text.length < MIN || text.length > MAX) {
+      throw new Error("AI returned invalid length");
     }
 
-    return Response.json({ word });
-  } catch (err: any) {
-    console.error("❌ Scramble API Error:", err);
-    return Response.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ word: text });
+  } catch (err) {
+    console.error("❌ WordScramble Endpoint Error:", err);
+
+    const FALLBACK = {
+      en: ["academy", "teacher", "learning", "practice", "student", "grammar"],
+      es: ["idiomas", "estudio", "practica", "clases", "escuela", "verbos"],
+      pt: ["idiomas", "estudar", "pratica", "escola", "alunos", "linguas"],
+      it: ["studio", "imparare", "scuola", "lingua", "grammatica", "verbi"],
+      fr: ["langues", "ecole", "etudier", "grammaire", "verbes", "cours"]
+    };
+
+    const lang = new URL(req.url).searchParams.get("lang") || "en";
+    const fallbackList = FALLBACK[lang] || FALLBACK["en"];
+
+    const word = fallbackList[Math.floor(Math.random() * fallbackList.length)];
+
+    return NextResponse.json({ word });
   }
 }
