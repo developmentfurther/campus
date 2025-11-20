@@ -219,12 +219,17 @@ export default function Hangman() {
      📝 Guardar intento al terminar
   ============================================================ */
   useEffect(() => {
-    if (!user || role !== "alumno") return;
-    if (status === "playing") return;
+  if (!user || role !== "alumno") return;
+  if (status === "playing") return;
 
+  // Esperar 5 segundos antes de bloquear
+  const timer = setTimeout(() => {
     updateUserGameAttempt(user.uid, GAME_ID);
     setBlocked(true);
-  }, [status]);
+  }, 5000);
+
+  return () => clearTimeout(timer);
+}, [status, user, role]);
 
   /* ============================================================
      ESTADOS UI
