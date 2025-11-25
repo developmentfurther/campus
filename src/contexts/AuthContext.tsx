@@ -129,29 +129,38 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
      🔹 Cargar alumnos (para admin o profesor) => Lee todos los documentos en la coleccion alumnos
      ========================================================== */
   const loadAlumnos = async () => {
-    try {
-      const alumnosRef = collection(db, "alumnos");
-      const snap = await getDocs(alumnosRef);
-      const allUsers: any[] = [];
+  try {
+    const alumnosRef = collection(db, "alumnos");
+    const snap = await getDocs(alumnosRef);
+    const allUsers: any[] = [];
 
-      snap.forEach((batchDoc) => {
-        const data = batchDoc.data();
-        for (const key in data) {
-          if (key.startsWith("user_")) {
-            allUsers.push({
-              uid: data[key].uid,
-              email: data[key].email,
-              role: data[key].role,
-              batchId: batchDoc.id,
-            });
-          }
+    snap.forEach((batchDoc) => {
+      const data = batchDoc.data();
+      for (const key in data) {
+        if (key.startsWith("user_")) {
+          const u = data[key];
+
+          allUsers.push({
+            uid: u.uid,
+            email: u.email,
+            role: u.role,
+            batchId: batchDoc.id,
+            userKey: key,
+
+            // 🔥 CAMPOS IMPORTANTES QUE FALTABAN
+            learningLanguage: u.learningLanguage || u.idioma || "",
+            learningLevel: u.learningLevel || u.nivel || "",
+          });
         }
-      });
-      setAlumnos(allUsers);
-    } catch (err) {
-      console.error("❌ [AuthContext] Error cargando alumnos:", err);
-    }
-  };
+      }
+    });
+
+    setAlumnos(allUsers);
+  } catch (err) {
+    console.error("❌ [AuthContext] Error cargando alumnos:", err);
+  }
+};
+
 
 
   async function loadRecentActivity(uid: string, profile: any, cursos: any[]) {

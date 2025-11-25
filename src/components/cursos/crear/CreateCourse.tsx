@@ -135,8 +135,6 @@ interface Curso {
   capstone?: Capstone; // Will be added on save
   creadoEn?: Timestamp;
 
-  profesorNombre: string | null;
-
 
   // 🔹 Fechas de creación y actualización
   createdAt?: Timestamp | null;
@@ -174,32 +172,6 @@ export const uploadFile = async (path: string, file: File): Promise<string> => {
 };
 
 
-// 🔹 Crear profesor mínimo dentro de profesores/batch_1
-// 🔹 Crear profesor mínimo dentro de profesores/batch_1 (SAFE)
-async function crearProfesorMinimo(dbToUse: Firestore, datos: { nombre: string; apellido: string }) {
-  const batchRef = doc(dbToUse, "profesores", "batch_1");
-
-  const profesorId = `prof_${Date.now()}`;
-
-  // aseguramos que el documento exista
-  const snap = await getDoc(batchRef);
-  if (!snap.exists()) {
-    await setDoc(batchRef, {}); // crea el documento vacío
-  }
-
-  await updateDoc(batchRef, {
-    [profesorId]: {
-      nombre: datos.nombre,
-      apellido: datos.apellido,
-      email: "",
-      idioma: "",
-      nivel: "",
-      createdAt: serverTimestamp(),
-    },
-  });
-
-  return { id: profesorId };
-}
 
 
 
@@ -244,23 +216,7 @@ function CrearCurso({ onClose }: CrearCursoProps) {
 });
 
 
-  // --- Profesor asignado ---
-const [asignarProfesor, setAsignarProfesor] = useState<"ninguno" | "existente" | "nuevo">("ninguno");
 
-// Lista de profesores existentes (si los querés cargar)
-const [profesores, setProfesores] = useState<any[]>([]);
-
-// Datos de profesor nuevo
-const [nuevoProfesor, setNuevoProfesor] = useState({
-  nombre: "",
-  apellido: "",
-  email: "",
-  idioma: "",
-  nivel: "",
-});
-
-// Profesor existente seleccionado
-const [profesorSeleccionado, setProfesorSeleccionado] = useState<string>("");
 
 // Batch actual (ajustá según tu lógica real)
 const batchId = "batch_1"; // o tomalo desde contexto si lo tenés
@@ -272,6 +228,8 @@ const batchId = "batch_1"; // o tomalo desde contexto si lo tenés
   const [activeUnidad, setActiveUnidad] = useState<number>(0);
   const [activeUnitTab, setActiveUnitTab] = useState<"datos" | "lecciones" | "cierre">("datos"); // 'datos' | 'lecciones' | 'cierre'
   const [activeLeccion, setActiveLeccion] = useState<number>(0);
+  const [filterIdioma, setFilterIdioma] = useState("");
+  const [filterNivel, setFilterNivel] = useState("");
 
   /* =========================
      Exam & Capstone (parity)
@@ -292,7 +250,6 @@ const batchId = "batch_1"; // o tomalo desde contexto si lo tenés
   /* =========================
      Students (UI)
      ========================= */
-  const [searchAlumno, setSearchAlumno] = useState<string>("");
 
   /* =========================
      Handlers - Course
@@ -511,40 +468,21 @@ async function uploadToImgur(file: File): Promise<string | null> {
     setCurso((p) => ({ ...p, cursantes: [] }));
   };
 
-  const filteredAlumnos: Alumno[] = useMemo(() => {
-    const q = (searchAlumno || "").toLowerCase().trim();
-    const list = Array.isArray(alumnos) ? alumnos : [];
-    if (!q) return list;
-    return list.filter((a) => {
-      const name = (a?.displayName || a?.nombre || "").toLowerCase();
-      const mail = (a?.email || "").toLowerCase();
-      return name.includes(q) || mail.includes(q);
-    });
-  }, [alumnos, searchAlumno]);
+const filteredAlumnos = useMemo(() => {
+  const list = Array.isArray(alumnos) ? alumnos : [];
 
- useEffect(() => {
-  const fetchProfesores = async () => {
-    try {
-      const docRef = doc(db, "profesores", "batch_1");
-      const snap = await getDoc(docRef);
-      if (snap.exists()) {
-        const data = snap.data() || {};
-        const list = Object.entries(data).map(([id, value]: [string, any]) => ({
-          id,
-          ...(value || {}),
-        }));
-        setProfesores(list);
-      } else {
-        console.warn("⚠️ No hay profesores en batch_1");
-        setProfesores([]);
-      }
-    } catch (err) {
-      console.error("❌ Error cargando profesores:", err);
-      setProfesores([]);
-    }
-  };
-  fetchProfesores();
-}, []);
+  return list.filter((a) => {
+    const lang = a.learningLanguage || a.idioma || "";
+    const lvl  = a.learningLevel || a.nivel || "";
+
+    const matchLang = filterIdioma ? lang.toLowerCase() === filterIdioma.toLowerCase() : true;
+    const matchLvl  = filterNivel ? lvl.toLowerCase() === filterNivel.toLowerCase() : true;
+
+    return matchLang && matchLvl;
+  });
+}, [alumnos, filterIdioma, filterNivel]);
+
+
 
 
   /* =========================
@@ -612,29 +550,6 @@ async function uploadToImgur(file: File): Promise<string | null> {
    try {
     console.log("🚀 [DEBUG] Iniciando bloque principal de creación...");
 
-    // 1️⃣ Profesor asignado (existente o nuevo)
-    let profesorIdFinal: string | null = null;
-    let profesorNombreFinal: string | null = null;
-
-    // EXISTENTE
-    if (asignarProfesor === "existente" && profesorSeleccionado) {
-      const p = profesores.find((x) => x.id === profesorSeleccionado);
-      if (p) {
-        profesorIdFinal = p.id;
-        profesorNombreFinal = `${p.nombre} ${p.apellido}`.trim();
-      }
-    }
-
-    // NUEVO
-    if (asignarProfesor === "nuevo" && nuevoProfesor.nombre.trim()) {
-      const created = await crearProfesorMinimo(dbToUse, {
-        nombre: nuevoProfesor.nombre,
-        apellido: nuevoProfesor.apellido,
-      });
-
-      profesorIdFinal = created.id;
-      profesorNombreFinal = `${nuevoProfesor.nombre} ${nuevoProfesor.apellido}`.trim();
-    }
 
 
 
@@ -652,8 +567,6 @@ async function uploadToImgur(file: File): Promise<string | null> {
   actualizadoEn: serverTimestamp(),
   idioma: curso.idioma,
   nivel: curso.nivel,
-  profesorAsignadoId: profesorIdFinal,
-  profesorNombre: profesorNombreFinal,
   
 };
 
@@ -709,15 +622,6 @@ const refCurso = await addDoc(collection(dbToUse, "cursos"), payload);
       console.log("✅ Enrolamiento completado correctamente.");
     }
 
- 
-// Relación inversa en profesor (opcional)
-if (profesorIdFinal) {
-  const profBatchRef = doc(dbToUse, "profesores", "batch_1");
-  await updateDoc(profBatchRef, {
-    [`${profesorIdFinal}.cursoAsignadoId`]: refCurso.id,
-    [`${profesorIdFinal}.updatedAt`]: serverTimestamp(),
-  });
-}
 
     // =====================================================
     // 5️⃣ Actualizar estado local y cerrar modal
@@ -728,7 +632,6 @@ if (profesorIdFinal) {
 
     console.log("🎉 [DEBUG] Curso creado correctamente:", refCurso.path);
   } catch (err: any) {
-    console.error("❌ [ERROR] Error creando curso o profesor:", err);
     toast.error("Error creating the course");
   } finally {
     console.log("🔹 [DEBUG] handleSubmit finalizado");
@@ -936,87 +839,7 @@ const idiomasCurso = [
 
             </div>
 
-            {/* Profesor a cargo */}
-<div className="mt-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
-    <FiUsers className="w-4 h-4 text-blue-600" />
-    Professor in charge
-  </label>
-
-  {/* Modo de asignación */}
-  <div className="flex flex-wrap gap-6 mb-4">
-    <label className="flex items-center gap-2 text-gray-700">
-      <input
-        type="radio"
-        checked={asignarProfesor === "ninguno"}
-        onChange={() => setAsignarProfesor("ninguno")}
-        className="h-4 w-4 accent-blue-600"
-      />
-      <span className="text-sm">None</span>
-    </label>
-
-    <label className="flex items-center gap-2 text-gray-700">
-      <input
-        type="radio"
-        checked={asignarProfesor === "existente"}
-        onChange={() => setAsignarProfesor("existente")}
-        className="h-4 w-4 accent-blue-600"
-      />
-      <span className="text-sm">Existing</span>
-    </label>
-
-    <label className="flex items-center gap-2 text-gray-700">
-      <input
-        type="radio"
-        checked={asignarProfesor === "nuevo"}
-        onChange={() => setAsignarProfesor("nuevo")}
-        className="h-4 w-4 accent-blue-600"
-      />
-      <span className="text-sm">New</span>
-    </label>
-  </div>
-
-  {/* EXISTENTE */}
-  {asignarProfesor === "existente" && (
-    <select
-      value={profesorSeleccionado}
-      onChange={(e) => setProfesorSeleccionado(e.target.value)}
-      className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-    >
-      <option value="">Select existing professor</option>
-      {profesores.map((p) => (
-        <option key={p.id} value={p.id}>
-          {p.nombre} {p.apellido}
-        </option>
-      ))}
-    </select>
-  )}
-
-  {/* NUEVO — solo nombre y apellido */}
-  {asignarProfesor === "nuevo" && (
-    <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <input
-        type="text"
-        placeholder="Name"
-        value={nuevoProfesor.nombre}
-        onChange={(e) =>
-          setNuevoProfesor({ ...nuevoProfesor, nombre: e.target.value })
-        }
-        className="rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-      />
-
-      <input
-        type="text"
-        placeholder="Last name"
-        value={nuevoProfesor.apellido}
-        onChange={(e) =>
-          setNuevoProfesor({ ...nuevoProfesor, apellido: e.target.value })
-        }
-        className="rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-      />
-    </div>
-  )}
-</div>
+    
 
 
 
@@ -1040,78 +863,7 @@ const idiomasCurso = [
             </div>
           </div>
 
-          {/* --- Lado derecho: Media --- */}
-          <div className="space-y-6">
-            {/* Video */}
-            <div className="space-y-1">
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                <FiVideo className="text-blue-600" /> Presentation video (optional)
-              </label>
-              <div className="relative">
-                <FiLink2 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="url"
-                  name="videoPresentacion"
-                  value={curso.videoPresentacion}
-                  onChange={handleChange}
-                  placeholder="https://youtube.com/watch?v=..."
-                  className="w-full rounded-lg border border-gray-300 bg-white p-3 pl-10 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                />
-              </div>
-
-              {curso.videoPresentacion && isValidUrl(curso.videoPresentacion) && (
-                <div className="aspect-video rounded-lg overflow-hidden border border-gray-200">
-                  <iframe
-                    src={curso.videoPresentacion}
-                    title="Intro video"
-                    className="w-full h-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Imagen */}
-            <div className="space-y-1">
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                <FiImage className="text-blue-600" /> Course Image
-              </label>
-
-              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 hover:bg-gray-100 p-3 text-gray-600 text-sm transition">
-                <FiUpload className="text-gray-500" />
-                {uploading ? "Uploading..." : "Upload image"}
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => onUploadMiniaturaCurso(e.target.files?.[0])}
-                  disabled={uploading}
-                />
-              </label>
-
-              <div className="relative">
-                <FiLink2 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="url"
-                  placeholder="Or paste an image URL https://"
-                  value={curso.urlImagen}
-                  onChange={(e) =>
-                    setCurso((p) => ({ ...p, urlImagen: e.target.value }))
-                  }
-                  className="w-full rounded-lg border border-gray-300 bg-white p-3 pl-10 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                />
-              </div>
-
-              {curso.urlImagen && isValidUrl(curso.urlImagen) && (
-                <img
-                  src={curso.urlImagen}
-                  alt="Course thumbnail"
-                  className="w-full rounded-lg border border-gray-200 object-cover max-h-48"
-                />
-              )}
-            </div>
-          </div>
+          
         </div>
       </section>
 
@@ -1898,32 +1650,60 @@ const idiomasCurso = [
 
     {/* Contenido */}
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {/* === COLUMNA IZQUIERDA: Alumnos disponibles === */}
+
+      {/* === COLUMNA IZQUIERDA: FILTROS + LISTA === */}
       <div className="space-y-4">
-        {/* Búsqueda */}
-        <div className="relative">
-          <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search for student by name or email"
-            value={searchAlumno}
-            onChange={(e) => setSearchAlumno(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 bg-white p-3 pl-10 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-          />
+
+        {/* FILTRO POR IDIOMA */}
+        <div className="space-y-1">
+          <label className="text-sm font-medium text-gray-700">Filter by Language</label>
+          <select
+            value={filterIdioma}
+            onChange={(e) => setFilterIdioma(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 
+                       focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">All languages</option>
+            <option value="es">Spanish</option>
+            <option value="en">English</option>
+            <option value="pt">Portuguese</option>
+            <option value="fr">French</option>
+            <option value="it">Italian</option>
+          </select>
         </div>
 
-        {/* Lista de alumnos */}
+        {/* FILTRO POR NIVEL */}
+        <div className="space-y-1">
+          <label className="text-sm font-medium text-gray-700">Filter by Level</label>
+          <select
+            value={filterNivel}
+            onChange={(e) => setFilterNivel(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 
+                       focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">All levels</option>
+            <option value="A1">A1</option>
+            <option value="A2">A2</option>
+            <option value="B1">B1</option>
+            <option value="B2">B2</option>
+            <option value="C1">C1</option>
+            <option value="C2">C2</option>
+          </select>
+        </div>
+
+        {/* LISTADO DE ALUMNOS FILTRADOS */}
         <div className="max-h-80 overflow-y-auto border border-gray-200 rounded-lg p-3 bg-gray-50">
           {filteredAlumnos.length === 0 ? (
             <p className="text-center text-gray-500 py-6 text-sm">
-              No available students were found.
+              No students match the selected filters.
             </p>
           ) : (
             filteredAlumnos.map((a) => (
               <div
                 key={a.email}
                 onClick={() => toggleCursante(a.email)}
-                className="flex items-center justify-between p-2 rounded-md hover:bg-blue-50 cursor-pointer transition"
+                className="flex items-center justify-between p-2 rounded-md hover:bg-blue-50 
+                           cursor-pointer transition"
               >
                 <span className="text-sm font-medium text-gray-700">
                   {a.displayName || a.nombre || a.email}
@@ -1939,17 +1719,20 @@ const idiomasCurso = [
           )}
         </div>
 
-        {/* Botón agregar todos */}
+        {/* BOTÓN: ADD ALL */}
         <button
           type="button"
           onClick={() => addAllFiltered(filteredAlumnos.map((a) => a.email))}
-          className="w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-blue-300 bg-blue-50 text-blue-600 hover:bg-blue-100 p-3 text-sm font-medium transition"
+          className="w-full flex items-center justify-center gap-2 rounded-lg border border-dashed 
+                     border-blue-300 bg-blue-50 text-blue-600 hover:bg-blue-100 p-3 
+                     text-sm font-medium transition"
         >
-          <FiPlus /> Add all filters
+          <FiPlus /> Add all filtered students
         </button>
+
       </div>
 
-      {/* === COLUMNA DERECHA: Alumnos seleccionados === */}
+      {/* === COLUMNA DERECHA: ALUMNOS SELECCIONADOS === */}
       <div className="space-y-4">
         <h4 className="flex items-center gap-2 text-lg font-semibold text-gray-800">
           <FiCheck className="text-blue-600" /> Selected students (
@@ -1966,12 +1749,14 @@ const idiomasCurso = [
               <div
                 key={email}
                 onClick={() => toggleCursante(email)}
-                className="flex items-center justify-between p-2 rounded-md hover:bg-red-50 cursor-pointer transition"
+                className="flex items-center justify-between p-2 rounded-md hover:bg-red-50 
+                           cursor-pointer transition"
               >
                 <span className="text-sm text-gray-700">{email}</span>
                 <button
                   type="button"
-                  className="text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50 transition"
+                  className="text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50 
+                             transition"
                   aria-label="Delete student"
                 >
                   <FiTrash2 size={15} />
@@ -1981,18 +1766,22 @@ const idiomasCurso = [
           )}
         </div>
 
-        {/* Botón eliminar todos */}
+        {/* BOTÓN: REMOVE ALL */}
         <button
           type="button"
           onClick={removeAllSelected}
-          className="w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-red-300 bg-red-50 text-red-600 hover:bg-red-100 p-3 text-sm font-medium transition"
+          className="w-full flex items-center justify-center gap-2 rounded-lg border border-dashed 
+                     border-red-300 bg-red-50 text-red-600 hover:bg-red-100 p-3 
+                     text-sm font-medium transition"
         >
           <FiTrash2 /> Delete all selected
         </button>
       </div>
+
     </div>
   </section>
 )}
+
 
 {/* SAVE BUTTON */}
 <div className="sticky bottom-0 z-10 flex justify-end bg-gray-50 border-t border-gray-200 p-4">

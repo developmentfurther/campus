@@ -106,10 +106,6 @@ interface Curso {
   unidades?: Unidad[];
   examenFinal?: ExamenFinal;
   capstone?: Capstone;
-  // 🔹 Profesor asignado (opcional)
-  profesorId?: string;
-  profesorRef?: DocumentReference | null;
-  profesorNombre?: string;
 
   // 🔹 Fechas de creación y actualización
   createdAt?: Timestamp | null;
@@ -165,26 +161,17 @@ export default function EditCourseForm({
   const [uploading, setUploading] = useState(false);
   const [searchAlumno, setSearchAlumno] = useState("");
   const [activeMainTab, setActiveMainTab] = useState<string>("general");
+  
+const [filterIdioma, setFilterIdioma] = useState("");
+const [filterNivel, setFilterNivel] = useState("");
+
+
   // 🔹 Estados de navegación dentro del contenido
 const [activeUnidad, setActiveUnidad] = useState<number>(0);
 const [activeUnitTab, setActiveUnitTab] = useState<"datos" | "lecciones" | "cierre">("datos");
 const [activeLeccion, setActiveLeccion] = useState<number>(0);
 
-// Profesor asignado en EDIT
-const [asignarProfesor, setAsignarProfesor] = useState<
-  "keep" | "none" | "existente" | "nuevo"
->("keep");
 
-
-const [profesores, setProfesores] = useState<any[]>([]);
-const [profesorSeleccionado, setProfesorSeleccionado] = useState<string>("");
-
-// Para crear un profesor “rápido” (solo nombre/apellido → se guarda como texto)
-const [nuevoProfesor, setNuevoProfesor] = useState({
-  nombre: "",
-  apellido: "",
-});
-console.log("🧩 [EditCourseForm] Props:", { courseId, firestore });
 
   /* ==============================================================
      🔹 Cargar datos del curso desde Firestore
@@ -213,56 +200,8 @@ console.log("🧩 [EditCourseForm] Props:", { courseId, firestore });
   }, [firestore, courseId]);
 
 
-  // cargar los profes
-  useEffect(() => {
-  const fetchProfesores = async () => {
-    if (!firestore) return;
-    try {
-      const docRef = doc(firestore, "profesores", "batch_1");
-      const snap = await getDoc(docRef);
-      if (!snap.exists()) {
-        setProfesores([]);
-        return;
-      }
-      const data = snap.data() || {};
-      const list = Object.entries(data).map(([id, value]) => ({
-  id,
-  ...(value || {}),
-}));
-setProfesores(list);
+  
 
-      setProfesores(Array.isArray(list) ? list : []);
-    } catch (err) {
-      console.error("❌ Error cargando profesores:", err);
-      setProfesores([]);
-    }
-  };
-
-  fetchProfesores();
-}, [firestore]);
-
-async function crearProfesorMinimo(dbToUse: any, datos: { nombre: string; apellido: string }) {
-  const batchRef = doc(dbToUse, "profesores", "batch_1");
-
-  const profesorId = `prof_${Date.now()}`;
-
-  // crear si no existe
-  const snap = await getDoc(batchRef);
-  if (!snap.exists()) await setDoc(batchRef, {});
-
-  await updateDoc(batchRef, {
-    [profesorId]: {
-      nombre: datos.nombre,
-      apellido: datos.apellido,
-      email: "",
-      idioma: "",
-      nivel: "",
-      createdAt: serverTimestamp(),
-    },
-  });
-
-  return { id: profesorId };
-}
 
   /* ==============================================================
      🔹 Guardar cambios
@@ -297,48 +236,11 @@ async function crearProfesorMinimo(dbToUse: any, datos: { nombre: string; apelli
     curso.cursantes?.map((e) => e.toLowerCase().trim()).filter(Boolean) || [];
 
   try {
-  // 3️⃣ PROFESOR ASIGNADO (ID + Nombre)
-let profesorIdFinal: string | null = null;
-let profesorNombreFinal: string | null = null;
-
-// KEEP
-if (asignarProfesor === "keep") {
-  profesorIdFinal = curso.profesorId || null;
-  profesorNombreFinal = curso.profesorNombre || null;
-}
-
-// NONE
-if (asignarProfesor === "none") {
-  profesorIdFinal = null;
-  profesorNombreFinal = null;
-}
-
-// EXISTENTE
-if (asignarProfesor === "existente" && profesorSeleccionado) {
-  const prof = profesores.find((p) => p.id === profesorSeleccionado);
-  if (prof) {
-    profesorIdFinal = profesorSeleccionado;
-    profesorNombreFinal = `${prof.nombre} ${prof.apellido}`.trim();
-  }
-}
-
-// NUEVO
-if (asignarProfesor === "nuevo" && nuevoProfesor.nombre.trim()) {
-  const created = await crearProfesorMinimo(firestore, {
-    nombre: nuevoProfesor.nombre,
-    apellido: nuevoProfesor.apellido,
-  });
-
-  profesorIdFinal = created.id;
-  profesorNombreFinal = `${nuevoProfesor.nombre} ${nuevoProfesor.apellido}`.trim();
-}
 
 
     // 4️⃣ Payload limpio
     const payload: any = {
       ...curso,
-      profesorId: profesorIdFinal,
-      profesorNombre: profesorNombreFinal,
       unidades: unidadesToSave,
       examenFinal,
       capstone,
@@ -348,13 +250,6 @@ if (asignarProfesor === "nuevo" && nuevoProfesor.nombre.trim()) {
 
     // 5️⃣ Guardar curso
     await updateDoc(refCurso, payload);
-    if (profesorIdFinal) {
-  const profBatchRef = doc(firestore, "profesores", "batch_1");
-  await updateDoc(profBatchRef, {
-    [`${profesorIdFinal}.cursoAsignadoId`]: courseId,
-    [`${profesorIdFinal}.updatedAt`]: serverTimestamp(),
-  });
-}
 
     // 6️⃣ Enrolamiento en alumnos/batch_X/user_Y.cursosAdquiridos
     if (nuevosCursantes.length > 0) {
@@ -400,33 +295,6 @@ if (asignarProfesor === "nuevo" && nuevoProfesor.nombre.trim()) {
   }
 };
 
-
-
-
-
-useEffect(() => {
-  const fetchProfesores = async () => {
-    try {
-      const docRef = doc(firestore, "profesores", "batch_1");
-      const snap = await getDoc(docRef);
-      if (snap.exists()) {
-        const data = snap.data() || {};
-        const list = Object.entries(data).map(([id, val]: any) => ({
-          id,
-          ...val,
-        }));
-        setProfesores(list);
-      } else {
-        setProfesores([]);
-      }
-    } catch (err) {
-      console.error("❌ Error cargando profesores:", err);
-      setProfesores([]);
-    }
-  };
-
-  if (firestore) fetchProfesores();
-}, [firestore]);
 
 
   /* ==============================================================
@@ -576,16 +444,22 @@ useEffect(() => {
   /* ==============================================================
      🔹 Filtrado de alumnos
      ============================================================== */
-  const filteredAlumnos = useMemo(() => {
-    const q = searchAlumno.toLowerCase().trim();
-    const list = Array.isArray(alumnos) ? alumnos : [];
-    if (!q) return list;
-    return list.filter((a) => {
-      const name = (a?.displayName || a?.nombre || "").toLowerCase();
-      const mail = (a?.email || "").toLowerCase();
-      return name.includes(q) || mail.includes(q);
-    });
-  }, [alumnos, searchAlumno]);
+const filteredAlumnos = useMemo(() => {
+  const list = Array.isArray(alumnos) ? alumnos : [];
+
+  // Soporta ambos formatos
+  return list.filter((a) => {
+    const lang = a.learningLanguage || a.idioma || "";
+    const lvl  = a.learningLevel || a.nivel || "";
+
+    const matchLang = filterIdioma ? lang.toLowerCase() === filterIdioma.toLowerCase() : true;
+    const matchLvl  = filterNivel  ? lvl.toLowerCase() === filterNivel.toLowerCase() : true;
+
+    return matchLang && matchLvl;
+  });
+}, [alumnos, filterIdioma, filterNivel]);
+
+
 
   /* ==============================================================
      🔹 Control de alumnos (toggle, añadir, quitar)
@@ -790,115 +664,6 @@ if (!curso) {
   </div>
 </div>
 
-{/* Profesor a cargo */}
-<div className="mt-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
-    <FiUsers className="w-4 h-4 text-blue-600" />
-    Professor in charge
-  </label>
-
-  {/* Profesor actual (solo lectura, si existe) */}
-  {curso.profesorNombre && (
-    <p className="text-xs text-slate-500 mb-3">
-      Current professor:{" "}
-      <span className="font-medium text-slate-700">
-        {curso.profesorNombre}
-      </span>
-    </p>
-  )}
-
-  {/* OPCIONES */}
-  <div className="flex flex-wrap gap-6 mb-4">
-
-    {/* KEEP (solo si existe profesor) */}
-    {curso.profesorNombre && (
-      <label className="flex items-center gap-2 text-gray-700">
-        <input
-          type="radio"
-          checked={asignarProfesor === "keep"}
-          onChange={() => setAsignarProfesor("keep")}
-          className="h-4 w-4 accent-blue-600"
-        />
-        <span className="text-sm">Keep current</span>
-      </label>
-    )}
-
-    {/* NONE (siempre visible) */}
-    <label className="flex items-center gap-2 text-gray-700">
-      <input
-        type="radio"
-        checked={asignarProfesor === "none"}
-        onChange={() => setAsignarProfesor("none")}
-        className="h-4 w-4 accent-blue-600"
-      />
-      <span className="text-sm">
-        {curso.profesorNombre ? "Remove professor" : "None"}
-      </span>
-    </label>
-
-    {/* EXISTING */}
-    <label className="flex items-center gap-2 text-gray-700">
-      <input
-        type="radio"
-        checked={asignarProfesor === "existente"}
-        onChange={() => setAsignarProfesor("existente")}
-        className="h-4 w-4 accent-blue-600"
-      />
-      <span className="text-sm">Existing</span>
-    </label>
-
-    {/* NEW */}
-    <label className="flex items-center gap-2 text-gray-700">
-      <input
-        type="radio"
-        checked={asignarProfesor === "nuevo"}
-        onChange={() => setAsignarProfesor("nuevo")}
-        className="h-4 w-4 accent-blue-600"
-      />
-      <span className="text-sm">New</span>
-    </label>
-  </div>
-
-  {/* SELECT EXISTING */}
-  {asignarProfesor === "existente" && (
-    <select
-      value={profesorSeleccionado}
-      onChange={(e) => setProfesorSeleccionado(e.target.value)}
-      className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-    >
-      <option value="">Select existing professor</option>
-      {profesores.map((p) => (
-        <option key={p.id} value={p.id}>
-          {p.nombre} {p.apellido}
-        </option>
-      ))}
-    </select>
-  )}
-
-  {/* NEW PROFESSOR */}
-  {asignarProfesor === "nuevo" && (
-    <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <input
-        type="text"
-        placeholder="Name"
-        value={nuevoProfesor.nombre}
-        onChange={(e) =>
-          setNuevoProfesor((prev) => ({ ...prev, nombre: e.target.value }))
-        }
-        className="rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-      />
-      <input
-        type="text"
-        placeholder="Last name"
-        value={nuevoProfesor.apellido}
-        onChange={(e) =>
-          setNuevoProfesor((prev) => ({ ...prev, apellido: e.target.value }))
-        }
-        className="rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-      />
-    </div>
-  )}
-</div>
 
 
 
@@ -917,59 +682,7 @@ if (!curso) {
                     </label>
                   </div>
 
-                  {/* Media */}
-                  <div className="space-y-6">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
-                        <FiVideo className="w-4 h-4" /> Presentation video (optional)
-                      </label>
-                      <div className="relative">
-                        <FiLink2 className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                        <input
-                          type="url"
-                          name="videoPresentacion"
-                          placeholder="https://youtube.com/watch?v=…"
-                          value={curso.videoPresentacion}
-                          onChange={handleChange}
-                          className="w-full p-3.5 pl-11 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-                      {curso.videoPresentacion && isValidUrl(curso.videoPresentacion) && (
-                        <div className="aspect-video rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
-                          <iframe
-                            src={curso.videoPresentacion}
-                            title="Intro video"
-                            className="w-full h-full"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="space-y-3">
-                      <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
-                        <FiImage className="w-4 h-4" /> Course image
-                      </label>
-                      <div className="relative">
-                        <FiLink2 className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                        <input
-                          type="url"
-                          placeholder="Or paste an image URL https://"
-                          value={curso.urlImagen}
-                          onChange={(e) => setCurso((p) => ({ ...p!, urlImagen: e.target.value }))}
-                          className="w-full p-3.5 pl-11 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-                      {curso.urlImagen && isValidUrl(curso.urlImagen) && (
-                        <img
-                          src={curso.urlImagen}
-                          alt="Course thumbnail"
-                          className="w-full rounded-xl border border-slate-200 object-cover max-h-48 bg-slate-50"
-                        />
-                      )}
-                    </div>
-                  </div>
+                  
                 </div>
               </section>
 
@@ -1716,98 +1429,136 @@ if (!curso) {
             )}
 
             {/* TAB: Cursantes */}
-            {activeMainTab === "cursantes" && (
-              <section className="bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-2xl p-6 border border-blue-200">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <FiUsers className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-slate-900">Manage Course Students</h3>
-                </div>
+{activeMainTab === "cursantes" && (
+  <section className="bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-2xl p-6 border border-blue-200">
+    <div className="flex items-center gap-3 mb-6">
+      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+        <FiUsers className="w-5 h-5 text-blue-600" />
+      </div>
+      <h3 className="text-xl font-semibold text-slate-900">
+        Manage Course Students
+      </h3>
+    </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Available Students */}
-                  <div className="space-y-4">
-                    <div className="relative">
-                      <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <input
-                        type="text"
-                        placeholder="Search student by name or email"
-                        value={searchAlumno}
-                        onChange={(e) => setSearchAlumno(e.target.value)}
-                        className="w-full p-3 pl-10 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                    </div>
-                    <div className="max-h-80 overflow-y-auto border border-slate-200 rounded-xl p-3 bg-white">
-                      {filteredAlumnos.length === 0 ? (
-                        <p className="text-center text-slate-500 py-4">No students found or available.</p>
-                      ) : (
-                        filteredAlumnos.map((a) => (
-                          <div
-                            key={a.email}
-                            className="flex items-center justify-between p-2 hover:bg-slate-50 rounded-lg cursor-pointer"
-                            onClick={() => toggleCursante(a.email)}
-                          >
-                            <span className="text-sm font-medium text-slate-800">
-                              {a.displayName || a.nombre || a.email}
-                            </span>
-                            <input
-                              type="checkbox"
-                              checked={curso.cursantes.includes(a.email)}
-                              readOnly
-                              className="h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
-                            />
-                          </div>
-                        ))
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => addAllFiltered(filteredAlumnos.map((a) => a.email))}
-                      className="w-full flex items-center justify-center gap-2 p-3 bg-blue-50 text-blue-600 rounded-xl border border-dashed border-blue-200 hover:bg-blue-100 transition-colors"
-                    >
-                      <FiPlus size={16} /> Add All Filtered Students
-                    </button>
-                  </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Available Students */}
+      <div className="space-y-4">
 
-                  {/* Selected Students */}
-                  <div className="space-y-4">
-                    <h4 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                      <FiCheck size={20} className="text-blue-600" /> Selected Students ({curso.cursantes.length})
-                    </h4>
-                    <div className="max-h-80 overflow-y-auto border border-slate-200 rounded-xl p-3 bg-white">
-                      {curso.cursantes.length === 0 ? (
-                        <p className="text-center text-slate-500 py-4">No students selected.</p>
-                      ) : (
-                        curso.cursantes.map((email) => (
-                          <div
-                            key={email}
-                            className="flex items-center justify-between p-2 hover:bg-red-50 rounded-lg cursor-pointer"
-                            onClick={() => toggleCursante(email)}
-                          >
-                            <span className="text-sm text-slate-800">{email}</span>
-                            <button
-                              type="button"
-                              className="text-slate-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50 transition-colors"
-                              aria-label="Remove student"
-                            >
-                              <FiTrash2 size={16} />
-                            </button>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={removeAllSelected}
-                      className="w-full flex items-center justify-center gap-2 p-3 bg-red-50 text-red-600 rounded-xl border border-dashed border-red-200 hover:bg-red-100 transition-colors"
-                    >
-                      <FiTrash2 size={16} /> Remove All Selected
-                    </button>
-                  </div>
-                </div>
-              </section>
-            )}
+        {/* FILTRO POR IDIOMA */}
+        <div className="space-y-1">
+          <label className="text-sm font-medium text-slate-700">Filter by Language</label>
+          <select
+  value={filterIdioma}
+  onChange={(e) => setFilterIdioma(e.target.value)}
+  className="w-full p-3 border border-slate-300 rounded-xl"
+>
+  <option value="">All languages</option>
+  <option value="es">Spanish</option>
+  <option value="en">English</option>
+  <option value="pt">Portuguese</option>
+  <option value="fr">French</option>
+  <option value="it">Italian</option>
+</select>
+
+        </div>
+
+        {/* FILTRO POR NIVEL */}
+        <div className="space-y-1">
+          <label className="text-sm font-medium text-slate-700">Filter by Level</label>
+          <select
+            value={filterNivel}
+            onChange={(e) => setFilterNivel(e.target.value)}
+            className="w-full p-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">All levels</option>
+            <option value="A1">A1</option>
+            <option value="A2">A2</option>
+            <option value="B1">B1</option>
+            <option value="B2">B2</option>
+            <option value="C1">C1</option>
+            <option value="C2">C2</option>
+          </select>
+        </div>
+
+        {/* LISTA DE ALUMNOS FILTRADOS */}
+        <div className="max-h-80 overflow-y-auto border border-slate-200 rounded-xl p-3 bg-white">
+          {filteredAlumnos.length === 0 ? (
+            <p className="text-center text-slate-500 py-4">
+              No students found for the selected filters.
+            </p>
+          ) : (
+            filteredAlumnos.map((a) => (
+              <div
+                key={a.email}
+                className="flex items-center justify-between p-2 hover:bg-slate-50 rounded-lg cursor-pointer"
+                onClick={() => toggleCursante(a.email)}
+              >
+                <span className="text-sm font-medium text-slate-800">
+                  {a.displayName || a.nombre || a.email}
+                </span>
+                <input
+                  type="checkbox"
+                  checked={curso.cursantes.includes(a.email)}
+                  readOnly
+                  className="h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                />
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* ADD ALL */}
+        <button
+          type="button"
+          onClick={() => addAllFiltered(filteredAlumnos.map((a) => a.email))}
+          className="w-full flex items-center justify-center gap-2 p-3 bg-blue-50 text-blue-600 rounded-xl border border-dashed border-blue-200 hover:bg-blue-100 transition-colors"
+        >
+          <FiPlus size={16} /> Add All Filtered Students
+        </button>
+      </div>
+
+      {/* Selected Students */}
+      <div className="space-y-4">
+        <h4 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+          <FiCheck size={20} className="text-blue-600" /> Selected Students ({curso.cursantes.length})
+        </h4>
+
+        <div className="max-h-80 overflow-y-auto border border-slate-200 rounded-xl p-3 bg-white">
+          {curso.cursantes.length === 0 ? (
+            <p className="text-center text-slate-500 py-4">No students selected.</p>
+          ) : (
+            curso.cursantes.map((email) => (
+              <div
+                key={email}
+                className="flex items-center justify-between p-2 hover:bg-red-50 rounded-lg cursor-pointer"
+                onClick={() => toggleCursante(email)}
+              >
+                <span className="text-sm text-slate-800">{email}</span>
+                <button
+                  type="button"
+                  className="text-slate-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50 transition-colors"
+                  aria-label="Remove student"
+                >
+                  <FiTrash2 size={16} />
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* REMOVE ALL */}
+        <button
+          type="button"
+          onClick={removeAllSelected}
+          className="w-full flex items-center justify-center gap-2 p-3 bg-red-50 text-red-600 rounded-xl border border-dashed border-red-200 hover:bg-red-100 transition-colors"
+        >
+          <FiTrash2 size={16} /> Remove All Selected
+        </button>
+      </div>
+    </div>
+  </section>
+)}
+
 
             {/* SAVE BAR */}
           <div className="p-4 bg-white border-t border-slate-200 sticky bottom-0 z-10 flex justify-end">
