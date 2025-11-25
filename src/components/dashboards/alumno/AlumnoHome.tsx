@@ -147,7 +147,7 @@ export default function AlumnoHome() {
 
       {/* FOOTER */}
       <footer className="text-center text-xs text-gray-400 pt-8 border-t border-gray-100">
-        © {new Date().getFullYear()} Further Academy — Campus Virtual
+        © {new Date().getFullYear()} Further Campus — Campus Virtual
       </footer>
     </div>
   );

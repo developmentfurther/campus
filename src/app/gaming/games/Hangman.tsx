@@ -17,86 +17,111 @@ const GAME_ID = "hangman";
 ============================================================ */
 const HangmanDrawing = ({ wrongGuesses }: { wrongGuesses: number }) => {
   return (
-    <div className="relative w-52 h-64 mx-auto">
-      {/* Poste */}
+    <div className="relative w-64 h-72 mx-auto">
+      {/* Base circular decorativa */}
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-48 h-3 bg-gradient-to-r from-slate-300 via-slate-400 to-slate-300 rounded-full shadow-lg" />
+      
+      {/* Poste principal */}
       <motion.div
-        className="absolute left-4 top-0 w-1 h-56 bg-slate-700"
+        className="absolute left-8 bottom-3 w-3 h-64 bg-gradient-to-b from-amber-800 to-amber-900 rounded-t-lg shadow-xl"
         initial={{ height: 0 }}
-        animate={{ height: "14rem" }}
+        animate={{ height: "16rem" }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
       />
 
       {/* Barra superior */}
       <motion.div
-        className="absolute left-4 top-0 w-28 h-1 bg-slate-700"
+        className="absolute left-8 top-8 w-36 h-3 bg-gradient-to-r from-amber-800 to-amber-900 rounded-r-lg shadow-xl"
         initial={{ width: 0 }}
-        animate={{ width: "7rem" }}
+        animate={{ width: "9rem" }}
+        transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}
       />
 
       {/* Soga */}
       <motion.div
-        className="absolute left-[7.5rem] top-0 w-1 h-10 bg-slate-500"
+        className="absolute left-[8.75rem] top-[2.75rem] w-2 h-12 bg-gradient-to-b from-gray-600 to-gray-700 rounded-full shadow-lg"
         initial={{ height: 0 }}
-        animate={{ height: "2.5rem" }}
+        animate={{ height: "3rem" }}
+        transition={{ duration: 0.4, delay: 0.6 }}
       />
 
       {/* Cabeza */}
       {wrongGuesses >= 1 && (
         <motion.div
-          className="absolute left-[6.6rem] top-10 w-12 h-12 rounded-full bg-yellow-200 border-4 border-yellow-600"
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-        />
+          className="absolute left-[7.5rem] top-[5.5rem] w-16 h-16 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 border-4 border-amber-600 shadow-2xl"
+          initial={{ scale: 0, rotate: -180 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ type: "spring", stiffness: 200 }}
+        >
+          {/* Ojos */}
+          <div className="absolute top-5 left-3 w-2 h-2 bg-slate-800 rounded-full" />
+          <div className="absolute top-5 right-3 w-2 h-2 bg-slate-800 rounded-full" />
+          {/* Boca */}
+          {wrongGuesses < 7 && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-6 h-2 border-b-2 border-slate-800 rounded-b-full" />
+          )}
+        </motion.div>
       )}
 
       {/* Cuerpo */}
       {wrongGuesses >= 2 && (
         <motion.div
-          className="absolute left-[7.4rem] top-[4.7rem] w-1 h-16 bg-yellow-600"
-          animate={{ scaleY: [1, 1.05, 1] }}
-          transition={{ repeat: Infinity, duration: 2 }}
+          className="absolute left-[8.6rem] top-[9rem] w-3 h-20 bg-gradient-to-b from-amber-600 to-amber-700 rounded-full shadow-lg"
+          initial={{ scaleY: 0 }}
+          animate={{ scaleY: 1 }}
+          transition={{ type: "spring", stiffness: 150 }}
         />
       )}
 
-      {/* Brazos */}
+      {/* Brazo izquierdo */}
       {wrongGuesses >= 3 && (
-        <>
-          <motion.div
-            className="absolute left-[7.4rem] top-[5rem] w-1 h-10 bg-yellow-600 origin-top"
-            initial={{ rotate: -90 }}
-            animate={{ rotate: -40 }}
-          />
-          <motion.div
-            className="absolute left-[7.4rem] top-[5rem] w-1 h-10 bg-yellow-600 origin-top"
-            initial={{ rotate: 90 }}
-            animate={{ rotate: 40 }}
-          />
-        </>
+        <motion.div
+          className="absolute left-[8.6rem] top-[10rem] w-3 h-12 bg-gradient-to-b from-amber-600 to-amber-700 rounded-full shadow-lg origin-top"
+          initial={{ rotate: 0, x: 0 }}
+          animate={{ rotate: -45, x: -8 }}
+          transition={{ type: "spring", stiffness: 120 }}
+        />
       )}
 
-      {/* Piernas */}
+      {/* Brazo derecho */}
+      {wrongGuesses >= 4 && (
+        <motion.div
+          className="absolute left-[8.6rem] top-[10rem] w-3 h-12 bg-gradient-to-b from-amber-600 to-amber-700 rounded-full shadow-lg origin-top"
+          initial={{ rotate: 0, x: 0 }}
+          animate={{ rotate: 45, x: 8 }}
+          transition={{ type: "spring", stiffness: 120 }}
+        />
+      )}
+
+      {/* Pierna izquierda */}
       {wrongGuesses >= 5 && (
-        <>
-          <motion.div
-            className="absolute left-[7.4rem] top-[8.5rem] w-1 h-10 bg-yellow-600 origin-top"
-            initial={{ rotate: -90 }}
-            animate={{ rotate: -30 }}
-          />
-          <motion.div
-            className="absolute left-[7.4rem] top-[8.5rem] w-1 h-10 bg-yellow-600 origin-top"
-            initial={{ rotate: 90 }}
-            animate={{ rotate: 30 }}
-          />
-        </>
+        <motion.div
+          className="absolute left-[8.6rem] top-[13.5rem] w-3 h-14 bg-gradient-to-b from-amber-600 to-amber-700 rounded-full shadow-lg origin-top"
+          initial={{ rotate: 0, x: 0 }}
+          animate={{ rotate: -35, x: -6 }}
+          transition={{ type: "spring", stiffness: 120 }}
+        />
       )}
 
-      {/* Muerte */}
+      {/* Pierna derecha */}
+      {wrongGuesses >= 6 && (
+        <motion.div
+          className="absolute left-[8.6rem] top-[13.5rem] w-3 h-14 bg-gradient-to-b from-amber-600 to-amber-700 rounded-full shadow-lg origin-top"
+          initial={{ rotate: 0, x: 0 }}
+          animate={{ rotate: 35, x: 6 }}
+          transition={{ type: "spring", stiffness: 120 }}
+        />
+      )}
+
+      {/* Muerte - efecto dramático */}
       {wrongGuesses >= 7 && (
         <motion.div
-          className="absolute left-[6.7rem] top-10 text-4xl"
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
+          className="absolute left-[7.2rem] top-[5rem]"
+          initial={{ scale: 0, rotate: -180 }}
+          animate={{ scale: 1.5, rotate: 0 }}
+          transition={{ type: "spring", stiffness: 150 }}
         >
-          💀
+          <span className="text-6xl drop-shadow-2xl">💀</span>
         </motion.div>
       )}
     </div>
@@ -110,7 +135,7 @@ export default function Hangman() {
   const { user, role, userProfile, authReady, loading } = useAuth();
   const { t } = useI18n();
 
-  /* ---------- HOOKS (orden correcto) ---------- */
+  /* ---------- ESTADOS ---------- */
   const [word, setWord] = useState<string>("");
   const [guessedLetters, setGuessedLetters] = useState<string[]>([]);
   const [wrongGuesses, setWrongGuesses] = useState<number>(0);
@@ -121,18 +146,6 @@ export default function Hangman() {
 
   const [blocked, setBlocked] = useState(false);
   const [checkingAttempt, setCheckingAttempt] = useState(true);
-
-  /* ============================================================
-     ⏳ Esperar a que cargue el idioma
-  ============================================================ */
-  if (!authReady || loading || !userProfile?.language) {
-    return (
-      <div className="w-full h-full flex flex-col items-center justify-center py-32 text-slate-500">
-        <div className="animate-spin h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full" />
-        <p className="mt-4">{t("gaming.games.hangman.loadingLanguage")}</p>
-      </div>
-    );
-  }
 
   /* ============================================================
      🔍 Verificar intento diario
@@ -149,19 +162,27 @@ export default function Hangman() {
         return;
       }
 
-      const played = await userPlayedToday(user.uid, GAME_ID);
-      if (played) setBlocked(true);
-
-      setCheckingAttempt(false);
+      try {
+        const played = await userPlayedToday(user.uid, GAME_ID);
+        setBlocked(played);
+      } catch (err) {
+        console.error("❌ Error checking attempt:", err);
+      } finally {
+        setCheckingAttempt(false);
+      }
     };
 
-    void check();
-  }, [user, role]);
+    if (authReady && !loading && userProfile) {
+      void check();
+    }
+  }, [user, role, authReady, loading, userProfile]);
 
   /* ============================================================
      📡 Obtener palabra IA
   ============================================================ */
   const fetchWord = async () => {
+    if (!userProfile?.language) return;
+
     try {
       setLoadingWord(true);
       setError("");
@@ -173,9 +194,14 @@ export default function Hangman() {
       const res = await fetch(`/api/games/hangman?lang=${lang}`);
       const data = await res.json();
 
-      setWord(data.word.toLowerCase());
-    } catch {
-      setError(t("gaming.games.hangman.errorFetching"));
+      if (data.word) {
+        setWord(data.word.toLowerCase());
+      } else {
+        throw new Error("No word received");
+      }
+    } catch (err) {
+      console.error("❌ Error fetching word:", err);
+      setError(t("gaming.games.hangman.errorFetching") || "Error al cargar palabra");
     } finally {
       setLoadingWord(false);
     }
@@ -183,22 +209,58 @@ export default function Hangman() {
 
   useEffect(() => {
     if (!checkingAttempt && !blocked && userProfile?.language) {
-      fetchWord();
+      void fetchWord();
     }
   }, [checkingAttempt, blocked, userProfile?.language]);
 
   /* ============================================================
-     🧠 Win / Lose
+     🧠 Win / Lose Detection
   ============================================================ */
   useEffect(() => {
-    if (!word) return;
+    if (!word || status !== "playing") return;
 
     const win = word.split("").every((l) => guessedLetters.includes(l));
     const lose = wrongGuesses >= 7;
 
-    if (win) setStatus("won");
-    else if (lose) setStatus("lost");
-  }, [guessedLetters, wrongGuesses, word]);
+    if (win) {
+      setStatus("won");
+    } else if (lose) {
+      setStatus("lost");
+    }
+  }, [guessedLetters, wrongGuesses, word, status]);
+
+  /* ============================================================
+     📝 Guardar intento al terminar (CRÍTICO)
+  ============================================================ */
+  useEffect(() => {
+    // Solo guardar si es alumno y el juego terminó
+    if (!user || role !== "alumno") return;
+    if (status === "playing") return;
+    if (blocked) return; // Ya fue guardado
+
+    console.log("🎮 Juego terminado, guardando intento...", {
+      uid: user.uid,
+      game: GAME_ID,
+      status,
+    });
+
+    // Guardar inmediatamente cuando termina el juego
+    const saveAttempt = async () => {
+      try {
+        await updateUserGameAttempt(user.uid, GAME_ID);
+        console.log("✅ Intento guardado exitosamente");
+        
+        // Esperar 2 segundos antes de bloquear para mostrar el resultado
+        setTimeout(() => {
+          setBlocked(true);
+        }, 2000);
+      } catch (err) {
+        console.error("❌ Error guardando intento:", err);
+      }
+    };
+
+    void saveAttempt();
+  }, [status, user, role, blocked]);
 
   /* ============================================================
      🅰 Manejar intento del usuario
@@ -208,74 +270,122 @@ export default function Hangman() {
     if (guessedLetters.includes(letter)) return;
     if (blocked) return;
 
-    if (word.includes(letter)) {
-      setGuessedLetters((prev) => [...prev, letter]);
-    } else {
+    const newGuessed = [...guessedLetters, letter];
+    setGuessedLetters(newGuessed);
+
+    if (!word.includes(letter)) {
       setWrongGuesses((prev) => prev + 1);
     }
   };
 
   /* ============================================================
-     📝 Guardar intento al terminar
+     RENDERS CONDICIONALES
   ============================================================ */
-  useEffect(() => {
-  if (!user || role !== "alumno") return;
-  if (status === "playing") return;
+  // Loading inicial
+  if (!authReady || loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="relative w-24 h-24 mx-auto mb-6">
+            <div className="absolute inset-0 rounded-full border-8 border-purple-200" />
+            <div className="absolute inset-0 rounded-full border-8 border-t-purple-600 animate-spin" />
+          </div>
+          <p className="text-slate-600 text-lg font-semibold">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
 
-  // Esperar 5 segundos antes de bloquear
-  const timer = setTimeout(() => {
-    updateUserGameAttempt(user.uid, GAME_ID);
-    setBlocked(true);
-  }, 5000);
+  // Sin perfil o idioma
+  if (!userProfile?.language) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="relative w-24 h-24 mx-auto mb-6">
+            <div className="absolute inset-0 rounded-full border-8 border-purple-200" />
+            <div className="absolute inset-0 rounded-full border-8 border-t-purple-600 animate-spin" />
+          </div>
+          <p className="text-slate-600 text-lg font-semibold">
+            {t("gaming.games.hangman.loadingLanguage") || "Cargando idioma..."}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
-  return () => clearTimeout(timer);
-}, [status, user, role]);
-
-  /* ============================================================
-     ESTADOS UI
-  ============================================================ */
+  // Verificando intento
   if (checkingAttempt) {
     return (
-      <div className="w-full h-full flex items-center justify-center py-32">
-        <div className="animate-spin h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full" />
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="relative w-24 h-24 mx-auto mb-6">
+            <div className="absolute inset-0 rounded-full border-8 border-purple-200" />
+            <div className="absolute inset-0 rounded-full border-8 border-t-purple-600 animate-spin" />
+          </div>
+        </div>
       </div>
     );
   }
 
+  // Bloqueado (ya jugó hoy)
   if (blocked && role === "alumno") {
     return (
-      <div className="py-20 text-center text-slate-600">
-        <h2 className="text-2xl font-bold mb-3">
-          {t("gaming.games.hangman.alreadyPlayedTitle")}
-        </h2>
-        <p className="text-slate-500">
-          {t("gaming.games.hangman.alreadyPlayedText")}
-        </p>
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="bg-white rounded-3xl shadow-2xl p-12 text-center max-w-md"
+        >
+          <div className="text-7xl mb-6">⏰</div>
+          <h2 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-4">
+            {t("gaming.games.hangman.alreadyPlayedTitle") || "Ya jugaste hoy"}
+          </h2>
+          <p className="text-slate-600 text-lg">
+            {t("gaming.games.hangman.alreadyPlayedText") || "Vuelve mañana para jugar de nuevo"}
+          </p>
+        </motion.div>
       </div>
     );
   }
 
+  // Cargando palabra
   if (loadingWord) {
     return (
-      <div className="w-full h-full flex items-center justify-center py-32">
-        <div className="animate-spin h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full" />
+       <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="relative w-24 h-24 mx-auto mb-6">
+            <div className="absolute inset-0 rounded-full border-8 border-purple-200" />
+            <div className="absolute inset-0 rounded-full border-8 border-t-purple-600 animate-spin" />
+          </div>
+        </div>
       </div>
     );
   }
 
+  // Error
   if (error) {
     return (
-      <div className="py-20 flex flex-col items-center space-y-5">
-        <p className="text-red-600">{error}</p>
-        <button
-          onClick={fetchWord}
-          className="px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold"
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center p-4">
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="bg-white rounded-3xl shadow-2xl p-12 text-center max-w-md"
         >
-          {t("gaming.games.hangman.retry")}
-        </button>
+          <div className="text-7xl mb-6">❌</div>
+          <p className="text-red-600 text-xl mb-6">{error}</p>
+          <motion.button
+            onClick={fetchWord}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="px-8 py-4 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold text-lg shadow-xl"
+          >
+            {t("gaming.games.hangman.retry") || "Reintentar"}
+          </motion.button>
+        </motion.div>
       </div>
     );
   }
+
 
   /* ============================================================
      UI PRINCIPAL

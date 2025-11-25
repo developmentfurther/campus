@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useI18n } from "@/contexts/I18nContext";
 import { userPlayedToday, updateUserGameAttempt } from "@/lib/games/attempts";
 import { getIdiomsBank, IdiomItem } from "@/lib/games/idioms";
+import { motion } from "framer-motion";
 
 // Normaliza textos
 function norm(s: string) {
@@ -153,34 +154,57 @@ export default function EmojiIdioms() {
   // ===========================================
   // UI – Estados iniciales
   // ===========================================
+ 
+
+   // Verificando intento
   if (checkingAttempt) {
     return (
-      <div className="w-full h-full flex items-center justify-center py-32">
-        <div className="animate-spin h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full" />
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="relative w-24 h-24 mx-auto mb-6">
+            <div className="absolute inset-0 rounded-full border-8 border-purple-200" />
+            <div className="absolute inset-0 rounded-full border-8 border-t-purple-600 animate-spin" />
+          </div>
+        </div>
       </div>
     );
   }
 
+  // Bloqueado (ya jugó hoy)
   if (blocked && role === "alumno") {
     return (
-      <div className="py-20 text-center">
-        <h2 className="text-2xl font-bold mb-3">
-          {t("gaming.games.emojiIdioms.alreadyPlayedTitle")}
-        </h2>
-        <p className="text-slate-500">
-          {t("gaming.games.emojiIdioms.alreadyPlayedText")}
-        </p>
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="bg-white rounded-3xl shadow-2xl p-12 text-center max-w-md"
+        >
+          <div className="text-7xl mb-6">⏰</div>
+          <h2 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-4">
+            {t("gaming.games.emojiIdioms.alreadyPlayedTitle")}
+          </h2>
+          <p className="text-slate-600 text-lg">
+            {t("gaming.games.emojiIdioms.alreadyPlayedText")}
+          </p>
+        </motion.div>
       </div>
     );
   }
 
+  // Cargando palabra
   if (!item) {
     return (
-      <div className="w-full h-full flex items-center justify-center py-32">
-        <div className="animate-spin h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full" />
+       <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="relative w-24 h-24 mx-auto mb-6">
+            <div className="absolute inset-0 rounded-full border-8 border-purple-200" />
+            <div className="absolute inset-0 rounded-full border-8 border-t-purple-600 animate-spin" />
+          </div>
+        </div>
       </div>
     );
-  }
+  } 
+
 
   // ===========================================
   // UI – Juego principal

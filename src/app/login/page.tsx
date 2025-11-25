@@ -59,7 +59,7 @@ return (
         {/* Logo / Header */}
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold text-gray-800 tracking-tight">
-            Further Academy
+            Further Campus
           </h1>
           <p className="text-gray-500 text-sm mt-1">
             {isRegister ? "Crea una nueva cuenta" : "Inicia sesión para continuar"}
@@ -134,7 +134,7 @@ return (
 
         {/* Footer */}
         <div className="mt-8 text-center text-xs text-gray-400">
-          © {new Date().getFullYear()} Further Academy. Todos los derechos reservados.
+          © {new Date().getFullYear()} Further Campus. Todos los derechos reservados.
         </div>
       </div>
     </div>

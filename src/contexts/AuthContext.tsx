@@ -537,95 +537,100 @@ const getCourseProgress = async (uid: string, courseId: string) => {
   /* ==========================================================
      🔹 Listener de Auth
      ========================================================== */
-  useEffect(() => {
+     useEffect(() => {
   const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
     setLoading(true);
 
-    if (firebaseUser) {
-      setUser(firebaseUser);
-      await loadChatSessions(firebaseUser.uid);
+    try {
+      if (firebaseUser) {
+        setUser(firebaseUser);
 
-      let profile = await fetchUserFromBatchesByUid(firebaseUser.uid);
+        // 🔥 PASO 1: Cargar sesiones de chat
+        await loadChatSessions(firebaseUser.uid);
 
-      if (profile?.batchId && profile?.userKey) {
-        const batchRef = doc(db, "alumnos", profile.batchId);
-        const snap = await getDoc(batchRef);
+        // 🔥 PASO 2: Buscar perfil existente
+        let profile = await fetchUserFromBatchesByUid(firebaseUser.uid);
 
-        if (snap.exists()) {
-          const data = snap.data()[profile.userKey] || {};
-          profile = {
-            ...profile,
-            ...data,
-          };
+        // 🔥 PASO 3: Si NO existe → CREAR PRIMERO
+        if (!profile) {
+          console.log("⚠️ Usuario nuevo detectado, creando en batch...");
+          await addUserToBatch(firebaseUser, "alumno");
+          
+          // Volver a buscar después de crear
+          profile = await fetchUserFromBatchesByUid(firebaseUser.uid);
+          
+          if (!profile) {
+            console.error("❌ Error: No se pudo crear el usuario en batch");
+            toast.error("Error al crear perfil de usuario");
+            setLoading(false);
+            return;
+          }
         }
-      }
 
-      // GUARDO EL PERFIL
-      setUserProfile(profile);
+        // 🔥 PASO 4: Obtener datos completos del batch
+        if (profile?.batchId && profile?.userKey) {
+          const batchRef = doc(db, "alumnos", profile.batchId);
+          const snap = await getDoc(batchRef);
 
-  // =======================================================
-// UNIFICAR CAMPOS DE IDIOMA
-// =======================================================
-const resolvedLanguage =
-  profile?.learningLanguage || 
-  profile?.language ||
-  profile?.idioma ||
-  "en";
+          if (snap.exists()) {
+            const data = snap.data()[profile.userKey] || {};
+            profile = {
+              ...profile,
+              ...data,
+            };
+          }
+        }
 
-profile = {
-  ...profile,
-  learningLanguage: resolvedLanguage,
-  language: resolvedLanguage,
-  idioma: resolvedLanguage,
-};
-setUserProfile(profile);
-setLang(resolvedLanguage);
+        // 🔥 PASO 5: Unificar campos de idioma
+        const resolvedLanguage =
+          profile?.learningLanguage || 
+          profile?.language ||
+          profile?.idioma ||
+          "en";
 
+        profile = {
+          ...profile,
+          learningLanguage: resolvedLanguage,
+          language: resolvedLanguage,
+          idioma: resolvedLanguage,
+        };
 
-console.log("🌍 Idioma final del alumno:", resolvedLanguage);
+        setUserProfile(profile);
+        setLang(resolvedLanguage);
 
+        console.log("🌍 Idioma final del usuario:", resolvedLanguage);
 
+        // 🔥 PASO 6: Determinar rol
+        const resolvedRole = profile?.role || "alumno";
+        setRole(resolvedRole);
 
-      // ⬇️⬇️⬇️ **ESTE ES EL LUGAR CORRECTO**
-     if (profile?.learningLanguage) {
-  setLang(profile.learningLanguage);
-} else {
-  setLang("en");
-}
+        // 🔥 PASO 7: Cargar alumnos (para todos los roles)
+        await loadAlumnos();
 
-      // ⬆️⬆️⬆️ ESTE EXACTO LUGAR
-
-      if (!profile) {
-        await addUserToBatch(firebaseUser, "alumno");
-        profile = await fetchUserFromBatchesByUid(firebaseUser.uid);
-      }
-
-      const resolvedRole = profile?.role || "alumno";
-      setRole(resolvedRole);
-      setUserProfile(profile);
-
-      await loadAlumnos();
-
-      if (resolvedRole === "alumno") {
-        await loadMisCursos(firebaseUser.uid);
+        // 🔥 PASO 8: Cargar datos según rol
+        if (resolvedRole === "alumno") {
+          await loadMisCursos(firebaseUser.uid);
+        } else {
+          await Promise.all([
+            loadAllCursos(),
+            loadProfesores(),
+          ]);
+        }
       } else {
-        await Promise.all([
-          loadAllCursos(),
-          loadProfesores(),
-        ]);
+        // Usuario no logueado
+        setUser(null);
+        setRole(null);
+        setMisCursos([]);
+        setUserProfile(null);
+        setLang("en");
       }
-    } else {
-      setUser(null);
-      setRole(null);
-      setMisCursos([]);
-      setUserProfile(null);
-
-      // En logout → forzar idioma default
-      setLang("en");
+    } catch (error) {
+      console.error("❌ Error en onAuthStateChanged:", error);
+      toast.error("Error al cargar datos del usuario");
+    } finally {
+      setLoading(false);
+      setAuthReady(true);
     }
-
-    setLoading(false);
-    setAuthReady(true);
   });
 
   return () => unsubscribe();

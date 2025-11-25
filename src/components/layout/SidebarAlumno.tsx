@@ -53,8 +53,7 @@ const chatSection = [
 
 const menuPersonal = [
   { id: "perfil", label: t("sidebar.profile"), icon: <FiUser size={16} /> },
-  { id: "eventos", label: t("sidebar.events"), icon: <FiCalendar size={16} /> },
-  { id: "mensajes", label: t("sidebar.messages"), icon: <FiMessageSquare size={16} /> },
+  { id: "events", label: t("sidebar.events"), icon: <FiCalendar size={16} /> },
 ];
 
 
@@ -117,7 +116,7 @@ const menuPersonal = [
       {/* FOOTER */}
       <div className="border-t border-gray-200 p-5">
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+          <div className="w-10 h-10 rounded-fullbg-[#FFF4E8] text-[#EE7203] flex items-center justify-center font-bold">
             {initials}
           </div>
           <div className="flex flex-col truncate">
@@ -128,17 +127,19 @@ const menuPersonal = [
           </div>
         </div>
 
-        <button
-          onClick={handleLogout}
-          className="flex items-center justify-center gap-2 w-full px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium text-sm transition"
-        >
-          <FiLogOut size={16} />
-          {t("sidebar.logout")}
+       <button
+  onClick={handleLogout}
+  className="flex items-center justify-center gap-2 w-full px-3 py-2 
+    bg-[#FFF4E8] hover:bg-[#FF3816] rounded-lg 
+    text-[#EE7203] hover:text-white font-medium text-sm transition"
+>
+  <FiLogOut size={16} />
+  {t("sidebar.logout")}
+</button>
 
-        </button>
 
         <p className="text-xs text-gray-400 text-center mt-5">
-          © {new Date().getFullYear()} Further Academy
+          © {new Date().getFullYear()} Further Campus
         </p>
       </div>
     </aside>
@@ -165,8 +166,8 @@ function SidebarButton({
       onClick={onClick}
       className={`w-full flex items-center gap-3 px-4 py-2 rounded-md text-sm font-medium transition-all duration-150 ${
         active
-          ? "bg-blue-50 text-blue-700 border-l-4 border-blue-600"
-          : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+          ? "bg-[#FFF4E8] text-[#EE7203] border-l-4 border-[#EE7203]"
+          : "text-gray-700 hover:bg-[#FFF4E8] hover:text-[#EE7203]"
       }`}
     >
       {icon}
@@ -174,6 +175,7 @@ function SidebarButton({
     </button>
   );
 }
+
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (

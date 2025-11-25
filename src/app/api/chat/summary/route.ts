@@ -10,7 +10,7 @@ const genAI = new GoogleGenerativeAI(apiKey!);
 const MODEL_ID = "gemini-2.5-flash";
 
 const SUMMARY_PROMPT = `
-You are a strict JSON generator for Further Academy.
+You are a strict JSON generator for Further Campus.
 
 Your ONLY task is to analyze the conversation between a student and a language tutor
 and return a CLEAN JSON object.

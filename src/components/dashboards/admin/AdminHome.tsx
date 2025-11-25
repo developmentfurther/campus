@@ -156,7 +156,7 @@ export default function AdminHome() {
 
       {/* FOOTER */}
       <footer className="text-center text-xs text-gray-400 pt-8 border-t border-gray-100">
-        © {new Date().getFullYear()} Further Academy — Panel Administrativo
+        © {new Date().getFullYear()} Further Campus — Panel Administrativo
       </footer>
     </div>
   );

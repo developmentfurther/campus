@@ -25,32 +25,32 @@ export default function GamingHub() {
     hangman: {
     title: t("gaming.games.hangman.title"),
     description: t("gaming.games.hangman.description"),
-    icon: <FiTarget className="text-blue-600 text-2xl" />,
+    icon: <FiTarget className="text-[#EE7203] text-2xl" />,
   },
   wordScramble: {
     title: t("gaming.games.wordScramble.title"),
     description: t("gaming.games.wordScramble.description"),
-    icon: <FiZap className="text-indigo-600 text-2xl" />,
+    icon: <FiZap className="text-[#EE7203] text-2xl" />,
   },
   wordle: {
     title: t("gaming.games.wordle.title"),
     description: t("gaming.games.wordle.description"),
-    icon: <FiAperture className="text-green-600 text-2xl" />,
+    icon: <FiAperture className="text-[#EE7203] text-2xl" />,
   },
   emojiIdioms: {
     title: t("gaming.games.emojiIdioms.title"),
     description: t("gaming.games.emojiIdioms.description"),
-    icon: <FiBookOpen className="text-yellow-600 text-2xl" />,
+    icon: <FiBookOpen className="text-[#EE7203] text-2xl" />,
   },
   sentenceBuilder: {
     title: t("gaming.games.sentenceBuilder.title"),
     description: t("gaming.games.sentenceBuilder.description"),
-    icon: <FiEdit className="text-orange-600 text-2xl" />,
+    icon: <FiEdit className="text-[#EE7203] text-2xl" />,
   },
   errorFinder: {
     title: t("gaming.games.errorFinder.title"),
     description: t("gaming.games.errorFinder.description"),
-    icon: <FiAlertTriangle className="text-red-600 text-2xl" />,
+    icon: <FiAlertTriangle className="text-[#FF3816] text-2xl" />,
   }
   };
 
@@ -81,7 +81,8 @@ export default function GamingHub() {
             className="rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-lg transition-all p-6 flex flex-col justify-between hover:-translate-y-1 hover:scale-[1.02]"
           >
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 rounded-xl bg-slate-100 shadow-inner">
+              <div className="p-3 rounded-xl bg-[#FFF4E8] shadow-inner">
+
                 {game.icon}
               </div>
               <h2 className="text-xl font-semibold">{game.title}</h2>
@@ -93,7 +94,9 @@ export default function GamingHub() {
 
             <button
               onClick={() => router.push(`/gaming/${game.slug}`)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition active:scale-95"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg 
+  bg-[#EE7203] text-white font-medium hover:bg-[#FF3816] transition active:scale-95"
+
             >
               <FiPlay size={16} /> {t("gaming.play")}
             </button>

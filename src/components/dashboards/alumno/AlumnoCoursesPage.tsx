@@ -1,8 +1,7 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { FiBookOpen, FiTrendingUp, FiClock, FiUser } from "react-icons/fi";
-import { Button } from "@/components/ui/button";
+import { FiBookOpen, FiClock, FiUser, FiArrowRight, FiAward } from "react-icons/fi";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/contexts/I18nContext";
 
@@ -13,17 +12,17 @@ export default function AlumnoCoursesPage() {
 
   if (loadingCursos)
     return (
-      <div className="p-8 text-slate-500 bg-gray-50 min-h-screen flex items-center justify-center">
+      <div className="p-8 text-slate-500 bg-white min-h-screen flex items-center justify-center">
         {t("courses.loading")}
       </div>
     );
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-800 p-8 space-y-8">
+    <div className="min-h-screen bg-white text-gray-800 p-8 space-y-8">
       {/* HEADER */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">
+          <h1 className="text-3xl font-bold" style={{ color: '#112C3E' }}>
             {t("courses.title")}
           </h1>
           <p className="text-gray-500 mt-1">
@@ -34,11 +33,14 @@ export default function AlumnoCoursesPage() {
 
       {/* EMPTY STATE */}
       {misCursos.length === 0 ? (
-        <div className="border border-dashed border-gray-300 p-10 text-center bg-white rounded-xl shadow-sm">
-          <p className="text-gray-500 mb-2 text-sm">
+        <div className="border-2 border-dashed border-gray-300 p-12 text-center rounded-2xl">
+          <div className="flex justify-center mb-4">
+            <FiBookOpen size={48} className="text-gray-400" />
+          </div>
+          <p className="text-gray-600 mb-2 font-medium">
             {t("courses.emptyMessage")}
           </p>
-          <p className="text-gray-400 text-xs">
+          <p className="text-gray-400 text-sm">
             {t("courses.emptyHint")}
           </p>
         </div>
@@ -47,82 +49,112 @@ export default function AlumnoCoursesPage() {
           {misCursos.map((c) => (
             <div
               key={c.id}
-              className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 p-6 flex flex-col justify-between"
+              className="group relative border-2 border-gray-200 rounded-2xl overflow-hidden hover:border-gray-300 transition-all duration-300 hover:shadow-lg"
             >
-              {/* HEADER */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-gray-100 pb-3">
-                <h2 className="text-xl font-semibold text-gray-800">
-                  {c.titulo || t("courses.untitled")}
-                </h2>
-                <span className="text-xs font-medium bg-blue-50 text-blue-700 px-3 py-1 rounded-full">
-                  {c.categoria || t("courses.generalCategory")}
-                </span>
-              </div>
+              {/* Top Accent Bar */}
+              <div 
+                className="h-1.5 w-full"
+                style={{ 
+                  background: c.progressPercent >= 100 
+                    ? '#EE7203' 
+                    : `linear-gradient(to right, #EE7203 ${c.progressPercent}%, #e5e7eb ${c.progressPercent}%)`
+                }}
+              />
 
-              {/* INFO BLOCK */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4 text-sm text-gray-600">
-                <InfoItem
-                  icon={<FiBookOpen />}
-                  label={t("courses.units")}
-                  value={c.unidades?.length || 0}
-                />
-                <InfoItem
-                  icon={<FiClock />}
-                  label={t("courses.duration")}
-                  value={`${c.unidades?.reduce(
-                    (acc: number, u: any) => acc + (u.duracion || 0),
-                    0
-                  )} min`}
-                />
-                <InfoItem
-                  icon={<FiTrendingUp />}
-                  label={t("courses.progress")}
-                  value={`${c.progressPercent || 0}%`}
-                />
-                <InfoItem
-                  icon={<FiUser />}
-                  label={t("courses.teacher")}
-                  value={c.profesorNombre || t("courses.noTeacher")}
-                />
-              </div>
+              <div className="p-6">
+                {/* Header Section */}
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span 
+                        className="text-xs font-bold uppercase tracking-wide px-2.5 py-1 rounded-md"
+                        style={{ backgroundColor: '#112C3E', color: '#FFFFFF' }}
+                      >
+                        {c.categoria || t("courses.generalCategory")}
+                      </span>
+                      {c.progressPercent >= 100 && (
+                        <div className="flex items-center gap-1 text-xs font-semibold" style={{ color: '#EE7203' }}>
+                          <FiAward size={14} />
+                          Completado
+                        </div>
+                      )}
+                    </div>
+                    <h2 
+                      className="text-xl font-bold leading-tight"
+                      style={{ color: '#112C3E' }}
+                    >
+                      {c.titulo || t("courses.untitled")}
+                    </h2>
+                  </div>
+                </div>
 
-              {/* PROGRESS BAR */}
-              <div className="mt-5">
-                <div className="flex justify-between text-xs text-gray-500 mb-1">
-                  <span>
+                {/* Stats Grid */}
+                <div className="grid grid-cols-2 gap-4 mb-5 pb-5 border-b border-gray-200">
+                  <StatItem
+                    icon={<FiBookOpen size={16} />}
+                    label={t("courses.units")}
+                    value={c.unidades?.length || 0}
+                  />
+                  <StatItem
+                    icon={<FiClock size={16} />}
+                    label={t("courses.duration")}
+                    value={`${c.unidades?.reduce(
+                      (acc: number, u: any) => acc + (u.duracion || 0),
+                      0
+                    )} min`}
+                  />
+                  <StatItem
+                    icon={<FiUser size={16} />}
+                    label={t("courses.teacher")}
+                    value={c.profesorNombre || t("courses.noTeacher")}
+                    fullWidth
+                  />
+                </div>
+
+                {/* Progress Section */}
+                <div className="mb-5">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-gray-600">
+                      Progreso del curso
+                    </span>
+                    <span 
+                      className="text-sm font-bold"
+                      style={{ color: '#EE7203' }}
+                    >
+                      {c.progressPercent}%
+                    </span>
+                  </div>
+                  <div className="relative w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="absolute top-0 left-0 h-full rounded-full transition-all duration-500"
+                      style={{ 
+                        width: `${c.progressPercent}%`,
+                        backgroundColor: '#EE7203'
+                      }}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1.5">
                     {t("courses.lessonsCompleted", {
                       done: c.completedCount,
                       total: c.totalLessons,
                     })}
-                  </span>
-                  <span>{c.progressPercent}%</span>
+                  </p>
                 </div>
-                <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-blue-600 rounded-full transition-all duration-500"
-                    style={{ width: `${c.progressPercent}%` }}
-                  ></div>
-                </div>
-              </div>
 
-              {/* ACTIONS */}
-              <div className="mt-6 flex flex-wrap gap-3 justify-end">
-                <Button
+                {/* Action Button */}
+                <button
                   onClick={() => router.push(`/material-academico/${c.id}`)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg px-6 py-2 text-sm"
+                  className="w-full py-3 px-4 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all duration-200 group-hover:gap-3"
+                  style={{ 
+                    backgroundColor: '#EE7203',
+                    color: '#FFFFFF'
+                  }}
                 >
                   {c.progressPercent >= 100
                     ? t("courses.review")
                     : t("courses.continue")}
-                </Button>
-
-                <Button
-                  variant="outline"
-                  onClick={() => router.push(`/material-academico/${c.id}`)}
-                  className="border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg px-6 py-2 text-sm"
-                >
-                  {t("courses.viewDetails")}
-                </Button>
+                  <FiArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
+                </button>
               </div>
             </div>
           ))}
@@ -132,23 +164,39 @@ export default function AlumnoCoursesPage() {
   );
 }
 
-/* 🔹 INFO ITEM */
-function InfoItem({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
+/* Stat Item Component */
+function StatItem({ 
+  icon, 
+  label, 
+  value, 
+  fullWidth = false 
+}: { 
+  icon: React.ReactNode; 
+  label: string; 
   value: string | number;
+  fullWidth?: boolean;
 }) {
   return (
-    <div className="flex flex-col items-start gap-1">
-      <div className="flex items-center gap-2 text-gray-500">
-        {icon}
-        <span className="text-xs font-medium uppercase">{label}</span>
+    <div className={`flex items-center gap-3 ${fullWidth ? 'col-span-2' : ''}`}>
+      <div 
+        className="p-2 rounded-lg"
+        style={{ backgroundColor: '#f8f9fa' }}
+      >
+        <div style={{ color: '#112C3E' }}>
+          {icon}
+        </div>
       </div>
-      <span className="font-semibold text-gray-800">{value}</span>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
+          {label}
+        </p>
+        <p 
+          className="font-semibold truncate"
+          style={{ color: '#112C3E' }}
+        >
+          {value}
+        </p>
+      </div>
     </div>
   );
 }

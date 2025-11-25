@@ -140,29 +140,46 @@ export default function ErrorFinder() {
 
   if (checkingAttempt) {
     return (
-      <div className="py-20 text-center text-slate-600">
-        {t("gaming.games.errorFinder.checking")}
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="relative w-24 h-24 mx-auto mb-6">
+            <div className="absolute inset-0 rounded-full border-8 border-purple-200" />
+            <div className="absolute inset-0 rounded-full border-8 border-t-purple-600 animate-spin" />
+          </div>
+        </div>
       </div>
     );
   }
-
+  // Bloqueado (ya jugó hoy)
   if (blocked && role === "alumno") {
     return (
-      <div className="max-w-lg mx-auto py-16 text-center space-y-4">
-        <h1 className="text-3xl font-bold text-slate-800">
-          {t("gaming.games.errorFinder.title")}
-        </h1>
-        <p className="text-slate-500">{t("gaming.games.errorFinder.alreadyPlayed")}</p>
-        <p className="text-slate-600 text-sm">{t("gaming.games.errorFinder.comeBack")}</p>
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="bg-white rounded-3xl shadow-2xl p-12 text-center max-w-md"
+        >
+          <div className="text-7xl mb-6">⏰</div>
+          <h2 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-4">
+            {t("gaming.games.errorFinder.alreadyPlayed")}
+          </h2>
+          <p className="text-slate-600 text-lg">
+            {t("gaming.games.errorFinder.comeBack")} 
+          </p>
+        </motion.div>
       </div>
     );
   }
 
   if (loading || !data) {
     return (
-      <div className="py-24 text-center text-slate-700">
-        <div className="animate-spin h-10 w-10 mx-auto border-4 border-blue-500 border-t-transparent rounded-full"></div>
-        <p className="mt-3">{t("gaming.games.errorFinder.loading")}</p>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="relative w-24 h-24 mx-auto mb-6">
+            <div className="absolute inset-0 rounded-full border-8 border-purple-200" />
+            <div className="absolute inset-0 rounded-full border-8 border-t-purple-600 animate-spin" />
+          </div>
+        </div>
       </div>
     );
   }

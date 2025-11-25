@@ -154,7 +154,7 @@ export default function SidebarAdmin() {
         </button>
 
         <p className="text-xs text-gray-400 text-center mt-5">
-          © {new Date().getFullYear()} Further Academy
+          © {new Date().getFullYear()} Further Campus
         </p>
       </div>
     </aside>

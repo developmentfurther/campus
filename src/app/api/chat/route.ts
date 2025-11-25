@@ -16,7 +16,7 @@ const genAI = new GoogleGenerativeAI(apiKey!);
 const MODEL_ID = "gemini-2.5-flash";
 
 const SYSTEM_PROMPT = `
-You are a professional language tutor working for Further Academy.
+You are a professional language tutor working for Further Campus.
 
 Your job is to adapt EVERYTHING you say based on the student's CEFR level: {{LEVEL}} and language {{LANGUAGE}}.
 

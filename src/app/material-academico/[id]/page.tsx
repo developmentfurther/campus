@@ -32,6 +32,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import Player from "@vimeo/player";
 import {motion} from "framer-motion"
+import Image from "next/image";
 
 
 
@@ -254,7 +255,7 @@ if (u.closing && (u.closing.examIntro || u.closing.examExercises?.length || u.cl
   if (curso.textoFinalCurso || curso.textoFinalCursoVideoUrl) {
     normalized.push({
       id: "closing-course",
-      title: "🎓 Cierre del Curso",
+      title: "Cierre del Curso",
       lessons: [
         {
           key: buildKey("closing", "final"),
@@ -994,9 +995,9 @@ const currentUnit = units[activeU];
      🔹 UI inicial (básica)
      ========================================================= */
  return (
-  <div className="flex min-h-screen bg-white text-slate-900">
+ <div className="flex h-screen overflow-hidden bg-white text-slate-900">
     {/* ======================= SIDEBAR IZQUIERDA ======================= */}
-    <aside className="w-72 shrink-0 border-r border-slate-200 bg-white overflow-y-auto">
+    <aside className="w-72 shrink-0 border-r border-slate-200 bg-white sticky top-0 h-screen overflow-y-auto">
       <div className="p-4 border-b border-slate-200">
         <button
           onClick={() => router.push("/dashboard")}
@@ -1013,7 +1014,7 @@ const currentUnit = units[activeU];
         
       </div>
 
-      <nav className="p-3 space-y-2">
+      <nav className="p-3 space-y-2 pb-32">
         {units.map((u, uIdx) => {
           // Cierre del curso
           if (u.id === "closing-course") {
@@ -1094,12 +1095,11 @@ const currentUnit = units[activeU];
                       >
                         <div className="flex items-center justify-between">
                           <span className="truncate">
-  {l.id !== "intro" && l.id !== "closing"
-    ? `Lesson ${lIdx} — ${l.title}`
-    : l.id === "intro"
-    ? "Introducción"
-    : "🧠 Cierre de la unidad"}
+  {l.id === "closing"
+    ? "Cierre de la unidad"
+    : `${uIdx + 1}.${lIdx + 1}  ${l.title}`}
 </span>
+
 
                           {done && (
                             <FiCheckCircle size={12} className="text-emerald-500" />
@@ -1114,6 +1114,23 @@ const currentUnit = units[activeU];
           );
         })}
       </nav>
+    
+    {/* Logo fijo al fondo */}
+
+ {/* Logo fijo al fondo */}
+     <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white via-white to-transparent">
+        <div className="w-full h-px bg-slate-200 mb-4" />
+        <div className="flex justify-center">
+          <Image
+            src="/images/logo.png"
+            alt="Further Corporate"
+            width={200}
+            height={80}
+            className="opacity-90"
+          />
+        </div>
+      </div>
+
     </aside>
 
     {/* ======================= CONTENIDO PRINCIPAL ======================= */}
@@ -1273,7 +1290,7 @@ const currentUnit = units[activeU];
     </main>
 
     {/* ======================= SIDEBAR DERECHA ======================= */}
-    <aside className="hidden xl:block xl:w-80 xl:shrink-0 bg-white border-l border-slate-200 p-6">
+    <aside className="hidden xl:block xl:w-80 xl:shrink-0 bg-white border-l border-slate-200 p-6 sticky top-0 h-screen overflow-y-auto">
       <h3 className="text-lg font-semibold text-slate-900 mb-2">
         Resumen del curso
       </h3>

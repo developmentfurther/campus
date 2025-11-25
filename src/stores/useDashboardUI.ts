@@ -9,7 +9,8 @@ type Section =
   | "perfil"
   | "chatbot"
   | "chat-history"
-  | "chat-session";
+  | "chat-session"
+  | "events";
 
 interface State {
   section: Section;
