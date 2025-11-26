@@ -591,7 +591,7 @@ const idiomasCurso = [
         <div className="flex items-center justify-center h-[90vh]">
           <div className="text-center">
             <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading course data...</p>
+            <p className="text-gray-600">Loading Material data...</p>
           </div>
         </div>
       </div>
@@ -663,14 +663,14 @@ const idiomasCurso = [
                   <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center border border-blue-100">
                     <FiBookOpen className="w-5 h-5 text-blue-600" />
                   </div>
-                  <h3 className="text-lg font-semibold">Course information</h3>
+                  <h3 className="text-lg font-semibold">Material information</h3>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Basics */}
                   <div className="lg:col-span-2 space-y-4">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700">Course title</label>
+                      <label className="text-sm font-medium text-slate-700">Material title</label>
                       <input
                         type="text"
                         name="titulo"
@@ -771,7 +771,7 @@ const idiomasCurso = [
           <FiLayers className="w-5 h-5 text-indigo-600" />
         </div>
         <h3 className="text-xl font-semibold text-slate-900">
-          Course Content: Units & Lessons
+          Material Content: Units & Lessons
         </h3>
       </div>
 
@@ -1470,12 +1470,12 @@ const idiomasCurso = [
                   <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
                     <FiFlag className="w-5 h-5 text-green-600" />
                   </div>
-                  <h3 className="text-xl font-semibold text-slate-900">Course Closing</h3>
+                  <h3 className="text-xl font-semibold text-slate-900">Material Closing</h3>
                 </div>
 
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">Final Course Message</label>
+                    <label className="text-sm font-medium text-slate-700">Final Material Message</label>
                     <textarea
                       placeholder="A message shown to students upon completing the entire course."
                       value={curso.textoFinalCurso}
@@ -1487,7 +1487,7 @@ const idiomasCurso = [
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
-                      <FiVideo className="w-4 h-4" /> Final Course Video URL (optional)
+                      <FiVideo className="w-4 h-4" /> Final Material Video URL (optional)
                     </label>
                     <div className="relative">
                       <FiLink2 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -1504,7 +1504,7 @@ const idiomasCurso = [
                       <div className="aspect-video bg-black/5 rounded-xl overflow-hidden">
                         <iframe
                           src={curso.textoFinalCursoVideoUrl}
-                          title="Final course video"
+                          title="Final Material video"
                           className="w-full h-full"
                           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                           allowFullScreen
@@ -1524,7 +1524,7 @@ const idiomasCurso = [
         <FiUsers className="w-5 h-5 text-blue-600" />
       </div>
       <h3 className="text-xl font-semibold text-slate-900">
-        Manage Course Students
+        Manage Material Students
       </h3>
     </div>
 

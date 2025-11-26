@@ -645,7 +645,7 @@ const refCurso = await addDoc(collection(dbToUse, "cursos"), payload);
     // 5️⃣ Actualizar estado local y cerrar modal
     // =====================================================
     await reloadData?.();
-    toast.success("✅ Course created successfully");
+    toast.success("✅ created successfully");
     onClose?.();
 
     console.log("🎉 [DEBUG] Curso creado correctamente:", refCurso.path);
@@ -717,7 +717,7 @@ const idiomasCurso = [
             Create Material Academy
           </h2>
           <p className="text-sm text-gray-500 mt-1">
-            Define the structure, content, and configuration of your course.
+            Define the structure, content, and configuration of your material.
           </p>
         </div>
 
@@ -763,7 +763,7 @@ const idiomasCurso = [
             <FiBookOpen className="w-5 h-5" />
           </div>
           <h3 className="text-lg font-semibold text-gray-900">
-            Course information
+            Material information
           </h3>
         </header>
 
@@ -773,7 +773,7 @@ const idiomasCurso = [
             {/* Título */}
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-700">
-                Course title
+                Material title
               </label>
               <input
                 type="text"
@@ -872,10 +872,10 @@ const idiomasCurso = [
               />
               <div className="flex flex-col">
                 <span className="text-sm font-medium text-gray-700">
-                  Public Course
+                  Public Material
                 </span>
                 <span className="text-xs text-gray-500">
-                  Users will be able to view and access the course.
+                  Users will be able to view and access the Material.
                 </span>
               </div>
             </div>
@@ -898,7 +898,7 @@ const idiomasCurso = [
           <FiLayers className="w-5 h-5 text-indigo-600" />
         </div>
         <h3 className="text-xl font-semibold text-slate-900">
-          Course Content: Units & Lessons
+          Material Content: Units & Lessons
         </h3>
       </div>
 
@@ -1461,7 +1461,7 @@ const idiomasCurso = [
         <FiClipboard className="w-5 h-5" />
       </div>
       <h3 className="text-lg font-semibold text-gray-900">
-        Final exam of the course
+        Final exam of the Material
       </h3>
     </div>
 
@@ -1615,17 +1615,17 @@ const idiomasCurso = [
         <FiFlag className="w-5 h-5" />
       </div>
       <h3 className="text-lg font-semibold text-gray-900">
-        Closing of the course
+        Closing of the Material
       </h3>
     </div>
 
     {/* Mensaje final */}
     <div className="space-y-2">
       <label className="text-sm font-medium text-gray-700">
-        Final message of the course
+        Final message of the Material
       </label>
       <textarea
-        placeholder="Message displayed upon completion of the course (thank you, conclusion, congratulations, etc.)"
+        placeholder="Message displayed upon completion of the material (thank you, conclusion, congratulations, etc.)"
         value={curso.textoFinalCurso}
         onChange={handleChange}
         name="textoFinalCurso"
@@ -1656,7 +1656,7 @@ const idiomasCurso = [
           <div className="aspect-video overflow-hidden rounded-lg border border-gray-200">
             <iframe
               src={curso.textoFinalCursoVideoUrl}
-              title="Course closing video"
+              title="Material closing video"
               className="w-full h-full"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
@@ -1676,7 +1676,7 @@ const idiomasCurso = [
         <FiUsers className="w-5 h-5" />
       </div>
       <h3 className="text-lg font-semibold text-gray-900">
-        Course student management
+        Material student management
       </h3>
     </div>
 
@@ -1828,7 +1828,7 @@ const idiomasCurso = [
       }`}
   >
     <FiSave size={18} />
-    {uploading ? "Saving..." : "Create course"}
+    {uploading ? "Saving..." : "Create Material"}
   </button>
 </div>
 

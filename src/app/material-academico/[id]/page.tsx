@@ -1347,7 +1347,7 @@ const prevExercise = () => {
   if (!authReady || authLoading || loading) {
     return (
       <div className="min-h-[60vh] grid place-items-center text-slate-300">
-        Cargando curso...
+        Cargando material...
       </div>
     );
   }
@@ -1730,7 +1730,7 @@ const currentUnit = units[activeU];
     {/* ======================= SIDEBAR DERECHA ======================= */}
     <aside className="hidden xl:block xl:w-80 xl:shrink-0 bg-white border-l border-slate-200 p-6 sticky top-0 h-screen overflow-y-auto">
       <h3 className="text-lg font-semibold text-slate-900 mb-2">
-        Resumen del curso
+        Resumen del material
       </h3>
       <p className="text-sm text-slate-600 mb-4">
         {curso?.descripcion || "Sin descripción disponible"}
