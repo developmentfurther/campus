@@ -14,7 +14,7 @@ import {
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import Exercises from "../cursoItem/exercises/Exercises";
+import Exercises, { Exercise } from "../cursoItem/exercises/Exercises";
 import {
   FiPlus,
   FiTrash2,
@@ -38,28 +38,34 @@ import {
   FiDollarSign,
   FiGlobe,
 } from "react-icons/fi";
+import VocabularyEditor from "../cursoItem/VocabularyEditor";
 
 /* ----------------- Interfaces ----------------- */
 
 
-interface Ejercicio {
-  id: string;
-  pregunta: string;
-  opciones: { texto: string; correcto: boolean }[];
-  tipo: "multiple_choice" | "true_false" | "text_input";
-}
+
 
 interface Leccion {
   id: string;
   titulo: string;
-  descripcion?: string;  // ✅ nuevo campo corto
-  teoria?: string;       // ✅ markdown
+  descripcion?: string;
+  teoria?: string;
   urlVideo: string;
   urlImagen: string;
   pdfUrl: string;
-  ejercicios: Ejercicio[];
+
+  vocabulary?: {
+  entries: {
+    term: string;
+    translation: string;
+    example?: string;
+  }[];
+};
+
+  ejercicios: Exercise[];
   finalMessage: string;
 }
+
 
 
 interface Unidad {
@@ -69,13 +75,13 @@ interface Unidad {
   introVideo?: string;
   duracion?: number;
   urlImagen: string;
-  ejercicios: Ejercicio[];
+  ejercicios: Exercise[];
   textoCierre: string;
   lecciones: Leccion[];
   closing?: {
     closingText?: string;
     examIntro?: string;
-    examExercises?: Ejercicio[];
+    examExercises?: Exercise[];
     pdfUrl?: string; // ✅ nuevo campo
     videoUrl?: string;
   };
@@ -83,7 +89,7 @@ interface Unidad {
 
 interface ExamenFinal {
   introTexto: string;
-  ejercicios: Ejercicio[];
+  ejercicios: Exercise[];
 }
 
 interface Capstone {
@@ -140,9 +146,13 @@ const uploadFile = async (storage: any, path: string, file: File): Promise<strin
 export default function EditCourseForm({
   
   courseId,
+  initialData,  // 🔥 NUEVO: Recibe los datos pre-cargados
+  loading,      // 🔥 NUEVO: Indicador de carga externa
   onClose,
 }: {
   courseId: string;
+  initialData?: any;  // 🔥 NUEVO
+  loading?: boolean;  // 🔥 NUEVO
   onClose?: () => void;
 }) {
   const { firestore, storage, alumnos, reloadData } = useAuth();
@@ -176,31 +186,73 @@ const [activeLeccion, setActiveLeccion] = useState<number>(0);
   /* ==============================================================
      🔹 Cargar datos del curso desde Firestore
      ============================================================== */
-  useEffect(() => {
-    const loadCourse = async () => {
-      if (!firestore || !courseId) return;
-      try {
-        const docRef = doc(firestore, "cursos", courseId);
-        const snap = await getDoc(docRef);
-        if (!snap.exists()) {
-          toast.error("El curso no existe o fue eliminado");
-          return;
-        }
-        const data = snap.data() as Curso;
-        setCurso(data);
-        setUnidades(data.unidades || []);
-        setExamenFinal(data.examenFinal || { introTexto: "", ejercicios: [] });
-        setCapstone(data.capstone || { videoUrl: "", instrucciones: "", checklist: [] });
-      } catch (err) {
-        console.error("❌ Error cargando curso:", err);
-        toast.error("Error cargando los datos del curso");
-      }
-    };
-    loadCourse();
-  }, [firestore, courseId]);
+ useEffect(() => {
+    if (!initialData) return;
+    
+    // Setear los datos inmediatamente desde las props
+    setCurso(initialData);
+    setUnidades(initialData.unidades || []);
+    setExamenFinal(initialData.examenFinal || { introTexto: "", ejercicios: [] });
+    setCapstone(initialData.capstone || { videoUrl: "", instrucciones: "", checklist: [] });
+  }, [initialData]);
 
+  function normalizeExercise(ex: any) {
+  if (!ex || typeof ex !== "object") return {};
 
-  
+  const base = {
+    id: ex.id || "",
+    type: ex.type || "",
+  };
+
+  switch (ex.type) {
+    case "reading":
+      return {
+        ...base,
+        title: ex.title || "",
+        text: ex.text || "",
+        questions: Array.isArray(ex.questions)
+          ? ex.questions.map((q: any) => ({
+              id: q.id || "",
+              prompt: q.prompt || "",
+              kind: q.kind || "mc",
+              options: q.options || [],
+              correctIndex: q.correctIndex ?? 0,
+              answer: q.answer ?? false,
+            }))
+          : [],
+      };
+
+    case "multiple_choice":
+      return {
+        ...base,
+        question: ex.question || "",
+        options: ex.options || [],
+        correctIndex: ex.correctIndex ?? 0,
+      };
+
+    case "true_false":
+      return {
+        ...base,
+        statement: ex.statement || "",
+        answer: ex.answer ?? false,
+      };
+
+    case "fill_blank":
+      return {
+        ...base,
+        title: ex.title || "",
+        sentence: ex.sentence || "",
+        answers: ex.answers || [],
+        hintWords: ex.hintWords || "",
+      };
+
+    default:
+      return {
+        ...ex,
+      };
+  }
+}
+
 
 
   /* ==============================================================
@@ -219,16 +271,32 @@ const [activeLeccion, setActiveLeccion] = useState<number>(0);
     ...u,
     closing: {
   examIntro: u.closing?.examIntro ?? "",
-  examExercises: u.closing?.examExercises ?? [],
+  examExercises: Array.isArray(u.closing?.examExercises)
+  ? [...u.closing.examExercises]
+  : [],
+
   closingText: u.closing?.closingText ?? "",
   pdfUrl: u.closing?.pdfUrl ?? "",
   videoUrl: u.closing?.videoUrl ?? "",
 },
 
-    lecciones: (u.lecciones || []).map((l: any) => ({
-      ...l,
-      ejercicios: Array.isArray(l.ejercicios) ? l.ejercicios : [],
-    })),
+  lecciones: (u.lecciones || []).map((l) => {
+  return {
+    ...l,
+
+    vocabulary: l.vocabulary
+  ? { entries: l.vocabulary.entries || [] }
+  : null,
+
+    ejercicios: Array.isArray(l.ejercicios)
+      ? l.ejercicios.map((ex: any) => normalizeExercise(ex))
+      : [],
+  };
+}),
+
+
+
+
   }));
 
   // 2️⃣ Normalizar cursantes
@@ -517,14 +585,18 @@ const idiomasCurso = [
   { value: "it", label: "Italian" },
 ];
 
-// ✅ Evitar crash mientras carga
-if (!curso) {
-  return (
-    <div className="flex items-center justify-center h-screen text-gray-600">
-      Loading course data...
-    </div>
-  );
-}
+ if (loading || !curso) {
+    return (
+      <div className="bg-white text-slate-900 max-w-7xl w-full mx-auto rounded-3xl shadow-2xl relative max-h-[95vh] overflow-hidden flex flex-col border border-slate-200">
+        <div className="flex items-center justify-center h-[90vh]">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading course data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
 
 
@@ -1056,12 +1128,28 @@ if (!curso) {
                 </p>
               </div>
 
+{/* VOCABULARY */}
+<div className="space-y-1">
+  <label className="text-sm font-medium text-gray-700">
+    Vocabulary
+  </label>
+
+  <VocabularyEditor
+    value={l.vocabulary}
+    onChange={(val) =>
+      updateLeccion(activeUnidad, lIdx, {
+        vocabulary: val,
+      })
+    }
+  />
+</div>
+
               {/* Ejercicios */}
               <div className="space-y-1">
                 <label className="text-sm font-medium text-gray-700">Exercises</label>
                 <Exercises
                   initial={l.ejercicios}
-                  onChange={(newExercises: Ejercicio[]) =>
+                  onChange={(newExercises: Exercise[]) =>
                     updateLeccion(activeUnidad, lIdx, {
                       ejercicios: [...newExercises],
                     })
@@ -1267,7 +1355,7 @@ if (!curso) {
                     <label className="text-sm font-medium text-slate-700">Exam Exercises</label>
                     <Exercises
   initial={examenFinal.ejercicios}
-  onChange={(newExercises: Ejercicio[]) =>
+  onChange={(newExercises: Exercise[]) =>
     setExamenFinal((prev) => ({
       ...prev,
       ejercicios: [...newExercises],

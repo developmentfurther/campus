@@ -204,7 +204,7 @@ export default function SentenceBuilder() {
   }
 
   // Cargando palabra
-  if (loadingWord) {
+  if (loading) {
     return (
        <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

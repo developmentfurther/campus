@@ -57,15 +57,33 @@
   "updatedSuccess": "Profil mis à jour avec succès"
   },
   "dashboard": {
-    "hello": "Bonjour {{name}} ! 👋",
-    "welcome": "Bienvenue sur votre campus virtuel.",
-    "activeCourses": "Cours actifs",
-    "certificates": "Certificats obtenus",
-    "recentActivity": "Activité récente",
-    "noActivity": "Aucune activité enregistrée pour le moment.",
-    "announcements": "Actualités et annonces",
-    "noAnnouncements": "Aucune annonce pour le moment.",
-    "loading": "Chargement de vos informations..."
+    "loading": "Chargement...",
+    "hello": "Bonjour, {{name}}",
+    "welcome": "Bon retour.",
+    "language": "Langue",
+    "level": "Niveau",
+    "unassigned": "Non attribué",
+    "announcements": "Annonces",
+    "announcements.new": "nouveaux",
+    "noAnnouncements": "Aucune annonce disponible.",
+    "activity": "Activité",
+    "noActivity": "Aucune activité récente.",
+    "quickTitle": "Accès Rapide"
+  },
+  "quick": {
+    "material": "Matériel Académique",
+    "material.desc": "Accédez à votre contenu d’apprentissage",
+    "certificates": "Certificats",
+    "certificates.desc": "Consultez vos réussites",
+    "gaming": "Jeux",
+    "gaming.desc": "Jeux quotidiens pour pratiquer votre langue",
+    "chat": "Chat IA",
+    "chat.desc": "Pratique conversationnelle avec l’IA",
+    "history": "Historique IA",
+    "history.desc": "Consultez vos sessions précédentes",
+    "profile": "Mon Profil",
+    "profile.desc": "Paramètres du compte",
+    "go": "Aller"
   },
   "courses": {
     "loading": "Chargement de vos cours...",

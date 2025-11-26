@@ -104,11 +104,12 @@ export default function AlumnoCoursesPage() {
                     )} min`}
                   />
                   <StatItem
-                    icon={<FiUser size={16} />}
-                    label={t("courses.teacher")}
-                    value={c.profesorNombre || t("courses.noTeacher")}
-                    fullWidth
-                  />
+  icon={<FiAward size={16} />} 
+  label={t("courses.level")}
+  value={c.nivel || t("courses.noLevel")}
+  fullWidth
+/>
+
                 </div>
 
                 {/* Progress Section */}

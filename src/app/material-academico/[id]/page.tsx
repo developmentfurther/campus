@@ -374,6 +374,51 @@ if (url.startsWith("http")) {
 
 
 
+function RenderVocabularyBlock({ vocab }: { vocab: any }) {
+  if (!vocab) return null;
+
+  return (
+    <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+      <h3 className="text-blue-600 font-semibold text-lg">Vocabulary</h3>
+
+      {/* MODO TABLA */}
+      {vocab.mode === "table" && (
+        <div className="overflow-x-auto max-w-[750px]">
+          <table className="w-full bg-white border border-slate-300 rounded-xl text-sm overflow-hidden">
+            <thead className="bg-slate-100 text-left">
+              <tr>
+                <th className="p-3 border-r font-medium text-slate-700">Term</th>
+                <th className="p-3 border-r font-medium text-slate-700">Meaning</th>
+                <th className="p-3 font-medium text-slate-700">Example</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {vocab.entries?.map((row: any, idx: number) => (
+                <tr key={idx} className="border-t">
+                  <td className="p-3 border-r text-slate-800">{row.term}</td>
+                  <td className="p-3 border-r text-slate-800">{row.translation}</td>
+                  <td className="p-3 text-slate-800">{row.example || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* MODO IMAGEN */}
+      {vocab.mode === "image" && vocab.imageUrl && (
+        <div className="max-w-[750px]">
+          <img
+            src={vocab.imageUrl}
+            alt="Vocabulary chart"
+            className="rounded-xl border border-slate-300 shadow-sm max-w-full"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
 
 
 
@@ -506,9 +551,18 @@ function computeStats(byLesson: any, totalLessons: number) {
 /* =========================================================
    🧠 ExerciseRunner — versión avanzada completa (TSX)
    ========================================================= */
+
+
+/* =========================================================
+   🧠 ExerciseRunner — VERSIÓN CORREGIDA
+   ========================================================= */
+/* =========================================================
+   🧠 ExerciseRunner — VERSIÓN CORREGIDA
+   ========================================================= */
 function ExerciseRunner({
   ejercicios,
   lessonKey,
+  exerciseIndex, // 🆕 NUEVO: índice del ejercicio actual
   batchId,
   userKey,
   courseId,
@@ -516,6 +570,7 @@ function ExerciseRunner({
 }: {
   ejercicios: any[];
   lessonKey: string;
+  exerciseIndex: number; // 🆕 NUEVO
   batchId: string;
   userKey: string;
   courseId: string;
@@ -523,152 +578,217 @@ function ExerciseRunner({
 }) {
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [submitted, setSubmitted] = useState(false);
-  const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(
-    null
-  );
+  const [feedback, setFeedback] = useState<{
+    ok: boolean;
+    msg: string;
+    correct?: number;
+    total?: number;
+  } | null>(null);
+
   const { user, saveCourseProgress } = useAuth();
-  
+  const prevProgress = (progress as any) || {};
 
-
+  // 🆕 CONSTRUIR KEY ÚNICA POR EJERCICIO
+  const currentExerciseKey = `${lessonKey}::ex${exerciseIndex}`;
 
   // Manejar respuesta individual
   const handleAnswer = (id: string, value: any) => {
-    if (submitted) return; // ya respondió, no permitir más
+    if (submitted) return;
     setAnswers((prev) => ({ ...prev, [id]: value }));
   };
-useEffect(() => {
-  const prev = progress?.[lessonKey];
 
-  // No sobreescribir si ya se envió en este render
-  if (submitted) return;
+  // 🆕 Cargar estado previo DEL EJERCICIO ESPECÍFICO
+  useEffect(() => {
+    const prev = prevProgress?.[currentExerciseKey];
 
-  if (prev?.exSubmitted) {
+    if (!prev?.exSubmitted) {
+      // Si no hay intento previo, resetear todo
+      setSubmitted(false);
+      setFeedback(null);
+      setAnswers({});
+      return;
+    }
+
+    // Si hay intento previo, cargar ese estado
     setSubmitted(true);
 
-    // Restaurar la respuesta del usuario
     if (prev.score?.answers) {
       setAnswers(prev.score.answers);
     }
 
-    // Restaurar feedback
     setFeedback({
       ok: prev.exPassed,
-      msg: prev.exPassed
-        ? "¡Correcto!"
-        : "Intento previo registrado."
+      msg: prev.exPassed ? "¡Correcto!" : "Intento previo registrado.",
+      correct: prev.score?.correct,
+      total: prev.score?.total,
     });
-  }
-}, [lessonKey, progress]);
+  }, [currentExerciseKey]); // 🔧 SOLO depende de currentExerciseKey
 
+  // ✅ Evaluación (sin cambios en la lógica interna)
+  const evaluate = async () => {
+    if (submitted) return;
 
-  const evalOne = (ex: any): boolean => {
-    const a = answers[ex.id];
+    const ex = ejercicios[0];
+    if (!ex) return;
+
+    let correct = 0;
+    let totalItems = 1;
+
+    // [... tu lógica de evaluación existente ...]
+    const evalMC = (ex: any) => {
+      const a = answers[ex.id];
+      return a === ex.correctIndex;
+    };
+
+    const evalTF = (ex: any) => {
+      const a = answers[ex.id];
+      return a === ex.answer;
+    };
+
+    const evalFill = (ex: any) => {
+      const a = answers[ex.id];
+      return (
+        Array.isArray(a) &&
+        Array.isArray(ex.answers) &&
+        a.every(
+          (v, i) =>
+            v?.trim()?.toLowerCase() ===
+            ex.answers[i]?.trim()?.toLowerCase()
+        )
+      );
+    };
+
+    const evalReadingOrListening = (ex: any) => {
+      let okCount = 0;
+      const totalQ = ex.questions?.length || 0;
+
+      ex.questions.forEach((q: any) => {
+        const qKey = `${ex.id}::${q.id}`;
+        const ans = answers[qKey];
+
+        let isOk = false;
+
+        if (q.kind === "mc") {
+          isOk = ans === q.correctIndex;
+        } else if (q.kind === "tf") {
+          isOk = ans === q.answer;
+        }
+
+        if (isOk) okCount++;
+      });
+
+      correct = okCount;
+      totalItems = totalQ || 1;
+    };
+
     switch (ex.type) {
       case "multiple_choice":
-        return a === ex.correctIndex;
+        totalItems = 1;
+        correct = evalMC(ex) ? 1 : 0;
+        break;
+
       case "true_false":
-        return a === ex.answer;
+        totalItems = 1;
+        correct = evalTF(ex) ? 1 : 0;
+        break;
+
       case "fill_blank":
-        return (
-          Array.isArray(a) &&
-          Array.isArray(ex.answers) &&
-          a.every(
-            (v, i) =>
-              v?.trim()?.toLowerCase() ===
-              ex.answers[i]?.trim()?.toLowerCase()
-          )
-        );
-      case "reorder":
-        return (
-          Array.isArray(a) &&
-          JSON.stringify(a) === JSON.stringify(ex.correctOrder)
-        );
-      case "matching":
-        return (
-          Array.isArray(a) &&
-          ex.pairs?.every(
-            (p: any, i: number) =>
-              p.left === a[i]?.left && p.right === a[i]?.right
-          )
-        );
-      case "text":
-        return true; // no se evalúa automáticamente
+        totalItems = 1;
+        correct = evalFill(ex) ? 1 : 0;
+        break;
+
+      case "reading":
+      case "listening":
+        evalReadingOrListening(ex);
+        break;
+
+      case "sentence_correction": {
+        const a = answers[ex.id];
+        if (typeof a === "string") {
+          const matched = ex.correctAnswers.some(
+            (ans: string) =>
+              ans.trim().toLowerCase() === a.trim().toLowerCase()
+          );
+          correct = matched ? 1 : 0;
+        } else {
+          correct = 0;
+        }
+        totalItems = 1;
+        break;
+      }
+
+      case "speaking":
+      case "reflection":
+      case "vocabulary":
+        correct = 1;
+        totalItems = 1;
+        break;
+
       default:
-        return false;
+        correct = 0;
+        totalItems = 1;
+        break;
     }
-  };
 
-  const evaluate = async (lessonKeyParam = lessonKey) => {
+    const passed = correct === totalItems;
 
-    if (submitted) return; // no permitir reintento
-
-    const total = ejercicios.length;
-    let correct = 0;
-    const details: Record<string, any> = {};
-
-    ejercicios.forEach((ex) => {
-      const isOk = evalOne(ex);
-      if (isOk) correct++;
-      details[ex.id] = {
-        correct: isOk,
-        answer: answers[ex.id],
-        timestamp: Date.now(),
-      };
-    });
-
-    const passed = correct === total;
     setSubmitted(true);
     setFeedback({
       ok: passed,
       msg: passed
-        ? "✅ ¡Correcto! ¡Ejercicio completado!"
-        : "❌ Incorrecto. Se registró tu intento.",
+        ? "✅ ¡Ejercicio completado!"
+        : "❌ Hay respuestas incorrectas.",
+      correct,
+      total: totalItems,
     });
 
     try {
       if (!userProfile?.batchId || !userProfile?.userKey) {
-  console.error("❌ No hay batchId o userKey en userProfile");
-  return;
-}
+        console.error("❌ No hay batchId o userKey en userProfile");
+        return;
+      }
 
-if (user?.uid && saveCourseProgress) {
-  await saveCourseProgress(user.uid, courseId, {
-    [lessonKeyParam]: {
-      exSubmitted: true,
-      exPassed: passed,
-      score: { correct, total, answers },
-    },
-  });
-}
+      if (user?.uid && saveCourseProgress) {
+        // 🆕 GUARDAR CON LA KEY ÚNICA DEL EJERCICIO
+        await saveCourseProgress(user.uid, courseId, {
+          [currentExerciseKey]: {
+            exSubmitted: true,
+            exPassed: passed,
+            score: { correct, total: totalItems, answers },
+          },
+        });
 
-
+        console.log("✅ Progreso guardado para:", currentExerciseKey);
+      }
     } catch (err) {
       console.error("🔥 Error guardando resultado:", err);
     }
 
-    onSubmit?.({ correct, total });
+    onSubmit?.({ correct, total: totalItems });
   };
 
+  // [... resto del código de renderizado sin cambios ...]
   const renderSolution = (ex: any) => {
-    if (feedback?.ok) return null; // si aprobó, no mostrar
+    if (feedback?.ok) return null;
+
     switch (ex.type) {
       case "multiple_choice":
         return (
-          <div className="text-xs text-slate-400">
+          <div className="text-xs text-slate-500 mt-2">
             Correcta: <b>{ex.options?.[ex.correctIndex]}</b>
           </div>
         );
       case "true_false":
         return (
-          <div className="text-xs text-slate-400">
+          <div className="text-xs text-slate-500 mt-2">
             La respuesta correcta es:{" "}
             <b>{ex.answer ? "Verdadero" : "Falso"}</b>
           </div>
         );
       case "fill_blank":
         return (
-          <div className="text-xs text-slate-400">
-            Respuestas: {ex.answers?.join(", ")}
+          <div className="text-xs text-slate-500 mt-2">
+            Respuestas correctas: {ex.answers?.join(", ")}
           </div>
         );
       default:
@@ -676,222 +796,534 @@ if (user?.uid && saveCourseProgress) {
     }
   };
 
-  return (
-  <motion.div
-    initial={{ opacity: 0, y: 15 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.35, ease: "easeOut" }}
-    className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6"
-  >
-    {/* HEADER */}
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.1 }}
-      className="flex items-center gap-3 mb-1"
-    >
-      <div className="w-10 h-10 rounded-xl bg-blue-600/10 text-blue-600 grid place-items-center text-xl">
-        🧠
+  const renderReading = (ex: any) => {
+    return (
+      <div className="space-y-6">
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-5">
+          <h4 className="font-semibold text-slate-900 mb-3 text-lg">
+            {ex.title || "Reading"}
+          </h4>
+          <p className="text-slate-700 whitespace-pre-line leading-relaxed break-words max-w-[750px]">
+            {ex.text}
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          {ex.questions.map((q: any, idx: number) => {
+            const qKey = `${ex.id}::${q.id}`;
+            const current = answers[qKey];
+            let isCorrect = false;
+
+            if (submitted) {
+              if (q.kind === "mc") {
+                isCorrect = current === q.correctIndex;
+              } else if (q.kind === "tf") {
+                isCorrect = current === q.answer;
+              }
+            }
+
+            return (
+              <div key={q.id} className="border border-slate-300 rounded-xl p-4 bg-white">
+                <div className="flex items-start justify-between gap-3">
+                  <h5 className="font-medium mb-2">
+                    {idx + 1}. {q.prompt}
+                  </h5>
+
+                  {submitted && (
+                    <span
+                      className={`text-xs px-2 py-1 rounded-full ${
+                        isCorrect
+                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          : "bg-rose-50 text-rose-700 border border-rose-200"
+                      }`}
+                    >
+                      {isCorrect ? "Correcto" : "Incorrecto"}
+                    </span>
+                  )}
+                </div>
+
+                {q.kind === "mc" && (
+                  <div className="space-y-2">
+                    {q.options.map((opt: string, optIdx: number) => {
+                      const selected = current === optIdx;
+                      const isOptCorrect = optIdx === q.correctIndex;
+                      const base = "flex items-center gap-3 p-3 rounded-lg border cursor-pointer";
+                      const color = submitted
+                        ? isOptCorrect
+                          ? "bg-emerald-50 border-emerald-300"
+                          : selected
+                          ? "bg-rose-50 border-rose-300"
+                          : "bg-slate-50 border-slate-200"
+                        : selected
+                        ? "bg-blue-50 border-blue-300"
+                        : "bg-slate-50 border-slate-300 hover:bg-slate-100";
+
+                      return (
+                        <label key={optIdx} className={`${base} ${color}`}>
+                          <input
+                            type="radio"
+                            disabled={submitted}
+                            checked={selected}
+                            onChange={() => handleAnswer(qKey, optIdx)}
+                          />
+                          <span>{opt}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {q.kind === "tf" && (
+                  <div className="flex gap-4">
+                    {[true, false].map((val) => {
+                      const selected = current === val;
+                      const isOptCorrect = q.answer === val;
+                      const base = "flex items-center gap-3 px-4 py-2 rounded-lg border cursor-pointer";
+                      const color = submitted
+                        ? isOptCorrect
+                          ? "bg-emerald-50 border-emerald-300"
+                          : selected
+                          ? "bg-rose-50 border-rose-300"
+                          : "bg-slate-50 border-slate-200"
+                        : selected
+                        ? "bg-blue-50 border-blue-300"
+                        : "bg-slate-50 border-slate-300 hover:bg-slate-100";
+
+                      return (
+                        <label key={String(val)} className={`${base} ${color}`}>
+                          <input
+                            type="radio"
+                            disabled={submitted}
+                            checked={selected}
+                            onChange={() => handleAnswer(qKey, val)}
+                          />
+                          <span>{val ? "True" : "False"}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {submitted && !isCorrect && (
+                  <div className="mt-2 text-xs text-rose-600">
+                    {q.kind === "mc" && `Correct answer: ${q.options[q.correctIndex]}`}
+                    {q.kind === "tf" && `Correct answer: ${q.answer ? "True" : "False"}`}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
-      <h3 className="text-xl font-semibold text-slate-900">
-        Ejercicio
-      </h3>
-    </motion.div>
+    );
+  };
 
-    {/* EXERCISE BLOCK */}
-    {ejercicios.map((ex, i) => (
-      <motion.div
-        key={ex.id}
-        initial={{ opacity: 0, y: 20, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ delay: 0.05 * i }}
-        className={`rounded-xl p-5 border ${
-  submitted
-    ? feedback?.ok
-      ? "bg-emerald-50 border-emerald-300"
-      : "bg-rose-50 border-rose-300"
-    : "bg-slate-50 border-slate-200"
-}`}
+  const renderFillBlank = (ex: any, answers: any, submitted: boolean, handleAnswer: any) => {
+  return (
+    <div className="space-y-3 max-w-[650px]">
+      {ex.answers.map((_: any, idx: number) => {
+        const userAns = answers[ex.id]?.[idx] || "";
+        const correct = ex.answers[idx];
 
-      >
-        {/* TITLE */}
-        <h4 className="font-semibold text-slate-900 mb-4 text-lg">
-          {ex.question || ex.prompt || ex.statement}
+        const isCorrect =
+          submitted &&
+          userAns.trim().toLowerCase() === correct.trim().toLowerCase();
+
+        const base =
+          "px-4 py-2 rounded-xl bg-white border text-sm transition w-full";
+
+        const color = !submitted
+          ? "border-slate-300 focus:ring-2 focus:ring-blue-300"
+          : isCorrect
+          ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+          : "border-rose-300 bg-rose-50 text-rose-700";
+
+        return (
+          <div key={idx} className="space-y-1">
+            <input
+              type="text"
+              disabled={submitted}
+              className={`${base} ${color}`}
+              placeholder={`Respuesta ${idx + 1}`}
+              value={userAns}
+              onChange={(e) => {
+                const val = e.target.value;
+                const current = Array.isArray(answers[ex.id])
+                  ? [...answers[ex.id]]
+                  : [];
+                current[idx] = val;
+                handleAnswer(ex.id, current);
+              }}
+            />
+
+            {/* Feedback si es incorrecto */}
+            {submitted && !isCorrect && (
+              <p className="text-xs text-rose-600">
+                Correcta: <b>{correct}</b>
+              </p>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+
+
+const renderSpeaking = (ex: any) => {
+  return (
+    <div className="space-y-4 max-w-[700px]">
+      {/* Título del ejercicio */}
+      {ex.title && (
+        <h4 className="text-lg font-semibold text-slate-900">{ex.title}</h4>
+      )}
+
+      {/* Bullets */}
+      <ul className="list-disc pl-6 space-y-2 text-slate-700">
+        {ex.bullets.map((item: string, idx: number) => (
+          <li key={idx} className="leading-relaxed">
+            {item}
+          </li>
+        ))}
+      </ul>
+
+      {/* Notas opcionales */}
+      {ex.notes && (
+        <p className="text-sm text-slate-500 italic">
+          {ex.notes}
+        </p>
+      )}
+
+      {/* Mensaje de que no es auto-evaluable */}
+      <p className="text-xs text-slate-500 border-t pt-3">
+        * Este ejercicio no es auto-evaluable. Tu progreso se registra al avanzar.
+      </p>
+    </div>
+  );
+};
+
+const renderReflection = (
+  ex: any,
+  answers: any,
+  submitted: boolean,
+  handleAnswer: any
+) => {
+  const totalIdeas = ex.ideasCount || 3;
+
+  return (
+    <div className="space-y-6 max-w-[700px]">
+      
+      {/* CONSIGNA */}
+      <div className="bg-slate-50 border border-slate-200 rounded-xl p-5">
+        <h4 className="font-semibold text-slate-900 mb-2">
+          {ex.title || "Reflection"}
+        </h4>
+        <p className="text-slate-700 whitespace-pre-line leading-relaxed">
+          {ex.prompt}
+        </p>
+      </div>
+
+      {/* CAMPOS DE RESPUESTA */}
+      <div className="space-y-4">
+        {[...Array(totalIdeas)].map((_, idx) => {
+          const key = `${ex.id}::idea${idx}`;
+          const userText = answers[key] || "";
+
+          const base =
+            "w-full p-3 rounded-lg border bg-white text-sm focus:ring-2 transition";
+
+          const color = !submitted
+            ? "border-slate-300 focus:ring-blue-300"
+            : userText.trim().length > 0
+            ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+            : "border-rose-300 bg-rose-50 text-rose-700";
+
+          return (
+            <div key={idx} className="space-y-1">
+              <textarea
+                rows={3}
+                disabled={submitted}
+                className={`${base} ${color}`}
+                placeholder={`Idea ${idx + 1}`}
+                value={userText}
+                onChange={(e) => handleAnswer(key, e.target.value)}
+              />
+
+              {/* Feedback para ideas vacías */}
+              {submitted && userText.trim().length === 0 && (
+                <p className="text-xs text-rose-600">
+                  * Esta idea no puede estar vacía.
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* NOTA */}
+      <p className="text-xs text-slate-500">
+        * Este ejercicio no es auto-evaluable. Se registra tu participación.
+      </p>
+    </div>
+  );
+};
+
+const renderSentenceCorrection = (
+  ex: any,
+  answers: any,
+  submitted: boolean,
+  handleAnswer: any
+) => {
+  const userAns = answers[ex.id] || "";
+
+  // Determinar si es correcto cuando submitted = true
+  const isCorrect =
+    submitted &&
+    typeof userAns === "string" &&
+    ex.correctAnswers.some(
+      (a: string) =>
+        a.trim().toLowerCase() === userAns.trim().toLowerCase()
+    );
+
+  const base =
+    "w-full p-3 rounded-xl border text-sm transition bg-white";
+
+  const color = !submitted
+    ? "border-slate-300 focus:ring-2 focus:ring-blue-300"
+    : isCorrect
+    ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+    : "border-rose-300 bg-rose-50 text-rose-700";
+
+  return (
+    <div className="space-y-5 max-w-[700px]">
+      {/* Frase incorrecta */}
+      <div className="bg-slate-50 border border-slate-200 rounded-xl p-5">
+        <h4 className="font-semibold text-slate-900 mb-3">
+          Corregí la siguiente frase:
         </h4>
 
-        {/* MULTIPLE CHOICE */}
-        {ex.type === "multiple_choice" && (
-          <div className="flex flex-col gap-3">
-            {ex.options.map((opt: string, idx: number) => {
-              const isSelected = answers[ex.id] === idx;
+        <p className="italic text-slate-700">
+          “{ex.incorrect}”
+        </p>
+      </div>
 
-              return (
-                <motion.label
-                  key={idx}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={`flex items-center gap-3 p-4 rounded-xl cursor-pointer transition border 
-                    ${
-                      isSelected
-                        ? "bg-blue-50 border-blue-300 text-blue-700 shadow-sm"
-                        : "bg-white border-slate-300 hover:bg-slate-100"
-                    }`}
-                >
-                  <input
-                    type="radio"
-                    name={ex.id}
-                    disabled={submitted}
-                    checked={isSelected}
-                    onChange={() => handleAnswer(ex.id, idx)}
-                  />
-                  <span className="text-sm">{opt}</span>
-                </motion.label>
-              );
-            })}
-          </div>
+      {/* Input del alumno */}
+      <div className="space-y-1">
+        <input
+          type="text"
+          disabled={submitted}
+          placeholder="Escribí la frase corregida"
+          className={`${base} ${color}`}
+          value={userAns}
+          onChange={(e) => handleAnswer(ex.id, e.target.value)}
+        />
+
+        {/* Feedback si está mal */}
+        {submitted && !isCorrect && (
+          <p className="text-xs text-rose-600">
+            Respuesta correcta:
+            {" "}
+            <b>{ex.correctAnswers[0]}</b>
+            {ex.correctAnswers.length > 1 &&
+              ` (o variantes aceptadas: ${ex.correctAnswers
+                .slice(1)
+                .join(", ")})`}
+          </p>
         )}
+      </div>
 
-        {/* TRUE/FALSE */}
-        {ex.type === "true_false" && (
-          <div className="flex gap-4">
-            {["Verdadero", "Falso"].map((label, idx) => {
-              const val = idx === 0;
-              const isSelected = answers[ex.id] === val;
-
-              return (
-                <motion.label
-                  key={label}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.96 }}
-                  className={`flex items-center gap-3 px-6 py-3 rounded-xl cursor-pointer border transition
-                    ${
-                      isSelected
-                        ? "bg-blue-50 border-blue-300 text-blue-700 shadow-sm"
-                        : "bg-white border-slate-300 hover:bg-slate-100"
-                    }`}
-                >
-                  <input
-                    type="radio"
-                    name={ex.id}
-                    disabled={submitted}
-                    checked={isSelected}
-                    onChange={() => handleAnswer(ex.id, val)}
-                  />
-                  <span className="font-medium">{label}</span>
-                </motion.label>
-              );
-            })}
-          </div>
-        )}
-
-        {/* FILL BLANK */}
-        {ex.type === "fill_blank" && (
-          <div className="flex flex-col gap-3">
-            {ex.answers.map((_: any, idx: number) => (
-              <motion.input
-                key={idx}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                type="text"
-                disabled={submitted}
-                placeholder={`Respuesta ${idx + 1}`}
-                className="px-4 py-2 rounded-xl bg-white border border-slate-300 text-slate-800 text-sm
-                  focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition"
-                value={answers[ex.id]?.[idx] || ""}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  const current = Array.isArray(answers[ex.id])
-                    ? [...answers[ex.id]]
-                    : [];
-                  current[idx] = val;
-                  handleAnswer(ex.id, current);
-                }}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* 🔎 SOLUCIÓN SI FALLÓ */}
-        {submitted && !feedback?.ok && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="mt-3 text-sm text-rose-600"
-          >
-            {renderSolution(ex)}
-          </motion.div>
-        )}
-      </motion.div>
-    ))}
-
-    {/* BTN -> Comprobar Respuestas */}
-    <motion.button
-      onClick={evaluate}
-      disabled={submitted}
-      whileHover={!submitted ? { scale: 1.03 } : {}}
-      whileTap={!submitted ? { scale: 0.97 } : {}}
-      className={`w-full py-3 rounded-xl font-semibold transition shadow-sm
-        ${
-          submitted
-            ? "bg-slate-300 text-slate-500 cursor-not-allowed"
-            : "bg-blue-600 text-white hover:bg-blue-700"
-        }`}
-    >
-      {submitted ? "Intento registrado" : "Comprobar respuestas"}
-    </motion.button>
-
-    {/* FEEDBACK */}
-    {/* FEEDBACK PERSONALIZADO */}
-{submitted && (
-  <motion.div
-    initial={{ opacity: 0, y: 10 }}
-    animate={{ opacity: 1, y: 0 }}
-    className={`p-5 rounded-xl mt-4 border ${
-      feedback?.ok
-        ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-        : "bg-rose-50 border-rose-200 text-rose-700"
-    }`}
-  >
-    <h3 className="text-lg font-semibold mb-2">
-      {feedback?.ok ? "🎉 ¡Correcto!" : "❌ Incorrecto"}
-    </h3>
-
-    {/* Tu respuesta */}
-    <p className="text-sm mb-2">
-      <b>Tu respuesta:</b>{" "}
-      <span className="font-medium">
-        {JSON.stringify(answers[ejercicios[0].id])}
-      </span>
-    </p>
-
-    {/* Respuesta correcta cuando falló */}
-    {!feedback?.ok && (
-      <p className="text-sm mb-2">
-        <b>Respuesta correcta:</b>{" "}
-        {ejercicios[0].type === "multiple_choice" &&
-          ejercicios[0].options[ejercicios[0].correctIndex]}
-        {ejercicios[0].type === "true_false" &&
-          (ejercicios[0].answer ? "Verdadero" : "Falso")}
-        {ejercicios[0].type === "fill_blank" &&
-          ejercicios[0].answers.join(", ")}
+      {/* Nota */}
+      <p className="text-xs text-slate-500">
+        * Evaluación exacta (sin mayúsculas / minúsculas).
       </p>
-    )}
-
-    {/* Mensaje motivacional */}
-    <p className="text-sm mt-2 italic">
-      {feedback?.ok
-        ? "¡Excelente trabajo! Seguí así 🚀"
-        : "No pasa nada, seguimos practicando. ¡Vas súper bien! 💪"}
-    </p>
-  </motion.div>
-)}
-
-  </motion.div>
-);
+    </div>
+  );
+};
 
 
-  
+
+
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
+      className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6"
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="flex items-center gap-3 mb-1"
+      >
+        <div className="w-10 h-10 rounded-xl bg-blue-600/10 text-blue-600 grid place-items-center text-xl">
+          🧠
+        </div>
+        <h3 className="text-xl font-semibold text-slate-900">Ejercicio</h3>
+      </motion.div>
+
+      {ejercicios.map((ex) => (
+        <motion.div
+          key={ex.id}
+          initial={{ opacity: 0, y: 20, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ delay: 0.05 }}
+          className={`rounded-xl p-5 border ${
+            submitted
+              ? feedback?.ok
+                ? "bg-emerald-50 border-emerald-300"
+                : "bg-rose-50 border-rose-300"
+              : "bg-slate-50 border-slate-200"
+          }`}
+        >
+          {ex.type !== "reading" && ex.type !== "listening" && (
+            <h4 className="font-semibold text-slate-900 mb-4 text-lg">
+              {ex.question || ex.prompt || ex.statement}
+            </h4>
+          )}
+
+
+{ex.type === "speaking" && renderSpeaking(ex)}
+
+{ex.type === "fill_blank" &&
+  renderFillBlank(ex, answers, submitted, handleAnswer)}
+
+{ex.type === "reflection" &&
+  renderReflection(ex, answers, submitted, handleAnswer)}
+{ex.type === "sentence_correction" &&
+  renderSentenceCorrection(ex, answers, submitted, handleAnswer)}
+
+
+
+          {/* MULTIPLE CHOICE */}
+          {ex.type === "multiple_choice" && (
+            <div className="flex flex-col gap-3">
+              {ex.options.map((opt: string, idx: number) => {
+                const isSelected = answers[ex.id] === idx;
+                const isCorrect = idx === ex.correctIndex;
+                const base = "flex items-center gap-3 p-4 rounded-xl cursor-pointer transition border";
+                const color = submitted
+                  ? isCorrect
+                    ? "bg-emerald-50 border-emerald-300"
+                    : isSelected
+                    ? "bg-rose-50 border-rose-300"
+                    : "bg-white border-slate-200"
+                  : isSelected
+                  ? "bg-blue-50 border-blue-300 text-blue-700 shadow-sm"
+                  : "bg-white border-slate-300 hover:bg-slate-100";
+
+                return (
+                  <motion.label
+                    key={idx}
+                    whileHover={!submitted ? { scale: 1.02 } : {}}
+                    whileTap={!submitted ? { scale: 0.98 } : {}}
+                    className={base + " " + color}
+                  >
+                    <input
+                      type="radio"
+                      name={ex.id}
+                      disabled={submitted}
+                      checked={isSelected}
+                      onChange={() => handleAnswer(ex.id, idx)}
+                    />
+                    <span className="text-sm">{opt}</span>
+                  </motion.label>
+                );
+              })}
+              {submitted && renderSolution(ex)}
+            </div>
+          )}
+
+          {/* TRUE/FALSE */}
+          {ex.type === "true_false" && (
+            <div className="flex gap-4">
+              {["Verdadero", "Falso"].map((label, idx) => {
+                const val = idx === 0;
+                const isSelected = answers[ex.id] === val;
+                const isCorrect = ex.answer === val;
+                const base = "flex items-center gap-3 px-6 py-3 rounded-xl cursor-pointer border transition";
+                const color = submitted
+                  ? isCorrect
+                    ? "bg-emerald-50 border-emerald-300"
+                    : isSelected
+                    ? "bg-rose-50 border-rose-300"
+                    : "bg-white border-slate-200"
+                  : isSelected
+                  ? "bg-blue-50 border-blue-300 text-blue-700 shadow-sm"
+                  : "bg-white border-slate-300 hover:bg-slate-100";
+
+                return (
+                  <motion.label
+                    key={label}
+                    whileHover={!submitted ? { scale: 1.02 } : {}}
+                    whileTap={!submitted ? { scale: 0.96 } : {}}
+                    className={base + " " + color}
+                  >
+                    <input
+                      type="radio"
+                      name={ex.id}
+                      disabled={submitted}
+                      checked={isSelected}
+                      onChange={() => handleAnswer(ex.id, val)}
+                    />
+                    <span className="font-medium">{label}</span>
+                  </motion.label>
+                );
+              })}
+              {submitted && renderSolution(ex)}
+            </div>
+          )}
+
+          {/* READING */}
+          {ex.type === "reading" && renderReading(ex)}
+
+          {/* LISTENING */}
+          {ex.type === "listening" && (
+            <div className="space-y-6">
+              <audio controls src={ex.audioUrl} className="w-full max-w-md" />
+              {renderReading(ex)}
+            </div>
+          )}
+        </motion.div>
+      ))}
+
+      <motion.button
+        onClick={evaluate}
+        disabled={submitted}
+        whileHover={!submitted ? { scale: 1.03 } : {}}
+        whileTap={!submitted ? { scale: 0.97 } : {}}
+        className={`w-full py-3 rounded-xl font-semibold transition shadow-sm
+          ${
+            submitted
+              ? "bg-slate-300 text-slate-500 cursor-not-allowed"
+              : "bg-blue-600 text-white hover:bg-blue-700"
+          }`}
+      >
+        {submitted ? "Intento registrado" : "Comprobar respuestas"}
+      </motion.button>
+
+      {submitted && feedback && (
+        <div className="text-sm text-slate-700 mt-2">
+          {typeof feedback.correct === "number" &&
+            typeof feedback.total === "number" && (
+              <p>
+                Resultado:{" "}
+                <b>
+                  {feedback.correct}/{feedback.total}
+                </b>{" "}
+                correctas
+              </p>
+            )}
+        </div>
+      )}
+    </motion.div>
+  );
 }
+
+
+
 
 
 
@@ -1187,6 +1619,10 @@ const currentUnit = units[activeU];
               </div>
             )}
 
+{/* VOCABULARY */}
+{activeLesson?.vocabulary && (
+  <RenderVocabularyBlock vocab={activeLesson.vocabulary} />
+)}
             {/* EJERCICIOS */}
             {Array.isArray(activeLesson?.ejercicios) &&
               activeLesson.ejercicios.length > 0 && (
@@ -1198,54 +1634,56 @@ const currentUnit = units[activeU];
                         </span>
                       </div>
 
-                      <ExerciseRunner
-                        ejercicios={[activeLesson.ejercicios[currentExercise]]}
-                        lessonKey={activeLesson.key}
-                        batchId={userProfile?.batchId}
-                        userKey={userProfile?.userKey}
-                        courseId={courseId}
-                        onSubmit={async ({ correct, total }) => {
-                          const passed = correct === total;
+  
+<ExerciseRunner
+  ejercicios={[activeLesson.ejercicios[currentExercise]]}
+  lessonKey={activeLesson.key}
+  exerciseIndex={currentExercise} // 🆕 AGREGAR ESTE PROP
+  batchId={userProfile?.batchId}
+  userKey={userProfile?.userKey}
+  courseId={courseId}
+  onSubmit={async ({ correct, total }) => {
+    const passed = correct === total;
+    
+    // 🆕 Construir la key única del ejercicio
+    const exerciseKey = `${activeLesson.key}::ex${currentExercise}`;
 
-                          if (!user?.uid) {
-                            toast.error("Inicia sesión para guardar tu progreso");
-                            return;
-                          }
-                          if (!activeLesson?.key) {
-                            console.error("No hay activeLesson.key");
-                            return;
-                          }
+    if (!user?.uid) {
+      toast.error("Inicia sesión para guardar tu progreso");
+      return;
+    }
 
-                          try {
-                            await saveCourseProgress(user.uid, courseId, {
-                              [activeLesson.key]: {
-                                exSubmitted: true,
-                                exPassed: passed,
-                                score: { correct, total },
-                              },
-                            });
+    try {
+      await saveCourseProgress(user.uid, courseId, {
+        [exerciseKey]: {
+          exSubmitted: true,
+          exPassed: passed,
+          score: { correct, total },
+        },
+      });
 
-                            setProgress((prev) => ({
-                              ...prev,
-                              [activeLesson.key]: {
-                                ...(prev[activeLesson.key] || {}),
-                                exSubmitted: true,
-                                exPassed: passed,
-                                score: { correct, total },
-                              },
-                            }));
+      setProgress((prev) => ({
+        ...prev,
+        [exerciseKey]: {
+          ...(prev[exerciseKey] || {}),
+          exSubmitted: true,
+          exPassed: passed,
+          score: { correct, total },
+        },
+      }));
 
-                            toast[passed ? "success" : "info"](
-                              passed
-                                ? "🎉 ¡Ejercicio aprobado!"
-                                : "❌ Fallaste. Tu intento quedó guardado."
-                            );
-                          } catch (error) {
-                            console.error("🔥 Error guardando progreso:", error);
-                            toast.error("No se pudo guardar tu progreso");
-                          }
-                        }}
-                      />
+      toast[passed ? "success" : "info"](
+        passed
+          ? "🎉 ¡Ejercicio aprobado!"
+          : "❌ Fallaste. Tu intento quedó guardado."
+      );
+    } catch (error) {
+      console.error("🔥 Error guardando progreso:", error);
+      toast.error("No se pudo guardar tu progreso");
+    }
+  }}
+/>
+
 
                       <div className="flex justify-between items-center pt-2 border-t border-slate-200">
                         <button

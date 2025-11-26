@@ -12,6 +12,7 @@ import {
   FiTarget,
   FiMessageSquare,
   FiClock,
+  FiBell
 } from "react-icons/fi";
 
 export default function SidebarAdmin() {
@@ -35,6 +36,8 @@ export default function SidebarAdmin() {
     { id: "material", label: "Material Académico", icon: <FiBookOpen size={16} /> },
     { id: "alumnos", label: "Alumnos", icon: <FiUsers size={16} /> },
     { id: "profesores", label: "Profesores", icon: <FiUser size={16} /> },
+    { id: "anuncios", label: "Anuncios", icon: <FiBell size={16}/> },
+
   ];
 
   // 🎮 Gaming

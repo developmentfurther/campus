@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import {
@@ -11,97 +11,88 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import CourseCard from "@/components/cursos/CourseCard";
-import CreateCourse from "@/components/cursos/crear/CreateCourse";
-import EditCourseForm from "@/components/cursos/edit/EditCourseForm";
 import { deleteDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { FiBookOpen, FiPlus } from "react-icons/fi";
+import EditCourseForm from "@/components/cursos/edit/EditCourseForm";
+import CreateCourse from "@/components/cursos/crear/CreateCourse";
+
+/* =====================================================================================
+   📘 MATERIAL ACADEMICO (ADMIN)
+   - Usa allCursos del AuthContext (datos completos)
+   - Modal sin lag
+   - Sin X duplicada (Radix)
+   ===================================================================================== */
 
 export default function MaterialAcademico() {
   const { allCursos, loadingAllCursos, reloadData } = useAuth();
 
   // Estados UI
   const [selectedCourse, setSelectedCourse] = useState<any | null>(null);
+  const [fullCourseData, setFullCourseData] = useState<any | null>(null);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [localCourses, setLocalCourses] = useState<any[]>([]);
 
-  /* =========================================================
-     🔹 Sincronizar datos globales con el estado local
-  ========================================================= */
-useEffect(() => {
-  const fetchCoursesWithProgress = async () => {
-    if (!Array.isArray(allCursos)) return;
+  /* ============================================================================
+     📌 Mapeamos cursos para la UI (rápido, sin fetch)
+     ============================================================================ */
+  const localCourses = useMemo(() => {
+    if (!Array.isArray(allCursos)) return [];
 
-    const coursesWithProgress = await Promise.all(
-      allCursos.map(async (c: any) => {
-        let averageProgress = 0;
+    return allCursos.map((c: any) => ({
+      id: c.id,
+      title: c.titulo || "Untitled",
+      description: c.descripcion || "",
+      level: c.nivel || "N/A",
+      category: c.categoria || "General",
+      students: Array.isArray(c.cursantes) ? c.cursantes.length : 0,
+      unidades: Array.isArray(c.unidades) ? c.unidades.length : 0,
+      created:
+        c.creadoEn?.seconds
+          ? new Date(c.creadoEn.seconds * 1000).toLocaleDateString()
+          : "N/A",
+      visible: c.publico ?? true,
+      image: c.urlImagen || "/images/default-course.jpg",
+      videoPresentacion: c.videoPresentacion || "",
+    }));
+  }, [allCursos]);
 
-        try {
-          // ✅ Si cada curso tiene una subcolección 'progresos'
-          // con documentos { alumnoId, progress: number }
-          const progressSnap = await getDocs(collection(db, "cursos", c.id, "progresos"));
-
-          if (!progressSnap.empty) {
-            const progresses = progressSnap.docs.map((d) => d.data()?.progress || 0);
-            const total = progresses.reduce((acc, p) => acc + p, 0);
-            averageProgress = Math.round(total / progresses.length);
-          }
-        } catch (err) {
-          console.warn("⚠️ No se pudo obtener el progreso para", c.id, err);
-        }
-
-        return {
-          id: c.id ?? c.docId ?? "",
-          title: c.titulo || "Untitled",
-          description: c.descripcion || "",
-          level: c.nivel || "N/A",
-          category: c.categoria || "General",
-          students: Array.isArray(c.cursantes) ? c.cursantes.length : 0,
-          progress: averageProgress, // ✅ progreso real
-          unidades: c.unidades?.length || 0,
-          created:
-  c.creadoEn?.seconds
-    ? new Date(c.creadoEn.seconds * 1000).toLocaleDateString()
-    : c.createdAt?.seconds
-    ? new Date(c.createdAt.seconds * 1000).toLocaleDateString()
-    : "N/A",
-          visible: c.publico ?? true,
-          image: c.urlImagen || "/images/default-course.jpg",
-          videoPresentacion: c.videoPresentacion || "",
-        };
-      })
-    );
-
-    setLocalCourses(coursesWithProgress);
-  };
-
-  fetchCoursesWithProgress();
-}, [allCursos]);
-
-
-  /* =========================================================
-     🔹 Acciones CRUD
-  ========================================================= */
-
+  /* ============================================================================
+     🟦 Crear curso
+     ============================================================================ */
   const handleCourseCreated = async () => {
     setIsCreateModalOpen(false);
     toast.success("Curso creado correctamente");
     await reloadData();
   };
 
+  /* ============================================================================
+     ✏ Editar curso — instantáneo, sin fetch
+     ============================================================================ */
   const handleEdit = (course: any) => {
+    const full = allCursos.find((c) => c.id === course.id);
+
+    if (!full) {
+      toast.error("No se pudo cargar el curso");
+      return;
+    }
+
     setSelectedCourse(course);
+    setFullCourseData(full);
     setIsModalOpen(true);
   };
 
+  /* ============================================================================
+     ❌ Eliminar curso
+     ============================================================================ */
   const handleDelete = async (id: string) => {
     try {
-      const confirmDelete = confirm("¿Seguro que deseas eliminar este curso?");
-      if (!confirmDelete) return;
+      if (!confirm("¿Seguro que deseas eliminar este curso?")) return;
+
       await deleteDoc(doc(db, "cursos", id));
       toast.success("Curso eliminado correctamente");
+
       await reloadData();
     } catch (err) {
       console.error("❌ Error eliminando curso:", err);
@@ -109,10 +100,18 @@ useEffect(() => {
     }
   };
 
-  /* =========================================================
-     🔹 Render
-  ========================================================= */
+  /* ============================================================================
+     🔒 Cerrar modal y limpiar estados
+     ============================================================================ */
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setFullCourseData(null);
+    setSelectedCourse(null);
+  };
 
+  /* =====================================================================================
+       JSX
+     ===================================================================================== */
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800 p-8 space-y-10">
       {/* HEADER */}
@@ -122,6 +121,7 @@ useEffect(() => {
             <FiBookOpen className="text-blue-600" />
             Material Académico
           </h1>
+
           <p className="text-gray-500 mt-1">
             Administra los cursos disponibles en el campus. Crea, edita o elimina material académico.
           </p>
@@ -131,11 +131,11 @@ useEffect(() => {
           onClick={() => setIsCreateModalOpen(true)}
           className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2"
         >
-          <FiPlus size={18} /> Nuevo curso
+          <FiPlus size={18} /> Nuevo Material
         </Button>
       </header>
 
-      {/* ESTADO DE CARGA */}
+      {/* LISTADO */}
       {loadingAllCursos ? (
         <div className="text-center text-gray-500 py-10 bg-white rounded-xl border border-gray-200 shadow-sm">
           Cargando cursos...
@@ -154,13 +154,12 @@ useEffect(() => {
               {/* HEADER */}
               <div className="p-5 border-b border-gray-100 flex justify-between items-start">
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-800">
-                    {course.title}
-                  </h2>
+                  <h2 className="text-xl font-semibold text-gray-800">{course.title}</h2>
                   <p className="text-sm text-gray-500 line-clamp-2">
                     {course.description || "Sin descripción"}
                   </p>
                 </div>
+
                 <span
                   className={`text-xs px-3 py-1 rounded-full font-medium ${
                     course.visible
@@ -181,37 +180,20 @@ useEffect(() => {
                   <span className="font-medium text-gray-800">{course.students}</span> alumnos
                 </div>
                 <div className="text-gray-500 hidden md:block">
-                  Creado:{" "}
-                  <span className="font-medium text-gray-800">
-                    {course.created}
-                  </span>
-                </div>
-              </div>
-
-              {/* PROGRESO */}
-              <div className="px-5 pt-4 pb-2">
-                <div className="flex justify-between text-xs text-gray-500 mb-1">
-                  <span>Progreso promedio</span>
-                  <span>{course.progress}%</span>
-                </div>
-                <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-blue-600 rounded-full transition-all duration-500"
-                    style={{ width: `${course.progress}%` }}
-                  ></div>
+                  Creado: <span className="font-medium text-gray-800">{course.created}</span>
                 </div>
               </div>
 
               {/* ACCIONES */}
               <div className="flex flex-wrap justify-end gap-3 p-5 border-t border-gray-100 bg-gray-50">
-               
-              <Button
-    variant="outline"
-    onClick={() => window.open(`/material-academico/${course.id}`, "_blank")}
-    className="border-blue-200 text-blue-600 hover:bg-blue-50 rounded-lg text-sm"
-  >
-    Ver curso
-  </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => window.open(`/material-academico/${course.id}`, "_blank")}
+                  className="border-blue-200 text-blue-600 hover:bg-blue-50 rounded-lg text-sm"
+                >
+                  Ver Material
+                </Button>
+
                 <Button
                   variant="outline"
                   onClick={() => handleEdit(course)}
@@ -219,6 +201,7 @@ useEffect(() => {
                 >
                   Editar
                 </Button>
+
                 <Button
                   variant="outline"
                   onClick={() => handleDelete(course.id)}
@@ -232,13 +215,21 @@ useEffect(() => {
         </div>
       )}
 
-      {/* ✅ MODAL: CREAR CURSO */}
+      {/* =====================================================================================
+         MODAL: CREAR CURSO
+         ===================================================================================== */}
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
         <DialogOverlay className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40" />
-        <DialogContent className="!max-w-none !w-[95vw] !h-[90vh] !p-0 overflow-hidden bg-transparent shadow-none border-none">
+
+        <DialogContent
+          className="!max-w-none !w-[95vw] !h-[90vh] !p-0 overflow-hidden 
+                     bg-transparent shadow-none border-none
+                     [&>button.absolute.right-4.top-4]:hidden"
+        >
           <VisuallyHidden>
             <DialogTitle>Crear Curso</DialogTitle>
           </VisuallyHidden>
+
           {isCreateModalOpen && (
             <CreateCourse
               onClose={() => setIsCreateModalOpen(false)}
@@ -248,21 +239,29 @@ useEffect(() => {
         </DialogContent>
       </Dialog>
 
-      {/* ✅ MODAL: EDITAR CURSO */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      {/* =====================================================================================
+         MODAL: EDITAR CURSO
+         ===================================================================================== */}
+      <Dialog open={isModalOpen} onOpenChange={handleCloseModal}>
         <DialogOverlay className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40" />
-        <DialogContent className="!max-w-none !w-[95vw] !h-[90vh] !p-0 overflow-hidden bg-transparent shadow-none border-none">
-  <VisuallyHidden>
-    <DialogTitle>Editar Curso</DialogTitle>
-  </VisuallyHidden>
 
-  {isModalOpen && selectedCourse && (
-    <EditCourseForm
-      courseId={selectedCourse.id}   // ✅ ahora sí se pasa
-      onClose={() => setIsModalOpen(false)}
-    />
-  )}
-</DialogContent>
+        <DialogContent
+          className="!max-w-none !w-[95vw] !h-[90vh] !p-0 overflow-hidden 
+                     bg-transparent shadow-none border-none
+                     [&>button.absolute.right-4.top-4]:hidden"
+        >
+          <VisuallyHidden>
+            <DialogTitle>Editar Curso</DialogTitle>
+          </VisuallyHidden>
+
+          {isModalOpen && fullCourseData && (
+            <EditCourseForm
+              courseId={selectedCourse?.id}
+              initialData={fullCourseData}
+              onClose={handleCloseModal}
+            />
+          )}
+        </DialogContent>
       </Dialog>
     </div>
   );

@@ -97,6 +97,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loadingCursos, setLoadingCursos] = useState(false);
   const [loadingAllCursos, setLoadingAllCursos] = useState(false);
   const [userProfile, setUserProfile] = useState<any | null>(null);
+  const [anuncios, setAnuncios] = useState<any[]>([]);
+  const [loadingAnuncios, setLoadingAnuncios] = useState(true);
+
 
   const [profesores, setProfesores] = useState<any[]>([]);
   const [loadingProfesores, setLoadingProfesores] = useState(false);
@@ -345,6 +348,42 @@ const loadMisCursos = async (uid: string) => {
     }
   };
 
+
+  const loadAnuncios = async () => {
+  setLoadingAnuncios(true);
+  try {
+    const snap = await getDocs(collection(db, "anuncios"));
+
+    // El admin debe recibir TODOS los anuncios, visibles y ocultos.
+    const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+    setAnuncios(list);
+  } catch (err) {
+    console.error("❌ Error cargando anuncios:", err);
+  } finally {
+    setLoadingAnuncios(false);
+  }
+};
+
+const getCourseById = async (id: string) => {
+  try {
+    // 1) Buscar en allCursos primero
+    if (allCursos.length > 0) {
+      const found = allCursos.find((c) => c.id === id);
+      if (found) return found;
+    }
+
+    // 2) Fallback: traerlo de Firestore
+    const snap = await getDoc(doc(db, "cursos", id));
+    if (!snap.exists()) return null;
+    return { id: snap.id, ...snap.data() };
+
+  } catch (err) {
+    console.error("❌ Error getCourseById:", err);
+    return null;
+  }
+};
+
   /* ==========================================================
    🔹 Cargar profesores (para admin)
    ========================================================== */
@@ -531,6 +570,7 @@ const getCourseProgress = async (uid: string, courseId: string) => {
       loadAlumnos?.(),
       loadAllCursos?.(),
       loadProfesores?.(),
+      loadAnuncios?.()
     ]);
   } else if (role === "alumno") {
     await Promise.all([
@@ -618,13 +658,16 @@ const getCourseProgress = async (uid: string, courseId: string) => {
 
         // 🔥 PASO 8: Cargar datos según rol
         if (resolvedRole === "alumno") {
-          await loadMisCursos(firebaseUser.uid);
-        } else {
-          await Promise.all([
-            loadAllCursos(),
-            loadProfesores(),
-          ]);
-        }
+  await loadMisCursos(firebaseUser.uid);
+  await loadAnuncios(); // 👈 NUEVO
+} else {
+  await Promise.all([
+    loadAllCursos(),
+    loadProfesores(),
+  ]);
+  await loadAnuncios(); // 👈 NUEVO
+}
+
       } else {
         // Usuario no logueado
         setUser(null);
@@ -702,13 +745,18 @@ const value = useMemo(
     loadMisCursos,
     loadAllCursos,
     loadProfesores,
-    loadAlumnos,          // 👈 Agregar porque reloadData lo necesita
+    loadAlumnos,   
+    anuncios,
+    loadingAnuncios,
+    loadAnuncios,
+
 
     saveCourseProgress,
     getCourseProgress,
 
     logout,
     setUserProfile,
+    getCourseById,
     chatSessions,
     loadingChatSessions,
     loadChatSessions,
@@ -739,6 +787,8 @@ reloadActivity: () => {
     loadingProfesores,
     recentActivity,
     loadingActivity,
+    anuncios,               // 👈 NECESARIO
+    loadingAnuncios,        // 👈 NECESARIO
   ]
 );
 

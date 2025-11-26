@@ -30,8 +30,7 @@ import {
 import { ref, uploadBytes, getDownloadURL, FirebaseStorage } from "firebase/storage";
 import { useAuth } from "@/contexts/AuthContext"; // ✅ correcto
 import { toast } from "sonner";
-import Exercises from "../cursoItem/exercises/Exercises";
-// import Exercises from "../cursoItem/exercises/Exercises"; // Assuming this path is correct
+import Exercises, { Exercise } from "../cursoItem/exercises/Exercises";
 import {
   FiPlus,
   FiTrash2,
@@ -56,6 +55,7 @@ import {
   FiGlobe,
 } from "react-icons/fi";
 import { storage, db } from "@/lib/firebase";
+import VocabularyEditor from "../cursoItem/VocabularyEditor";
 
 
 
@@ -65,26 +65,28 @@ import { storage, db } from "@/lib/firebase";
 
 
 
-interface Ejercicio {
-  // Define structure of an exercise
-  id: string;
-  pregunta: string;
-  opciones: { texto: string; correcto: boolean }[];
-  tipo: "multiple_choice" | "true_false" | "text_input";
-  // Add other fields as needed
-}
-
 interface Leccion {
   id: string;
   titulo: string;
-  descripcion?: string;  // ✅ nuevo campo breve
-  teoria?: string;       // ✅ texto markdown (en vez de textarea “texto”)
+  descripcion?: string;
+  teoria?: string;
   urlVideo: string;
   urlImagen: string;
   pdfUrl: string;
-  ejercicios: Ejercicio[];
+
+  vocabulary?: {
+  entries: {
+    term: string;
+    translation: string;
+    example?: string;
+  }[];
+};
+
+
+  ejercicios: Exercise[];
   finalMessage: string;
 }
+
 
 interface Unidad {
   id: string;
@@ -93,14 +95,14 @@ interface Unidad {
   introVideo?: string;
   duracion?: number; // Optional duration in minutes
   urlImagen: string;
-  ejercicios: Ejercicio[]; // Legacy, kept for backward compat
+  ejercicios: Exercise[]; // Legacy, kept for backward compat
   textoCierre: string;
   lecciones: Leccion[];
 
   // 🆕 Nueva estructura para manejar el cierre de unidad
   closing?: {
     examIntro?: string;           // Texto introductorio para examen de cierre
-    examExercises?: Ejercicio[];  // Ejercicios del examen
+    examExercises?: Exercise[];  // Ejercicios del examen
     closingText?: string;         // Texto final de la unidad
     pdfUrl?: string;              // ✅ URL del resumen PDF
     videoUrl?: string;
@@ -110,7 +112,7 @@ interface Unidad {
 
 interface ExamenFinal {
   introTexto: string;
-  ejercicios: Ejercicio[];
+  ejercicios: Exercise[];
 }
 
 interface Capstone {
@@ -518,10 +520,9 @@ const filteredAlumnos = useMemo(() => {
   id: u.id || makeId(),
   titulo: u.titulo || "",
   descripcion: u.descripcion || "",
-  urlVideo: "",
+  introVideo: u.introVideo || "",
   urlImagen: u.urlImagen || "",
   duracion: u.duracion ? Number(u.duracion) : undefined,
-  ejercicios: [],
   textoCierre: u.textoCierre || "",
   lecciones: (u.lecciones || []).map((l) => ({
   id: l.id || makeId(),
@@ -531,9 +532,18 @@ const filteredAlumnos = useMemo(() => {
   urlVideo: l.urlVideo || "",
   urlImagen: l.urlImagen || "",
   pdfUrl: l.pdfUrl || "",
+
+  vocabulary: l.vocabulary
+  ? {
+      entries: l.vocabulary.entries || [],
+    }
+  : null,
+
+
   ejercicios: Array.isArray(l.ejercicios) ? l.ejercicios : [],
   finalMessage: l.finalMessage || "",
 })),
+
 
   closing: {
   examIntro: u.closing?.examIntro ?? "",
@@ -571,6 +581,14 @@ const filteredAlumnos = useMemo(() => {
 };
 
 
+console.log("🔥 DEBUG PRE ADD", {
+  firestore,
+  db,
+  unidadesToSave,
+  examenFinal,
+  capstone,
+  payload,
+});
 
  // ✅ Guardá el payload directo
 const refCurso = await addDoc(collection(dbToUse, "cursos"), payload);
@@ -1229,6 +1247,20 @@ const idiomasCurso = [
                   Supports <code>**bold**</code>, <code>_italic_</code>, lists (-) and links.
                 </p>
               </div>
+              {/* VOCABULARY */}
+<div className="space-y-1">
+  <label className="text-sm font-medium text-gray-700">
+    Vocabulary
+  </label>
+
+  <VocabularyEditor
+    value={l.vocabulary}
+    onChange={(val) =>
+      updateLeccion(activeUnidad, lIdx, { vocabulary: val })
+    }
+  />
+</div>
+
 
               {/* Ejercicios */}
               <div className="space-y-1">
@@ -1237,7 +1269,7 @@ const idiomasCurso = [
                 </label>
                 <Exercises
                   initial={l.ejercicios}
-                  onChange={(newExercises: Ejercicio[]) =>
+                  onChange={(newExercises: Exercise[]) =>
                     updateLeccion(activeUnidad, lIdx, {
                       ejercicios: [...newExercises],
                     })
@@ -1456,7 +1488,7 @@ const idiomasCurso = [
       </label>
       <Exercises
   initial={examenFinal.ejercicios}
-  onChange={(newExercises: Ejercicio[]) =>
+  onChange={(newExercises: Exercise[]) =>
     setExamenFinal((prev) => ({ ...prev, ejercicios: newExercises }))
   }
 />

@@ -58,15 +58,33 @@
   "updatedSuccess": "Profilo aggiornato con successo"
   },
   "dashboard": {
-    "hello": "Ciao {{name}}! 👋",
-    "welcome": "Benvenuto nel tuo campus virtuale.",
-    "activeCourses": "Corsi attivi",
-    "certificates": "Certificati ottenuti",
-    "recentActivity": "Attività recente",
-    "noActivity": "Non ci sono ancora attività registrate.",
-    "announcements": "Notizie e annunci",
-    "noAnnouncements": "Nessun annuncio per ora.",
-    "loading": "Caricamento delle tue informazioni..."
+    "loading": "Caricamento...",
+    "hello": "Ciao, {{name}}",
+    "welcome": "Bentornato.",
+    "language": "Lingua",
+    "level": "Livello",
+    "unassigned": "Non assegnato",
+    "announcements": "Annunci",
+    "announcements.new": "nuovi",
+    "noAnnouncements": "Nessun annuncio disponibile.",
+    "activity": "Attività",
+    "noActivity": "Nessuna attività recente.",
+    "quickTitle": "Accesso Rapido"
+  },
+  "quick": {
+    "material": "Materiale Accademico",
+    "material.desc": "Accedi ai tuoi contenuti didattici",
+    "certificates": "Certificati",
+    "certificates.desc": "Visualizza i tuoi risultati",
+    "gaming": "Gaming",
+    "gaming.desc": "Giochi giornalieri per praticare la tua lingua",
+    "chat": "Chat IA",
+    "chat.desc": "Pratica conversazionale con l'intelligenza artificiale",
+    "history": "Storico IA",
+    "history.desc": "Consulta le sessioni precedenti e il feedback",
+    "profile": "Il Mio Profilo",
+    "profile.desc": "Impostazioni dell'account",
+    "go": "Vai ora"
   },
   "courses": {
     "loading": "Caricamento dei tuoi corsi...",

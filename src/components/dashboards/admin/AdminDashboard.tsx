@@ -13,6 +13,8 @@ import AdminProfilePage from "./AdminProfilePage";
 import ChatBox from "@/components/chat/ChatBox";
 import ChatHistoryList from "@/components/chat/history/ChatHistoryList";
 import ChatHistorySession from "@/components/chat/history/ChatHistorySession";
+import AdminAnunciosPage from "./AdminAnunciosPage";
+
 export default function AdminDashboard() {
   const { section } = useDashboardUI();
   const { userProfile } = useAuth(); // ← por si lo necesitás luego
@@ -36,16 +38,17 @@ export default function AdminDashboard() {
     case "perfil":
       return <AdminProfilePage />;
 
-      case "chatbot":
-        return <ChatBox />;
+    case "chatbot":
+      return <ChatBox />;
 
     case "chat-history":
-  return <ChatHistoryList />;
+      return <ChatHistoryList />;
 
-case "chat-session":
-  return <ChatHistorySession />;
-  // ← SIN PROPS, el ChatBox carga del AuthContext
+    case "chat-session":
+      return <ChatHistorySession />;
 
+    case "anuncios":
+      return <AdminAnunciosPage />;
     default:
       return <HomeDashboard />;
   }

@@ -57,15 +57,33 @@
   "updatedSuccess": "Perfil actualizado correctamente"
   },
   "dashboard": {
-    "hello": "¡Hola {{name}}! 👋",
-    "welcome": "Bienvenido a tu campus virtual.",
-    "activeCourses": "Cursos activos",
-    "certificates": "Certificados obtenidos",
-    "recentActivity": "Actividad reciente",
-    "noActivity": "No hay actividad registrada todavía.",
-    "announcements": "Noticias y anuncios",
-    "noAnnouncements": "No hay anuncios por ahora.",
-    "loading": "Cargando tu información..."
+    "loading": "Loading...",
+    "hello": "Hello, {{name}}",
+    "welcome": "Welcome back.",
+    "language": "Language",
+    "level": "Level",
+    "unassigned": "Unassigned",
+    "announcements": "Announcements",
+    "announcements.new": "new",
+    "noAnnouncements": "No announcements available.",
+    "activity": "Activity",
+    "noActivity": "No recent activity.",
+    "quickTitle": "Quick Access"
+  },
+  "quick": {
+    "material": "Academic Material",
+    "material.desc": "Access your learning content",
+    "certificates": "Certificates",
+    "certificates.desc": "View your achievements",
+    "gaming": "Gaming",
+    "gaming.desc": "Daily games to practice your language",
+    "chat": "AI Chat",
+    "chat.desc": "Conversational practice with AI",
+    "history": "AI History",
+    "history.desc": "Review past sessions and feedback",
+    "profile": "My Profile",
+    "profile.desc": "Account settings",
+    "go": "Go now"
   },
   "courses": {
     "loading": "Cargando tus cursos...",
@@ -213,4 +231,5 @@
   }
   },
   "auth": {}
+  
 }

@@ -11,9 +11,13 @@ import React, {
 
 // ===== Definiciones de tipo para los ejercicios =====
 
-interface ExerciseBase {
+export interface ExerciseBase {
   id: string;
 }
+
+/* ===============================
+   Tipos existentes (ya usados)
+=================================*/
 
 interface MultipleChoiceExercise extends ExerciseBase {
   type: "multiple_choice";
@@ -22,13 +26,13 @@ interface MultipleChoiceExercise extends ExerciseBase {
   correctIndex: number;
 }
 
-interface TrueFalseExercise extends ExerciseBase {
+export interface TrueFalseExercise extends ExerciseBase {
   type: "true_false";
   statement: string;
   answer: boolean;
 }
 
-interface FillBlankExercise extends ExerciseBase {
+export interface FillBlankExercise extends ExerciseBase {
   type: "fill_blank";
   title: string;
   sentence: string;
@@ -36,32 +40,113 @@ interface FillBlankExercise extends ExerciseBase {
   hintWords: string;
 }
 
-interface TextExercise extends ExerciseBase {
+export interface TextExercise extends ExerciseBase {
   type: "text";
   prompt: string;
   maxLength: number;
 }
 
-interface ReorderExercise extends ExerciseBase {
+export interface ReorderExercise extends ExerciseBase {
   type: "reorder";
   title: string;
   items: string[];
   correctOrder: number[];
 }
 
-interface MatchingExercise extends ExerciseBase {
+export interface MatchingExercise extends ExerciseBase {
   type: "matching";
   title: string;
   pairs: { left: string; right: string }[];
 }
 
-type Exercise =
+/* =========================================
+   Preguntas de comprensión (Reading/Listening)
+============================================*/
+
+export interface ComprehensionQuestionBase {
+  id: string;
+  prompt: string;
+}
+
+export interface ComprehensionMCQuestion extends ComprehensionQuestionBase {
+  kind: "mc";
+  options: string[];
+  correctIndex: number;
+}
+
+export interface ComprehensionTFQuestion extends ComprehensionQuestionBase {
+  kind: "tf";
+  answer: boolean;
+}
+
+type ComprehensionQuestion =
+  | ComprehensionMCQuestion
+  | ComprehensionTFQuestion;
+
+/* =========================================
+   Nuevos tipos de ejercicios
+============================================*/
+
+// 📖 Reading: texto + preguntas de comprensión
+export interface ReadingExercise extends ExerciseBase {
+  type: "reading";
+  title: string;
+  text: string; // texto a leer
+  questions: ComprehensionQuestion[]; // MC o True/False
+}
+
+
+// 🎧 Listening: audio + preguntas de comprensión
+export interface ListeningExercise extends ExerciseBase {
+  type: "listening";
+  title: string;
+  audioUrl: string;             // URL del audio (storage, https, etc.)
+  questions: ComprehensionQuestion[];
+  transcript?: string;          // opcional: texto del audio si lo quieren
+}
+
+// 🗣️ Speaking: bullets con prompts para hablar
+export interface SpeakingExercise extends ExerciseBase {
+  type: "speaking";
+  title: string;
+  bullets: string[];  // cada ítem = un bullet/prompt
+  notes?: string;     // campo extra opcional de notas/instrucciones
+}
+
+// 💭 Reflection: texto + 3 ideas del alumno
+export interface ReflectionExercise extends ExerciseBase {
+  type: "reflection";
+  title: string;
+  prompt: string;     // consigna de reflexión
+  ideasCount: number; // normalmente 3 (puedes setear por defecto en el editor)
+}
+
+// ✏️ Sentence correction: corregir la frase
+export interface SentenceCorrectionExercise extends ExerciseBase {
+  type: "sentence_correction";
+  incorrect: string;        // frase mal escrita
+  correctAnswers: string[]; // posibles correcciones válidas
+  // Luego en el front de alumno puedes decidir si haces comparación exacta,
+  // case-insensitive, etc.
+}
+
+/* =========================================
+   Unión principal de ejercicios
+============================================*/
+
+export type Exercise =
   | MultipleChoiceExercise
   | TrueFalseExercise
   | FillBlankExercise
   | TextExercise
   | ReorderExercise
-  | MatchingExercise;
+  | MatchingExercise
+  | ReadingExercise
+  | ListeningExercise
+  | SpeakingExercise
+  | ReflectionExercise
+  | SentenceCorrectionExercise;
+
 
 // ===== Props del componente =====
 
@@ -164,6 +249,126 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
         );
         return ok;
       }
+
+            /* ===============================
+         📖 READING — texto + preguntas
+      ==================================*/
+      case "reading": {
+        if (!ex.title || ex.title.trim() === "") return false;
+        if (!ex.text || ex.text.trim() === "") return false;
+
+        // Validación de preguntas de comprensión
+        if (!Array.isArray(ex.questions) || ex.questions.length === 0)
+          return false;
+
+        for (const q of ex.questions) {
+          if (!q.prompt || q.prompt.trim() === "") return false;
+
+          if (q.kind === "mc") {
+            if (!Array.isArray(q.options) || q.options.length < 2) return false;
+            const opts = q.options.map((o) => o.trim());
+            if (opts.filter((o) => o !== "").length < 2) return false;
+            if (
+              !Number.isInteger(q.correctIndex) ||
+              q.correctIndex < 0 ||
+              q.correctIndex >= opts.length
+            )
+              return false;
+          }
+
+          if (q.kind === "tf") {
+            if (typeof q.answer !== "boolean") return false;
+          }
+        }
+
+        return true;
+      }
+
+     
+
+      /* ===============================
+         🎧 LISTENING — audio + preguntas
+      ==================================*/
+      case "listening": {
+        if (!ex.title || ex.title.trim() === "") return false;
+        if (!ex.audioUrl || ex.audioUrl.trim() === "") return false;
+
+        if (!Array.isArray(ex.questions) || ex.questions.length === 0)
+          return false;
+
+        for (const q of ex.questions) {
+          if (!q.prompt || q.prompt.trim() === "") return false;
+
+          if (q.kind === "mc") {
+            if (!Array.isArray(q.options) || q.options.length < 2) return false;
+            const opts = q.options.map((o) => o.trim());
+            if (opts.filter((o) => o !== "").length < 2) return false;
+            if (
+              !Number.isInteger(q.correctIndex) ||
+              q.correctIndex < 0 ||
+              q.correctIndex >= opts.length
+            )
+              return false;
+          }
+
+          if (q.kind === "tf") {
+            if (typeof q.answer !== "boolean") return false;
+          }
+        }
+
+        return true;
+      }
+
+      /* ===============================
+         🗣️ SPEAKING — bullets de prompts
+      ==================================*/
+      case "speaking": {
+        if (!ex.title || ex.title.trim() === "") return false;
+
+        if (!Array.isArray(ex.bullets) || ex.bullets.length === 0)
+          return false;
+
+        const valid = ex.bullets.some((b) => b.trim() !== "");
+        if (!valid) return false;
+
+        return true;
+      }
+
+      /* ===============================
+         💭 REFLECTION — prompt + ideas
+      ==================================*/
+      case "reflection": {
+        if (!ex.title || ex.title.trim() === "") return false;
+        if (!ex.prompt || ex.prompt.trim() === "") return false;
+
+        // Min: 1 idea, usualmente 3
+        if (!Number.isInteger(ex.ideasCount) || ex.ideasCount < 1)
+          return false;
+
+        return true;
+      }
+
+      /* ===============================
+         ✏️ SENTENCE CORRECTION
+      ==================================*/
+      case "sentence_correction": {
+        if (!ex.incorrect || ex.incorrect.trim() === "") return false;
+
+        if (
+          !Array.isArray(ex.correctAnswers) ||
+          ex.correctAnswers.length === 0
+        )
+          return false;
+
+        const allNonEmpty = ex.correctAnswers.every(
+          (a) => a.trim() !== ""
+        );
+
+        return allNonEmpty;
+      }
+
+
+
       default:
         return false;
     }
@@ -211,26 +416,148 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
   const addExercise = (type: Exercise['type']) => {
     const id = makeId();
     let base: Exercise | null = null;
-    switch (type) {
+        switch (type) {
       case "multiple_choice":
-        base = { id, type, question: "", options: ["", ""], correctIndex: 0 };
+        base = {
+          id,
+          type,
+          question: "",
+          options: ["", ""],
+          correctIndex: 0,
+        };
         break;
+
       case "true_false":
-        base = { id, type, statement: "", answer: true };
+        base = {
+          id,
+          type,
+          statement: "",
+          answer: true,
+        };
         break;
+
       case "fill_blank":
-        base = { id, type, title: "", sentence: "", answers: [], hintWords: "" };
+        base = {
+          id,
+          type,
+          title: "",
+          sentence: "",
+          answers: [],
+          hintWords: "",
+        };
         break;
+
       case "text":
-        base = { id, type, prompt: "", maxLength: 500 };
+        base = {
+          id,
+          type,
+          prompt: "",
+          maxLength: 500,
+        };
         break;
+
       case "reorder":
-        base = { id, type, title: "", items: [], correctOrder: [] };
+        base = {
+          id,
+          type,
+          title: "",
+          items: [],
+          correctOrder: [],
+        };
         break;
+
       case "matching":
-        base = { id, type, title: "", pairs: [{ left: "", right: "" }] };
+        base = {
+          id,
+          type,
+          title: "",
+          pairs: [{ left: "", right: "" }],
+        };
+        break;
+
+      /* ===============================
+         📖 READING — texto + preguntas
+      ==================================*/
+      case "reading":
+        base = {
+          id,
+          type,
+          title: "",
+          text: "",
+          questions: [
+            {
+              id: makeId(),
+              kind: "mc",
+              prompt: "",
+              options: ["", ""],
+              correctIndex: 0,
+            },
+          ],
+        };
+        break;
+
+      
+
+      /* ===============================
+         🎧 LISTENING — audio + preguntas
+      ==================================*/
+      case "listening":
+        base = {
+          id,
+          type,
+          title: "",
+          audioUrl: "",
+          questions: [
+            {
+              id: makeId(),
+              kind: "tf",
+              prompt: "",
+              answer: true,
+            },
+          ],
+          transcript: "",
+        };
+        break;
+
+      /* ===============================
+         🗣️ SPEAKING — bullets
+      ==================================*/
+      case "speaking":
+        base = {
+          id,
+          type,
+          title: "",
+          bullets: [""],
+          notes: "",
+        };
+        break;
+
+      /* ===============================
+         💭 REFLECTION
+      ==================================*/
+      case "reflection":
+        base = {
+          id,
+          type,
+          title: "",
+          prompt: "",
+          ideasCount: 3, // default = 3 ideas
+        };
+        break;
+
+      /* ===============================
+         ✏️ SENTENCE CORRECTION
+      ==================================*/
+      case "sentence_correction":
+        base = {
+          id,
+          type,
+          incorrect: "",
+          correctAnswers: [""],
+        };
         break;
     }
+
 
     if (!base) return;
     exercisesRef.current.push(base);
@@ -1012,10 +1339,727 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
         return renderReorder(ex);
       case "matching":
         return renderMatching(ex);
+
+         case "reading":
+      return renderReading(ex);
+    case "listening":
+      return renderListening(ex);
+    case "speaking":
+      return renderSpeaking(ex);
+    case "reflection":
+      return renderReflection(ex);
+    case "sentence_correction":
+      return renderSentenceCorrection(ex);
       default:
         return null;
     }
   };
+
+  const renderReading = (ex: ReadingExercise) => {
+  const update = (patch: Partial<ReadingExercise>) =>
+    updateFieldImmediate(ex.id, patch);
+
+  // ==========================
+  // Ayudantes para preguntas
+  // ==========================
+  const addQuestion = () => {
+    const newQ: ComprehensionQuestion = {
+      id: makeId(),
+      kind: "mc",
+      prompt: "",
+      options: ["", ""],
+      correctIndex: 0,
+    };
+    update({ questions: [...ex.questions, newQ] });
+  };
+
+  const updateQuestion = (qid: string, patch: Partial<ComprehensionQuestion>) => {
+    const next = ex.questions.map((q) =>
+      q.id === qid ? { ...q, ...patch } : q
+    );
+    update({ questions: next });
+  };
+
+  const removeQuestion = (qid: string) => {
+    update({ questions: ex.questions.filter((q) => q.id !== qid) });
+  };
+
+  const toggleKind = (qid: string, newKind: "mc" | "tf") => {
+    const q = ex.questions.find((x) => x.id === qid);
+    if (!q) return;
+
+    if (newKind === "tf") {
+      updateQuestion(qid, {
+        kind: "tf",
+        options: undefined,
+        correctIndex: undefined,
+        answer: true,
+      });
+    } else {
+      updateQuestion(qid, {
+        kind: "mc",
+        options: ["", ""],
+        correctIndex: 0,
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+
+      {/* ======= Título ======= */}
+      <input
+        className="w-full border rounded px-3 py-2"
+        placeholder="Título del ejercicio (ej: Reading - Workplace email)"
+        value={ex.title}
+        onChange={(e) => update({ title: e.target.value })}
+      />
+
+      {/* ======= Texto de lectura ======= */}
+      <textarea
+        rows={8}
+        className="w-full border rounded px-3 py-2"
+        placeholder="Texto / artículo / párrafo para leer..."
+        value={ex.text}
+        onChange={(e) => update({ text: e.target.value })}
+        style={{ whiteSpace: "pre-wrap" }}
+      />
+
+      {/* ======= Lista de preguntas ======= */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="text-sm font-medium text-slate-700">
+            Preguntas de comprensión
+          </div>
+          <button
+            type="button"
+            onClick={addQuestion}
+            className="px-3 py-1 rounded bg-sky-600 text-white text-sm"
+          >
+            + Añadir pregunta
+          </button>
+        </div>
+
+        {ex.questions.length === 0 && (
+          <div className="text-sm text-slate-500">No hay preguntas todavía.</div>
+        )}
+
+        {ex.questions.map((q, idx) => (
+          <div
+            key={q.id}
+            className="border rounded p-3 bg-slate-50 space-y-3"
+          >
+            {/* Encabezado */}
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-medium text-slate-600">
+                Pregunta #{idx + 1}
+              </div>
+              <button
+                type="button"
+                onClick={() => removeQuestion(q.id)}
+                className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded"
+              >
+                Eliminar
+              </button>
+            </div>
+
+            {/* Prompt */}
+            <textarea
+              rows={2}
+              className="w-full border rounded px-2 py-1"
+              placeholder="Escribe la pregunta..."
+              value={q.prompt}
+              onChange={(e) =>
+                updateQuestion(q.id, { prompt: e.target.value })
+              }
+            />
+
+            {/* Selector de tipo */}
+            <div className="flex gap-3 text-sm">
+              <label className="flex items-center gap-1">
+                <input
+                  type="radio"
+                  checked={q.kind === "mc"}
+                  onChange={() => toggleKind(q.id, "mc")}
+                />
+                Multiple Choice
+              </label>
+              <label className="flex items-center gap-1">
+                <input
+                  type="radio"
+                  checked={q.kind === "tf"}
+                  onChange={() => toggleKind(q.id, "tf")}
+                />
+                Verdadero / Falso
+              </label>
+            </div>
+
+            {/* ================================
+                RENDER SEGÚN TIPO DE PREGUNTA
+            ==================================*/}
+
+            {q.kind === "mc" && (
+              <div className="space-y-2">
+                {q.options!.map((opt, oi) => (
+                  <div key={oi} className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name={`mc-${q.id}`}
+                      checked={q.correctIndex === oi}
+                      onChange={() =>
+                        updateQuestion(q.id, { correctIndex: oi })
+                      }
+                    />
+                    <input
+                      className="flex-1 border rounded px-2 py-1"
+                      value={opt}
+                      placeholder={`Opción ${oi + 1}`}
+                      onChange={(e) => {
+                        const newOptions = [...q.options!];
+                        newOptions[oi] = e.target.value;
+                        updateQuestion(q.id, { options: newOptions });
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded"
+                      disabled={(q.options || []).length <= 2}
+                      onClick={() => {
+                        const newOptions = q.options!.filter(
+                          (_, idx) => idx !== oi
+                        );
+                        updateQuestion(q.id, {
+                          options: newOptions,
+                          correctIndex: 0,
+                        });
+                      }}
+                    >
+                      ✖
+                    </button>
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  className="px-3 py-1 bg-slate-200 rounded text-sm"
+                  onClick={() =>
+                    updateQuestion(q.id, {
+                      options: [...q.options!, ""],
+                    })
+                  }
+                >
+                  + Opción
+                </button>
+              </div>
+            )}
+
+            {q.kind === "tf" && (
+              <div className="flex gap-4 items-center">
+                <label className="flex items-center gap-1">
+                  <input
+                    type="radio"
+                    checked={q.answer === true}
+                    onChange={() => updateQuestion(q.id, { answer: true })}
+                  />
+                  Verdadero
+                </label>
+                <label className="flex items-center gap-1">
+                  <input
+                    type="radio"
+                    checked={q.answer === false}
+                    onChange={() => updateQuestion(q.id, { answer: false })}
+                  />
+                  Falso
+                </label>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+
+
+const renderListening = (ex: ListeningExercise) => {
+  const update = (patch: Partial<ListeningExercise>) =>
+    updateFieldImmediate(ex.id, patch);
+
+  // ==========================
+  // Ayudantes para preguntas
+  // ==========================
+  const addQuestion = () => {
+    const newQ: ComprehensionQuestion = {
+      id: makeId(),
+      kind: "mc",
+      prompt: "",
+      options: ["", ""],
+      correctIndex: 0,
+    };
+    update({ questions: [...ex.questions, newQ] });
+  };
+
+  const updateQuestion = (qid: string, patch: Partial<ComprehensionQuestion>) => {
+    const next = ex.questions.map((q) =>
+      q.id === qid ? { ...q, ...patch } : q
+    );
+    update({ questions: next });
+  };
+
+  const removeQuestion = (qid: string) => {
+    update({ questions: ex.questions.filter((q) => q.id !== qid) });
+  };
+
+  const toggleKind = (qid: string, newKind: "mc" | "tf") => {
+    const q = ex.questions.find((x) => x.id === qid);
+    if (!q) return;
+
+    if (newKind === "tf") {
+      updateQuestion(qid, {
+        kind: "tf",
+        options: undefined,
+        correctIndex: undefined,
+        answer: true,
+      });
+    } else {
+      updateQuestion(qid, {
+        kind: "mc",
+        options: ["", ""],
+        correctIndex: 0,
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* ======= Título ======= */}
+      <input
+        className="w-full border rounded px-3 py-2"
+        placeholder="Título del ejercicio (ej: Listening - Customer support call)"
+        value={ex.title}
+        onChange={(e) => update({ title: e.target.value })}
+      />
+
+      {/* ======= URL de audio ======= */}
+      <div>
+        <div className="text-sm font-medium text-slate-700 mb-1">
+          Audio (URL o archivo subido)
+        </div>
+        <input
+          className="w-full border rounded px-3 py-2"
+          placeholder="Pega aquí la URL del audio (mp3, wav, etc.)"
+          value={ex.audioUrl}
+          onChange={(e) => update({ audioUrl: e.target.value })}
+        />
+
+        {ex.audioUrl && (
+          <audio
+            controls
+            src={ex.audioUrl}
+            className="mt-2 w-full max-w-md"
+          />
+        )}
+      </div>
+
+      {/* ======= TRANSCRIPT (opcional) ======= */}
+      <div>
+        <div className="text-sm text-slate-600">Transcript (opcional)</div>
+        <textarea
+          rows={4}
+          className="w-full border rounded px-3 py-2"
+          value={ex.transcript || ""}
+          onChange={(e) => update({ transcript: e.target.value })}
+          placeholder="Transcripción del audio, si quieres incluirla..."
+          style={{ whiteSpace: "pre-wrap" }}
+        />
+      </div>
+
+      {/* ======= Preguntas de comprensión ======= */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="text-sm font-medium text-slate-700">
+            Preguntas de comprensión
+          </div>
+          <button
+            type="button"
+            onClick={addQuestion}
+            className="px-3 py-1 rounded bg-sky-600 text-white text-sm"
+          >
+            + Añadir pregunta
+          </button>
+        </div>
+
+        {ex.questions.length === 0 && (
+          <div className="text-sm text-slate-500">No hay preguntas todavía.</div>
+        )}
+
+        {ex.questions.map((q, idx) => (
+          <div
+            key={q.id}
+            className="border rounded p-3 bg-slate-50 space-y-3"
+          >
+            {/* Encabezado */}
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-medium text-slate-600">
+                Pregunta #{idx + 1}
+              </div>
+              <button
+                type="button"
+                onClick={() => removeQuestion(q.id)}
+                className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded"
+              >
+                Eliminar
+              </button>
+            </div>
+
+            {/* Prompt */}
+            <textarea
+              rows={2}
+              className="w-full border rounded px-2 py-1"
+              placeholder="Escribe la pregunta..."
+              value={q.prompt}
+              onChange={(e) =>
+                updateQuestion(q.id, { prompt: e.target.value })
+              }
+            />
+
+            {/* Selector de tipo */}
+            <div className="flex gap-3 text-sm">
+              <label className="flex items-center gap-1">
+                <input
+                  type="radio"
+                  checked={q.kind === "mc"}
+                  onChange={() => toggleKind(q.id, "mc")}
+                />
+                Multiple Choice
+              </label>
+              <label className="flex items-center gap-1">
+                <input
+                  type="radio"
+                  checked={q.kind === "tf"}
+                  onChange={() => toggleKind(q.id, "tf")}
+                />
+                Verdadero / Falso
+              </label>
+            </div>
+
+            {/* ===== Multiple choice ===== */}
+            {q.kind === "mc" && (
+              <div className="space-y-2">
+                {q.options!.map((opt, oi) => (
+                  <div key={oi} className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name={`mc-list-${q.id}`}
+                      checked={q.correctIndex === oi}
+                      onChange={() =>
+                        updateQuestion(q.id, { correctIndex: oi })
+                      }
+                    />
+                    <input
+                      className="flex-1 border rounded px-2 py-1"
+                      value={opt}
+                      placeholder={`Opción ${oi + 1}`}
+                      onChange={(e) => {
+                        const newOptions = [...q.options!];
+                        newOptions[oi] = e.target.value;
+                        updateQuestion(q.id, { options: newOptions });
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded"
+                      disabled={(q.options || []).length <= 2}
+                      onClick={() => {
+                        const newOptions = q.options!.filter(
+                          (_, idx) => idx !== oi
+                        );
+                        updateQuestion(q.id, {
+                          options: newOptions,
+                          correctIndex: 0,
+                        });
+                      }}
+                    >
+                      ✖
+                    </button>
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  className="px-3 py-1 bg-slate-200 rounded text-sm"
+                  onClick={() =>
+                    updateQuestion(q.id, {
+                      options: [...q.options!, ""],
+                    })
+                  }
+                >
+                  + Opción
+                </button>
+              </div>
+            )}
+
+            {/* ===== True/False ===== */}
+            {q.kind === "tf" && (
+              <div className="flex gap-4 items-center">
+                <label className="flex items-center gap-1">
+                  <input
+                    type="radio"
+                    checked={q.answer === true}
+                    onChange={() => updateQuestion(q.id, { answer: true })}
+                  />
+                  Verdadero
+                </label>
+                <label className="flex items-center gap-1">
+                  <input
+                    type="radio"
+                    checked={q.answer === false}
+                    onChange={() => updateQuestion(q.id, { answer: false })}
+                  />
+                  Falso
+                </label>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const renderSpeaking = (ex: SpeakingExercise) => {
+  const update = (patch: Partial<SpeakingExercise>) =>
+    updateFieldImmediate(ex.id, patch);
+
+  const addBullet = () => {
+    update({ bullets: [...ex.bullets, ""] });
+  };
+
+  const updateBullet = (idx: number, value: string) => {
+    const next = [...ex.bullets];
+    next[idx] = value;
+    update({ bullets: next });
+  };
+
+  const removeBullet = (idx: number) => {
+    update({ bullets: ex.bullets.filter((_, i) => i !== idx) });
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* ======= Título ======= */}
+      <input
+        className="w-full border rounded px-3 py-2"
+        placeholder="Título del ejercicio (ej: Speaking - Talk about your work day)"
+        value={ex.title}
+        onChange={(e) => update({ title: e.target.value })}
+      />
+
+      {/* ======= Bullets ======= */}
+      <div className="space-y-3">
+        <div className="text-sm font-medium text-slate-700">
+          Bullet points
+        </div>
+
+        {ex.bullets.length === 0 && (
+          <div className="text-sm text-slate-500">No hay bullet points.</div>
+        )}
+
+        {ex.bullets.map((b, i) => (
+          <div
+            key={i}
+            className="flex items-start gap-2 border rounded p-2 bg-slate-50"
+          >
+            <span className="text-slate-400 mt-2 select-none">•</span>
+            <textarea
+              rows={2}
+              className="flex-1 border rounded px-2 py-1"
+              placeholder={`Bullet point ${i + 1}`}
+              value={b}
+              onChange={(e) => updateBullet(i, e.target.value)}
+              style={{ whiteSpace: "pre-wrap" }}
+            />
+            <button
+              type="button"
+              className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs"
+              onClick={() => removeBullet(i)}
+            >
+              ✖
+            </button>
+          </div>
+        ))}
+
+        <button
+          type="button"
+          onClick={addBullet}
+          className="px-3 py-1.5 rounded bg-slate-200 text-sm"
+        >
+          + Añadir bullet
+        </button>
+      </div>
+
+      {/* ======= Notas adicionales (opcional) ======= */}
+      <div>
+        <div className="text-sm font-medium text-slate-700">Notas (opcional)</div>
+        <textarea
+          rows={3}
+          className="w-full border rounded px-3 py-2"
+          placeholder="Instrucciones adicionales para el alumno..."
+          value={ex.notes || ""}
+          onChange={(e) => update({ notes: e.target.value })}
+          style={{ whiteSpace: "pre-wrap" }}
+        />
+      </div>
+    </div>
+  );
+};
+
+const renderReflection = (ex: ReflectionExercise) => {
+  const update = (patch: Partial<ReflectionExercise>) =>
+    updateFieldImmediate(ex.id, patch);
+
+  return (
+    <div className="space-y-4">
+
+      {/* ======= Título ======= */}
+      <input
+        className="w-full border rounded px-3 py-2"
+        placeholder="Título del ejercicio (ej: Reflection - Workplace feedback)"
+        value={ex.title}
+        onChange={(e) => update({ title: e.target.value })}
+      />
+
+      {/* ======= Prompt / Consigna ======= */}
+      <div>
+        <div className="text-sm font-medium text-slate-700 mb-1">
+          Consigna
+        </div>
+
+        <textarea
+          rows={4}
+          className="w-full border rounded px-3 py-2"
+          placeholder="Escribe aquí la consigna de reflexión que deberá pensar el alumno..."
+          value={ex.prompt}
+          onChange={(e) => update({ prompt: e.target.value })}
+          style={{ whiteSpace: 'pre-wrap' }}
+        />
+      </div>
+
+      {/* ======= Número de ideas ======= */}
+      <div className="flex items-center gap-3">
+        <label className="text-sm font-medium text-slate-700">
+          Número de ideas a completar:
+        </label>
+
+        <input
+          type="number"
+          min={1}
+          max={10}
+          className="w-20 border rounded px-2 py-1"
+          value={ex.ideasCount}
+          onChange={(e) => {
+            const count = parseInt(e.target.value || "1", 10);
+            update({ ideasCount: Math.max(1, count) });
+          }}
+        />
+      </div>
+
+      <div className="text-xs text-slate-500">
+        El alumno deberá completar {ex.ideasCount} idea{ex.ideasCount === 1 ? "" : "s"}.
+      </div>
+
+    </div>
+  );
+};
+
+
+const renderSentenceCorrection = (ex: SentenceCorrectionExercise) => {
+  const update = (patch: Partial<SentenceCorrectionExercise>) =>
+    updateFieldImmediate(ex.id, patch);
+
+  const addAnswer = () => {
+    update({ correctAnswers: [...ex.correctAnswers, ""] });
+  };
+
+  const updateAnswer = (idx: number, value: string) => {
+    const next = [...ex.correctAnswers];
+    next[idx] = value;
+    update({ correctAnswers: next });
+  };
+
+  const removeAnswer = (idx: number) => {
+    update({
+      correctAnswers: ex.correctAnswers.filter((_, i) => i !== idx),
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+
+      {/* ======= Frase incorrecta ======= */}
+      <div>
+        <div className="text-sm font-medium text-slate-700 mb-1">
+          Frase incorrecta (lo que el alumno debe corregir)
+        </div>
+
+        <textarea
+          rows={3}
+          className="w-full border rounded px-3 py-2"
+          placeholder='Ejemplo: "I have saw your job offer."'
+          value={ex.incorrect}
+          onChange={(e) => update({ incorrect: e.target.value })}
+          style={{ whiteSpace: "pre-wrap" }}
+        />
+      </div>
+
+      {/* ======= Lista de respuestas correctas ======= */}
+      <div className="space-y-2">
+        <div className="text-sm font-medium text-slate-700">
+          Respuestas correctas (una o más)
+        </div>
+
+        {ex.correctAnswers.length === 0 && (
+          <div className="text-sm text-slate-500">
+            No hay respuestas todavía.
+          </div>
+        )}
+
+        {ex.correctAnswers.map((ans, idx) => (
+          <div key={idx} className="flex items-center gap-2">
+            <input
+              className="flex-1 border rounded px-3 py-2"
+              placeholder={`Corrección válida #${idx + 1}`}
+              value={ans}
+              onChange={(e) => updateAnswer(idx, e.target.value)}
+            />
+
+            <button
+              type="button"
+              className="px-2 py-1 rounded bg-red-100 text-red-700 text-xs"
+              onClick={() => removeAnswer(idx)}
+            >
+              ✖
+            </button>
+          </div>
+        ))}
+
+        <button
+          type="button"
+          className="px-3 py-1.5 rounded bg-slate-200 text-sm"
+          onClick={addAnswer}
+        >
+          + Añadir respuesta
+        </button>
+      </div>
+
+      <div className="text-xs text-slate-500">
+        El alumno deberá escribir una frase que coincida con cualquiera de estas respuestas.
+      </div>
+    </div>
+  );
+};
+
 
   // Limpieza de debounce al desmontar
   useEffect(() => {
@@ -1040,57 +2084,35 @@ useEffect(() => {
   return (
     <div className="space-y-5">
       {/* Barra de herramientas */}
-      <div className="flex flex-wrap gap-2 items-center sticky top-0 bg-white/85 backdrop-blur py-2 z-10">
-        <span className="text-sm text-slate-600 pr-2">Añadir:</span>
+      {/* ======== AÑADIR EJERCICIOS ======== */}
+<div className="flex flex-wrap gap-2 items-center sticky top-0 bg-white/85 backdrop-blur py-2 z-10">
+  <span className="text-sm text-slate-600 pr-2">Añadir:</span>
 
-        <button
-          type="button"
-          onClick={() => addExercise("multiple_choice")}
-          className="px-3 py-1.5 rounded bg-sky-600 text-white text-sm"
-        >
-          + Opción Múltiple
-        </button>
+  {/* --- Core / Quiz --- */}
+  <button type="button" onClick={() => addExercise("multiple_choice")} className="px-3 py-1.5 rounded bg-sky-600 text-white text-sm">+ Opción Múltiple</button>
 
-        <button
-          type="button"
-          onClick={() => addExercise("true_false")}
-          className="px-3 py-1.5 rounded bg-emerald-600 text-white text-sm"
-        >
-          + Verdadero/Falso
-        </button>
+  <button type="button" onClick={() => addExercise("true_false")} className="px-3 py-1.5 rounded bg-emerald-600 text-white text-sm">+ Verdadero/Falso</button>
 
-        <button
-          type="button"
-          onClick={() => addExercise("fill_blank")}
-          className="px-3 py-1.5 rounded bg-amber-500 text-white text-sm"
-        >
-          + Rellenar Espacios
-        </button>
+  <button type="button" onClick={() => addExercise("fill_blank")} className="px-3 py-1.5 rounded bg-amber-500 text-white text-sm">+ Rellenar Espacios</button>
 
-        <button
-          type="button"
-          onClick={() => addExercise("text")}
-          className="px-3 py-1.5 rounded bg-indigo-600 text-white text-sm"
-        >
-          + Párrafo
-        </button>
+  <button type="button" onClick={() => addExercise("sentence_correction")} className="px-3 py-1.5 rounded bg-gray-700 text-white text-sm">+ Corrección de Frase</button>
 
-        <button
-          type="button"
-          onClick={() => addExercise("reorder")}
-          className="px-3 py-1.5 rounded bg-fuchsia-600 text-white text-sm"
-        >
-          + Reordenar
-        </button>
+  {/* --- Comprensión --- */}
+  <button type="button" onClick={() => addExercise("reading")} className="px-3 py-1.5 rounded bg-purple-600 text-white text-sm">+ Reading</button>
 
-        <button
-          type="button"
-          onClick={() => addExercise("matching")}
-          className="px-3 py-1.5 rounded bg-rose-600 text-white text-sm"
-        >
-          + Emparejar
-        </button>
-      </div>
+  <button type="button" onClick={() => addExercise("listening")} className="px-3 py-1.5 rounded bg-orange-600 text-white text-sm">+ Listening</button>
+
+  {/* --- Organización / Relación --- */}
+  <button type="button" onClick={() => addExercise("matching")} className="px-3 py-1.5 rounded bg-rose-600 text-white text-sm">+ Emparejar</button>
+
+  <button type="button" onClick={() => addExercise("reorder")} className="px-3 py-1.5 rounded bg-fuchsia-600 text-white text-sm">+ Reordenar</button>
+
+  {/* --- Producción --- */}
+  <button type="button" onClick={() => addExercise("speaking")} className="px-3 py-1.5 rounded bg-pink-600 text-white text-sm">+ Speaking</button>
+
+  <button type="button" onClick={() => addExercise("reflection")} className="px-3 py-1.5 rounded bg-lime-600 text-white text-sm">+ Reflexión</button>
+</div>
+
 
       {/* Contenedor de pestañas */}
       <div className="border rounded-lg bg-white shadow-sm">
