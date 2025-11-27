@@ -15,7 +15,8 @@
     "logout": "Cerrar sesión",
     "chatSection": "Chat",
   "chatbot": "Chat Conversacional",
-  "chatHistory": "Historial"
+  "chatHistory": "Historial",
+  "user": "Alumno"
   },
   "profile": {
   "title": "Mi Perfil",
@@ -56,65 +57,70 @@
 
   "updatedSuccess": "Perfil actualizado correctamente"
   },
-  "dashboard": {
-    "loading": "Loading...",
-    "hello": "Hello, {{name}}",
-    "welcome": "Welcome back.",
-    "language": "Language",
-    "level": "Level",
-    "unassigned": "Unassigned",
-    "announcements": "Announcements",
-    "announcements.new": "new",
-    "noAnnouncements": "No announcements available.",
-    "activity": "Activity",
-    "noActivity": "No recent activity.",
-    "quickTitle": "Quick Access"
+   "dashboard": {
+    "loading": "Cargando...",
+    "hello": "Hola, {{name}}",
+    "welcomeFull": "¡Bienvenido de nuevo!",
+    "welcome": "Bienvenido de nuevo.",
+    "language": "Idioma",
+    "level": "Nivel",
+    "unassigned": "Sin asignar",
+    "announcements": "Anuncios",
+    "announcementsNew": "nuevo",
+    "noAnnouncements": "No hay anuncios disponibles.",
+    "activity": "Actividad",
+    "noActivity": "No hay actividad reciente.",
+    "quickTitle": "Accesos rápidos",
+    "activeCoursesLabel": "Material activo",
+    "certificatesLabel": "Certificados",
+    "time": {
+    "days": "Hace {{count}} días",
+    "hours": "Hace {{count}} horas",
+    "minutes": "Hace {{count}} minutos",
+    "justNow": "Justo ahora"
+  }
   },
   "quick": {
-    "material": "Academic Material",
-    "material.desc": "Access your learning content",
-    "certificates": "Certificates",
-    "certificates.desc": "View your achievements",
-    "gaming": "Gaming",
-    "gaming.desc": "Daily games to practice your language",
-    "chat": "AI Chat",
-    "chat.desc": "Conversational practice with AI",
-    "history": "AI History",
-    "history.desc": "Review past sessions and feedback",
-    "profile": "My Profile",
-    "profile.desc": "Account settings",
-    "go": "Go now"
+    "material": "Material Académico",
+    "materialDesc": "Accede a tu contenido de aprendizaje",
+    "certificates": "Certificados",
+    "certificatesDesc": "Ve tus logros",
+    "gaming": "Juegos",
+    "gamingDesc": "Juegos diarios para practicar el idioma",
+    "chat": "Chat con IA",
+    "chatDesc": "Práctica conversacional con IA",
+    "history": "Historial de IA",
+    "historyDesc": "Revisa sesiones y retroalimentación anteriores",
+    "profile": "Mi Perfil",
+    "profileDesc": "Configuración de la cuenta",
+    "go": "Ir ahora"
   },
   "courses": {
-    "loading": "Cargando tus cursos...",
-  "title": "Mis Cursos",
-  "subtitle": "Aquí puedes ver tus módulos activos, tu progreso y tu historial académico.",
-  "emptyMessage": "Todavía no estás inscripto en ningún curso.",
-  "emptyHint": "Cuando te inscribas, tus cursos aparecerán aquí.",
-  
-  "untitled": "Curso sin título",
-  "generalCategory": "General",
-
-  "units": "Unidades",
-  "duration": "Duración",
-  "progress": "Progreso",
-  "teacher": "Profesor",
-  "noTeacher": "N/A",
-
-  "lessonsCompleted": "{{done}} de {{total}} lecciones completadas",
-
-  "continue": "Continuar",
-  "review": "Revisar curso",
-  "viewDetails": "Ver detalles"
+    "loading": "Cargando tu material...",
+    "title": "Mi Material",
+    "subtitle": "Aquí puedes ver tus módulos activos, tu progreso y tu historial académico.",
+    "emptyMessage": "Aún no estás inscrito en ningún curso.",
+    "emptyHint": "Una vez que te inscribas, tu material aparecerá aquí.",
+    "untitled": "Curso sin título",
+    "generalCategory": "General",
+    "units": "Unidades",
+    "duration": "Duración",
+    "progress": "Progreso",
+    "teacher": "Profesor",
+    "noTeacher": "N/A",
+    "lessonsCompleted": "{{done}} de {{total}} lecciones completadas",
+    "continue": "Continuar",
+    "review": "Revisar curso",
+    "viewDetails": "Ver detalles"
   },
   "certificates": {
   "title": "Certificados",
-  "subtitle": "Tus certificados aparecerán aquí una vez que completes un curso. Completa todas las lecciones y evaluaciones requeridas para desbloquear tu certificado descargable.",
+  "subtitle": "Tus certificados aparecerán aquí una vez que completes un material. Completa todas las lecciones y evaluaciones requeridas para desbloquear tu certificado descargable.",
 
-  "emptyPreview": "La vista previa del certificado estará disponible después de completar el curso.",
+  "emptyPreview": "La vista previa del certificado estará disponible después de completar el material.",
   
   "ctaPrefix": "¿Listo para obtener uno?",
-  "ctaLink": "Ir a Mis Cursos"
+  "ctaLink": "Ir a Mis Materiales"
 },
   "gaming": {
   "headerTitle": "Further Gaming 🎮",
@@ -227,7 +233,11 @@
     "wrongRemove": "La corrección adecuada era eliminar la palabra",
     "wrongReplace": "La corrección correcta era",
     "newExercise": "Nuevo ejercicio"
-    }
+    },
+    "alreadyPlayed": {
+  "title": "Ya jugaste hoy",
+  "text": "Volvé mañana para jugar otra vez."
+}
   }
   },
   "auth": {}

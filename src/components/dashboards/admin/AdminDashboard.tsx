@@ -50,6 +50,6 @@ export default function AdminDashboard() {
     case "anuncios":
       return <AdminAnunciosPage />;
     default:
-      return <HomeDashboard />;
+      return <AdminHome />;
   }
 }

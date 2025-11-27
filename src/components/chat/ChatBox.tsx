@@ -15,8 +15,8 @@ import TypingIndicator from "./TypingIndicator";
 function formatMarkdown(text: string) {
   if (!text) return "";
   return text
-    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>") // **bold**
-    .replace(/\*(.*?)\*/g, "<em>$1</em>");            // *italic*
+    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.*?)\*/g, "<em>$1</em>");
 }
 
 /* =============================================
@@ -40,10 +40,9 @@ Di quale argomento ti piacerebbe parlare oggi?
 (Viaggi, lavoro, hobby, cibo, colloqui di lavoro...)`,
 
   french: `Bonjour ! Je suis ton tuteur linguistique.
-De quel sujet aimerais-tu parler aujourd’hui ?
+De quel sujet aimerais-tu parler aujourd'hui ?
 (Voyages, affaires, loisirs, nourriture, entretiens d'embauche...)`,
 };
-
 
 const languageKeyMap: Record<string, keyof typeof initialMessagesByLanguage> = {
   en: "english",
@@ -53,17 +52,17 @@ const languageKeyMap: Record<string, keyof typeof initialMessagesByLanguage> = {
   fr: "french",
 };
 
+interface Message {
+  role: "user" | "assistant";
+  content: string;
+  corrections?: any[];
+}
+
 export default function ChatBox() {
   const { userProfile, user } = useAuth();
 
-  // Extraemos idioma y nivel del perfil
-// Código del alumno: en/es/pt/it/fr
-const rawLang = userProfile?.learningLanguage?.toLowerCase() || "en";
-
-// Clave correcta dentro del objeto initialMessagesByLanguage
-const language =
-  languageKeyMap[rawLang] ?? "english";
-
+  const rawLang = userProfile?.learningLanguage?.toLowerCase() || "en";
+  const language = languageKeyMap[rawLang] ?? "english";
   const level = userProfile?.learningLevel;
 
   /* =============================================
@@ -88,17 +87,17 @@ const language =
   /* =============================================
      💬 Mensajes del chat
   ============================================= */
-  const [messages, setMessages] = useState([
-  {
-    role: "assistant",
-    content: initialMessagesByLanguage[language],
-  },
-]);
-
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      role: "assistant",
+      content: initialMessagesByLanguage[language],
+    },
+  ]);
 
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const chatEndRef = useRef(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -118,7 +117,7 @@ const language =
         userId: user.uid,
         language,
         level,
-        summary, // 👈 SOLO guardamos summary
+        summary,
         startedAt: serverTimestamp(),
         endedAt: serverTimestamp(),
       },
@@ -127,18 +126,62 @@ const language =
   };
 
   /* =============================================
-     🚀 Enviar mensaje → API de streaming
+     🔍 Analizar errores en paralelo
+  ============================================= */
+  const analyzeMessage = async (messageText: string) => {
+    try {
+      const res = await fetch("/api/chat/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: messageText,
+          level,
+          language,
+        }),
+      });
+
+      const data = await res.json();
+      return data.corrections || [];
+    } catch (err) {
+      console.error("🔥 Error analyzing message:", err);
+      return [];
+    }
+  };
+
+  /* =============================================
+     🚀 Enviar mensaje → streaming + análisis
   ============================================= */
   const handleSend = async () => {
     if (!input.trim()) return;
 
-    const userMsg = { role: "user", content: input };
+    const userMsg: Message = { 
+      role: "user", 
+      content: input,
+      corrections: [] 
+    };
     const newMessages = [...messages, userMsg];
 
     setMessages(newMessages);
+    const userMessageIndex = newMessages.length - 1;
+    
     setInput("");
     setIsTyping(true);
+    setIsAnalyzing(true);
 
+    // 🔥 ANÁLISIS DE ERRORES EN PARALELO (no bloquea la conversación)
+    analyzeMessage(input).then((corrections) => {
+      setMessages((prev) => {
+        const updated = [...prev];
+        updated[userMessageIndex] = {
+          ...updated[userMessageIndex],
+          corrections,
+        };
+        return updated;
+      });
+      setIsAnalyzing(false);
+    });
+
+    // 🔥 STREAMING DE RESPUESTA (continúa sin esperar análisis)
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -177,25 +220,21 @@ const language =
           return updated;
         });
       }
-    }
-    catch (err) {
-  console.error("🔥 Streaming error:", err);
-  // NO bloquees la conversación nunca
-  setMessages(prev => [
-    ...prev,
-    {
-      role: "assistant",
-      content:
-        "The tutor had a small connection issue but you can continue normally.",
-    },
-  ]);
-}
-finally {
+    } catch (err) {
+      console.error("🔥 Streaming error:", err);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "The tutor had a small connection issue but you can continue normally.",
+        },
+      ]);
+    } finally {
       setIsTyping(false);
     }
   };
 
-  const handleKey = (e) => {
+  const handleKey = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -205,122 +244,102 @@ finally {
   /* =============================================
      🧾 Finalizar conversación → pedir summary
   ============================================= */
- const finishConversation = async () => {
-  setIsTyping(true);
+  const finishConversation = async () => {
+    setIsTyping(true);
 
-  // ============================================
-  // 🛑 VALIDACIÓN FRONTEND — conversación corta
-  // ============================================
-  const studentMessages = messages.filter((m) => m.role === "user");
-  const totalUserText = studentMessages.map((m) => m.content).join(" ");
+    const studentMessages = messages.filter((m) => m.role === "user");
+    const totalUserText = studentMessages.map((m) => m.content).join(" ");
 
-  if (studentMessages.length < 2 || totalUserText.trim().length < 20) {
-    setMessages((prev) => [
-      ...prev,
-      {
-        role: "assistant",
-        content: `
+    if (studentMessages.length < 2 || totalUserText.trim().length < 20) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: `
 <div style="color:#b91c1c; background:#fee2e2; padding:12px; border-radius:8px; border:1px solid #fecaca;">
 <strong>⚠️ Conversation too short</strong><br/>
 You need to chat a little more before requesting a summary.<br/>
 Try sending a few more messages!
 </div>
-        `,
-      },
-    ]);
-    setIsTyping(false);
-    return;
-  }
+          `,
+        },
+      ]);
+      setIsTyping(false);
+      return;
+    }
 
-  // ============================================
-  // 🔥 LLAMAR AL BACKEND
-  // ============================================
-  try {
-    const res = await fetch("/api/chat/summary", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        messages,
-        level,
-        language,
-      }),
-    });
+    try {
+      const res = await fetch("/api/chat/summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages,
+          level,
+          language,
+        }),
+      });
 
-    const summary = await res.json();
-    console.log("📘 SUMMARY OBJETO:", summary);
+      const summary = await res.json();
 
-    // ============================================
-    // 🛑 VALIDACIÓN BACKEND — conversación corta
-    // ============================================
-    if (summary.error === "conversation-too-short") {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: `
+      if (summary.error === "conversation-too-short") {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: `
 <div style="color:#b91c1c; background:#fee2e2; padding:12px; border-radius:8px; border:1px solid #fecaca;">
 <strong>⚠️ Conversation too short</strong><br/>
 The system needs more content to generate useful feedback.<br/>
 Try chatting a bit more before finishing.
 </div>
-          `,
-        },
-      ]);
+            `,
+          },
+        ]);
+        setIsTyping(false);
+        return;
+      }
 
-      setIsTyping(false);
-      return;
-    }
-
-    // ============================================
-    // 🛑 VALIDACIÓN — SUMMARY INCOMPLETO
-    // (no guardamos en Firestore)
-    // ============================================
-    if (summary.incomplete) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: `
+      if (summary.incomplete) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: `
 <div style="color:#92400e; background:#fef3c7; padding:12px; border-radius:8px; border:1px solid #fde68a;">
 <strong>⚠️ Partial Summary</strong><br/>
 The model was overloaded and could not generate a full summary.<br/>
 Please try again in a moment.
 </div>
-          `,
-        },
-      ]);
+            `,
+          },
+        ]);
+        setIsTyping(false);
+        return;
+      }
 
-      console.warn("⛔ Summary incomplete — NOT saving to DB");
-      setIsTyping(false);
-      return;
-    }
-
-    // ============================================
-    // 🟩 RENDER NORMAL DEL SUMMARY
-    // ============================================
-    setMessages((prev) => [
-      ...prev,
-      {
-        role: "assistant",
-        content: `
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: `
 <h3 class="font-bold text-gray-800">Final Feedback</h3>
 <p>${summary.feedbackSummary ?? ""}</p>
 
 <h4 class="mt-3 font-semibold">Strengths</h4>
 <ul>
-${(summary.strengths ?? []).map((s) => `<li>• ${s}</li>`).join("")}
+${(summary.strengths ?? []).map((s: string) => `<li>• ${s}</li>`).join("")}
 </ul>
 
 <h4 class="mt-3 font-semibold">Weak Points</h4>
 <ul>
-${(summary.weakPoints ?? []).map((w) => `<li>• ${w}</li>`).join("")}
+${(summary.weakPoints ?? []).map((w: string) => `<li>• ${w}</li>`).join("")}
 </ul>
 
 <h4 class="mt-3 font-semibold">Common Mistakes</h4>
 <ul>
 ${(summary.commonMistakes ?? [])
   .map(
-    (m) =>
+    (m: any) =>
       `<li><mark>${m.error}</mark> → <b>${m.correction}</b> (${m.explanation})</li>`
   )
   .join("")}
@@ -328,40 +347,37 @@ ${(summary.commonMistakes ?? [])
 
 <h4 class="mt-3 font-semibold">Improvement Plan</h4>
 <p>${summary.improvementPlan ?? ""}</p>
-        `,
-      },
-    ]);
+          `,
+        },
+      ]);
 
-    // Guardar summary SOLO si es válido
-    await saveConversationToFirestore(summary);
-
-  } catch (err) {
-    console.error("🔥 Error finishing conversation:", err);
-
-    setMessages((prev) => [
-      ...prev,
-      {
-        role: "assistant",
-        content: `
+      await saveConversationToFirestore(summary);
+    } catch (err) {
+      console.error("🔥 Error finishing conversation:", err);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: `
 <div style="color:#b91c1c; background:#fee2e2; padding:12px; border-radius:8px; border:1px solid #fecaca;">
 <strong>⚠️ Error</strong><br/>
 Something went wrong while generating your summary.<br/>
 Please try again.
 </div>
-        `,
-      },
-    ]);
-  } finally {
-    setIsTyping(false);
-  }
-};
-
+          `,
+        },
+      ]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
 
   /* =============================================
      UI Final
   ============================================= */
   return (
-    <div className="w-full max-w-3xl mx-auto bg-white rounded-xl shadow-lg border flex flex-col h-[80vh]">
+    <div className="w-full max-w-3xl mx-auto bg-white rounded-xl shadow-lg border flex flex-col h-[80vh] overflow-hidden">
+
       {/* HEADER */}
       <div className="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-xl">
         <div>
@@ -381,18 +397,28 @@ Please try again.
       </div>
 
       {/* CHAT AREA */}
-      <div className="flex-1 p-4 overflow-y-auto space-y-4">
-        {messages.map((msg, idx) => (
-          <MessageBubble
-            key={idx}
-            role={msg.role}
-            content={formatMarkdown(msg.content)}
-          />
-        ))}
+<div className="flex-1 overflow-y-auto">
+  <div className="p-4 space-y-4 overflow-visible relative">
+    {messages.map((msg, idx) => (
+      <MessageBubble
+        key={idx}
+        role={msg.role}
+        content={msg.role === "assistant" ? formatMarkdown(msg.content) : msg.content}
+        corrections={msg.corrections}
+      />
+    ))}
 
-        {isTyping && <TypingIndicator />}
-        <div ref={chatEndRef}></div>
+    {isTyping && <TypingIndicator />}
+    {isAnalyzing && (
+      <div className="text-xs text-gray-400 italic">
+        Analyzing your message...
       </div>
+    )}
+    <div ref={chatEndRef}></div>
+  </div>
+</div>
+
+
 
       {/* INPUT */}
       <div className="p-4 border-t bg-gray-50 rounded-b-xl flex items-center gap-3">

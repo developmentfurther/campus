@@ -12,6 +12,7 @@ import {
 } from "react-icons/fi";
 import { GAMES_MAP } from "@/app/gaming/games";
 import { useI18n } from "@/contexts/I18nContext";
+import Image from "next/image";
 
 export default function GamingHub() {
   const router = useRouter();
@@ -63,15 +64,18 @@ export default function GamingHub() {
   return (
     <div className="min-h-[80vh] text-slate-900 px-6 py-10">
 
-      {/* HEADER */}
       <header className="mb-10 text-center">
-        <h1 className="text-3xl font-bold  bg-clip-text">
-          {t("gaming.headerTitle")}
-        </h1>
-        <p className="text-slate-600 mt-1 text-sm">
-          {t("gaming.headerSubtitle")}
-        </p>
-      </header>
+  <Image
+    src="/images/probando.png"
+    alt="Gaming Hub Logo"
+    width={300}
+    height={300}
+    className="mx-auto"
+  />
+  <p className="text-slate-600 mt-1 text-sm">
+    {t("gaming.headerSubtitle")}
+  </p>
+</header>
 
       {/* GRID DE JUEGOS */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

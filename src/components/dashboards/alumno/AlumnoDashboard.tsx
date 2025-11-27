@@ -45,6 +45,6 @@ export default function AlumnoDashboard() {
         return <AlumnoEventos/>;
 
     default:
-      return <HomeDashboard />;
+      return <AlumnoHome />;
   }
 }

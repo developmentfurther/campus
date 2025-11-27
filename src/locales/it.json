@@ -15,7 +15,8 @@
     "logout": "Disconnetti",
     "chatSection": "Chat",
   "chatbot": "Chat Conversazionale",
-  "chatHistory": "Cronologia"
+  "chatHistory": "Cronologia",
+  "user": "Studente"
 
   },
   "profile": {
@@ -60,57 +61,62 @@
   "dashboard": {
     "loading": "Caricamento...",
     "hello": "Ciao, {{name}}",
+    "welcomeFull": "Bentornato!",
     "welcome": "Bentornato.",
     "language": "Lingua",
     "level": "Livello",
     "unassigned": "Non assegnato",
-    "announcements": "Annunci",
-    "announcements.new": "nuovi",
-    "noAnnouncements": "Nessun annuncio disponibile.",
+    "announcements": "Avvisi",
+    "announcementsNew": "nuovo",
+    "noAnnouncements": "Nessun avviso disponibile.",
     "activity": "Attività",
     "noActivity": "Nessuna attività recente.",
-    "quickTitle": "Accesso Rapido"
+    "quickTitle": "Accesso rapido",
+    "activeCoursesLabel": "Materiale attivo",
+    "certificatesLabel": "Certificati",
+    "time": {
+    "days": "{{count}} giorni fa",
+    "hours": "{{count}} ore fa",
+    "minutes": "{{count}} minuti fa",
+    "justNow": "Proprio adesso"
+  }
   },
   "quick": {
     "material": "Materiale Accademico",
-    "material.desc": "Accedi ai tuoi contenuti didattici",
+    "materialDesc": "Accedi ai tuoi contenuti di apprendimento",
     "certificates": "Certificati",
-    "certificates.desc": "Visualizza i tuoi risultati",
-    "gaming": "Gaming",
-    "gaming.desc": "Giochi giornalieri per praticare la tua lingua",
+    "certificatesDesc": "Visualizza i tuoi risultati",
+    "gaming": "Giochi",
+    "gamingDesc": "Giochi quotidiani per praticare la lingua",
     "chat": "Chat IA",
-    "chat.desc": "Pratica conversazionale con l'intelligenza artificiale",
-    "history": "Storico IA",
-    "history.desc": "Consulta le sessioni precedenti e il feedback",
-    "profile": "Il Mio Profilo",
-    "profile.desc": "Impostazioni dell'account",
+    "chatDesc": "Pratica conversazionale con l'IA",
+    "history": "Cronologia IA",
+    "historyDesc": "Rivedi sessioni e feedback precedenti",
+    "profile": "Il mio profilo",
+    "profileDesc": "Impostazioni dell'account",
     "go": "Vai ora"
   },
   "courses": {
-    "loading": "Caricamento dei tuoi corsi...",
-  "title": "I Miei Corsi",
-  "subtitle": "Qui puoi vedere i tuoi moduli attivi, i tuoi progressi e la tua storia accademica.",
-  "emptyMessage": "Non sei ancora iscritto a nessun corso.",
-  "emptyHint": "Una volta iscritto, i tuoi corsi appariranno qui.",
-
-  "untitled": "Corso senza titolo",
-  "generalCategory": "Generale",
-
-  "units": "Unità",
-  "duration": "Durata",
-  "progress": "Progresso",
-  "teacher": "Docente",
-  "noTeacher": "N/A",
-
-  "lessonsCompleted": "{{done}} di {{total}} lezioni completate",
-
-  "continue": "Continua",
-  "review": "Rivedi il corso",
-  "viewDetails": "Vedi dettagli"
+    "loading": "Caricamento del tuo materiale...",
+    "title": "Il mio Materiale",
+    "subtitle": "Qui puoi visualizzare i tuoi moduli attivi, i tuoi progressi e la tua cronologia accademica.",
+    "emptyMessage": "Non sei ancora iscritto a nessun corso.",
+    "emptyHint": "Una volta iscritto, il tuo materiale apparirà qui.",
+    "untitled": "Corso senza titolo",
+    "generalCategory": "Generale",
+    "units": "Unità",
+    "duration": "Durata",
+    "progress": "Progresso",
+    "teacher": "Insegnante",
+    "noTeacher": "N/A",
+    "lessonsCompleted": "{{done}} di {{total}} lezioni completate",
+    "continue": "Continua",
+    "review": "Rivedi il corso",
+    "viewDetails": "Vedi dettagli"
   },
   "certificates": {
   "title": "Certificati",
-  "subtitle": "I tuoi certificati appariranno qui una volta completato un corso. Completa tutte le lezioni e le valutazioni richieste per sbloccare il tuo certificato scaricabile.",
+  "subtitle": "I tuoi certificati appariranno qui una volta completato un materiale. Completa tutte le lezioni e le valutazioni richieste per sbloccare il tuo certificato scaricabile.",
 
   "emptyPreview": "L’anteprima del certificato sarà disponibile dopo il completamento.",
   
@@ -227,7 +233,12 @@
     "wrongRemove": "La soluzione corretta era rimuovere la parola",
     "wrongReplace": "La correzione corretta era",
     "newExercise": "Nuovo esercizio"
-    }
+    },
+    "alreadyPlayed": {
+  "title": "Hai già giocato oggi",
+  "text": "Torna domani per giocare di nuovo."
+}
+
   }
   },
   "auth": {}

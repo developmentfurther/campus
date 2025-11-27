@@ -10,10 +10,9 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import SuccessModal from "@/components/ui/SuccessModal";
 import { useI18n } from "@/contexts/I18nContext";
 
-
 export default function AlumnoProfilePage() {
-  const { user, userProfile, authReady, setUserProfile  } = useAuth();
-  const { setLang, t } = useI18n();
+  const { user, userProfile, authReady, setUserProfile } = useAuth();
+  const { t } = useI18n();
 
   const [loading, setLoading] = useState(true);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -26,99 +25,98 @@ export default function AlumnoProfilePage() {
     learningLevel: "",
   });
 
- useEffect(() => {
-  if (!authReady) return;
+  // ============================================================
+  // Cargar datos del alumno
+  // ============================================================
+  useEffect(() => {
+    if (!authReady) return;
 
-  // 1) Si ya tengo datos en userProfile → no fetch
-  if (userProfile?.firstName || userProfile?.learningLanguage) {
-    setForm({
-      firstName: userProfile.firstName || "",
-      lastName: userProfile.lastName || "",
-      dni: userProfile.dni || "",
-      learningLanguage: userProfile.learningLanguage || "",
-      learningLevel: userProfile.learningLevel || "",
-    });
-    setLoading(false);
-    return;
-  }
-
-  // 2) Si NO tengo datos → fetch desde Firestore (solo 1 vez)
-  async function load() {
-    if (!userProfile?.batchId || !userProfile?.userKey) {
+    if (userProfile?.firstName || userProfile?.learningLanguage) {
+      setForm({
+        firstName: userProfile.firstName || "",
+        lastName: userProfile.lastName || "",
+        dni: userProfile.dni || "",
+        learningLanguage: userProfile.learningLanguage || "",
+        learningLevel: userProfile.learningLevel || "",
+      });
       setLoading(false);
       return;
     }
-    try {
-      const ref = doc(db, "alumnos", userProfile.batchId);
-      const snap = await getDoc(ref);
 
-      if (snap.exists()) {
-        const alumno = snap.data()[userProfile.userKey] || {};
-        setForm({
-          firstName: alumno.firstName || "",
-          lastName: alumno.lastName || "",
-          dni: alumno.dni || "",
-          learningLanguage: alumno.learningLanguage || "",
-          learningLevel: alumno.learningLevel || "",
-        });
+    async function load() {
+      if (!userProfile?.batchId || !userProfile?.userKey) {
+        setLoading(false);
+        return;
       }
-    } finally {
-      setLoading(false);
+
+      try {
+        const ref = doc(db, "alumnos", userProfile.batchId);
+        const snap = await getDoc(ref);
+
+        if (snap.exists()) {
+          const alumno = snap.data()[userProfile.userKey] || {};
+          setForm({
+            firstName: alumno.firstName || "",
+            lastName: alumno.lastName || "",
+            dni: alumno.dni || "",
+            learningLanguage: alumno.learningLanguage || "",
+            learningLevel: alumno.learningLevel || "",
+          });
+        }
+      } finally {
+        setLoading(false);
+      }
     }
-  }
 
-  load();
-}, [authReady, userProfile]);
-  // 👈 antes tenías userProfile en dependencias
+    load();
+  }, [authReady, userProfile]);
 
-
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
+  // ============================================================
+  // Handler para campos editables
+  // ============================================================
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  // ============================================================
+  // Guardar SOLO datos personales
+  // (NO idioma / NO nivel → admin-only)
+  // ============================================================
   const handleSave = async () => {
-  if (!userProfile?.batchId || !userProfile?.userKey)
-    return toast.error("No se pudo identificar al alumno.");
+    if (!userProfile?.batchId || !userProfile?.userKey)
+      return toast.error("No se pudo identificar al alumno.");
 
-  try {
-    const ref = doc(db, "alumnos", userProfile.batchId);
+    try {
+      const ref = doc(db, "alumnos", userProfile.batchId);
 
-    // 1) Guardar en Firestore
-    await setDoc(
-      ref,
-      {
-        [userProfile.userKey]: {
-          ...userProfile,
-          ...form,
+      await setDoc(
+        ref,
+        {
+          [userProfile.userKey]: {
+            ...userProfile,
+            firstName: form.firstName,
+            lastName: form.lastName,
+            dni: form.dni,
+          },
         },
-      },
-      { merge: true }
-    );
+        { merge: true }
+      );
 
-    // 2) Actualizar userProfile en memoria
-    setUserProfile((prev: any) => ({
-      ...prev,
-      ...form,
-    }));
+      // Update local memory
+      setUserProfile((prev: any) => ({
+        ...prev,
+        firstName: form.firstName,
+        lastName: form.lastName,
+        dni: form.dni,
+      }));
 
-    // ⭐⭐⭐ 3) ACTUALIZAR IDIOMA DE i18n (posición correcta)
-    if (form.learningLanguage) {
-      setLang(form.learningLanguage);   // ← ESTO ERA LO QUE FALTABA
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 2000);
+    } catch (err) {
+      console.error(err);
+      toast.error("Error al guardar el perfil");
     }
-
-    // 4) Modal
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 2000);
-
-  } catch (err) {
-    console.error(err);
-    toast.error("Error al guardar el perfil");
-  }
-};
-
-
+  };
 
   if (!authReady || loading)
     return <div className="p-8 text-gray-500">Cargando perfil…</div>;
@@ -128,15 +126,12 @@ export default function AlumnoProfilePage() {
       <div className="min-h-screen bg-gray-50 p-8 space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-xl font-bold">{t("profile.title")}</h1>
-          <Button
-            onClick={handleSave}
-            className="bg-blue-600 text-white flex items-center gap-2"
-          >
-            <FiEdit2 />{t("profile.save")}
+          <Button onClick={handleSave} className="bg-blue-600 text-white flex items-center gap-2">
+            <FiEdit2 /> {t("profile.save")}
           </Button>
         </div>
 
-        {/* CARD DATOS PERSONALES */}
+        {/* DATOS PERSONALES */}
         <div className="bg-white rounded-xl shadow p-6 space-y-4">
           <h2 className="font-semibold text-gray-700 flex items-center gap-2">
             <FiUser /> {t("profile.personalHeader")}
@@ -172,56 +167,53 @@ export default function AlumnoProfilePage() {
           </div>
         </div>
 
-        {/* CARD APRENDIZAJE */}
+        {/* APRENDIZAJE — SOLO VISUAL, NO EDITABLE */}
         <div className="bg-white rounded-xl shadow p-6 space-y-4">
-          <h2 className="font-semibold text-gray-700">
-            {t("profile.learningHeader")}
-          </h2>
+          <h2 className="font-semibold text-gray-700">{t("profile.learningHeader")}</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Idioma */}
-          <div>
-            <label className="text-sm text-gray-600">{t("profile.languageLabel")}</label>
-            <select
-              name="learningLanguage"
-              value={form.learningLanguage}
-              onChange={handleChange}
-              className="w-full border p-2 rounded mt-1"
-            >
-              <option value="" disabled hidden>{t("profile.selectPlaceholder")}</option>
-              <option value="en">English</option>
-<option value="pt">Portuguese</option>
-<option value="es">Spanish</option>
-<option value="it">Italian</option>
-<option value="fr">French</option>
 
-            </select>
-          </div>
+            {/* Idioma — disabled */}
+            <div>
+              <label className="text-sm text-gray-600">{t("profile.languageLabel")}</label>
+              <select
+                name="learningLanguage"
+                value={form.learningLanguage}
+                disabled
+                className="w-full border p-2 rounded mt-1 bg-gray-100 text-gray-500"
+              >
+                <option value="en">English</option>
+                <option value="pt">Portuguese</option>
+                <option value="es">Spanish</option>
+                <option value="it">Italian</option>
+                <option value="fr">French</option>
+              </select>
+            </div>
 
-          {/* Nivel */}
-          <div>
-            <label className="text-sm text-gray-600">{t("profile.levelLabel")} </label>
-            <select
-              name="learningLevel"
-              value={form.learningLevel}
-              onChange={handleChange}
-              className="w-full border p-2 rounded mt-1"
-            >
-              <option value="" disabled hidden>{t("profile.selectPlaceholder")}</option>
-              <option value="A1">A1 – Beginner</option>
-              <option value="A2">A2 – Elementary</option>
-              <option value="B1">B1 – Intermediate</option>
-              <option value="B2">B2 – Upper Intermediate</option>
-              <option value="C1">C1 – Advanced</option>
-              <option value="C2">C2 – Proficient</option>
-            </select>
-          </div>
+            {/* Nivel — disabled */}
+            <div>
+              <label className="text-sm text-gray-600">{t("profile.levelLabel")}</label>
+              <select
+                name="learningLevel"
+                value={form.learningLevel}
+                disabled
+                className="w-full border p-2 rounded mt-1 bg-gray-100 text-gray-500"
+              >
+                <option value="A1">A1 – Beginner</option>
+                <option value="A2">A2 – Elementary</option>
+                <option value="B1">B1 – Intermediate</option>
+                <option value="B2">B2 – Upper Intermediate</option>
+                <option value="C1">C1 – Advanced</option>
+                <option value="C2">C2 – Proficient</option>
+              </select>
+            </div>
+
           </div>
         </div>
       </div>
 
       {/* MODAL */}
-      <SuccessModal open={showSuccess}message={t("profile.updatedSuccess")} />
+      <SuccessModal open={showSuccess} message={t("profile.updatedSuccess")} />
     </>
   );
 }

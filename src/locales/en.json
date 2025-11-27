@@ -15,7 +15,8 @@
     "logout": "Log out",
     "chatSection": "Chat",
   "chatbot": "Conversational Chat",
-  "chatHistory": "History"
+  "chatHistory": "History",
+  "user": "Student"
   },
   "profile": {
   "title": "My Profile",
@@ -59,16 +60,25 @@
   "dashboard": {
     "loading": "Loading...",
     "hello": "Hello, {{name}}",
+    "welcomeFull": "Welcome back!",
     "welcome": "Welcome back.",
     "language": "Language",
     "level": "Level",
     "unassigned": "Unassigned",
     "announcements": "Announcements",
-    "announcements.new": "new",
+    "announcementsNew": "new",
     "noAnnouncements": "No announcements available.",
     "activity": "Activity",
     "noActivity": "No recent activity.",
-    "quickTitle": "Quick Access"
+    "quickTitle": "Quick Access",
+    "activeCoursesLabel": "Active materials",
+    "certificatesLabel": "Certificates",
+    "time": {
+    "days": "{{count}} days ago",
+    "hours": "{{count}} hours ago",
+    "minutes": "{{count}} minutes ago",
+    "justNow": "Just now"
+  }
   },
   "quick": {
     "material": "Academic Material",
@@ -80,17 +90,17 @@
     "chat": "AI Chat",
     "chatDesc": "Conversational practice with AI",
     "history": "AI History",
-    "history.desc": "Review past sessions and feedback",
+    "historyDesc": "Review past sessions and feedback",
     "profile": "My Profile",
     "profileDesc": "Account settings",
     "go": "Go now"
   },
   "courses": {
-    "loading": "Loading your courses...",
-  "title": "My Courses",
+    "loading": "Loading your material...",
+  "title": "My Material",
   "subtitle": "Here you can view your active modules, your progress, and academic history.",
   "emptyMessage": "You are not enrolled in any course yet.",
-  "emptyHint": "Once you enroll, your courses will appear here.",
+  "emptyHint": "Once you enroll, your material will appear here.",
 
   "untitled": "Untitled course",
   "generalCategory": "General",
@@ -114,7 +124,7 @@
   "emptyPreview": "Certificate preview will be available after completion.",
   
   "ctaPrefix": "Ready to earn one?",
-  "ctaLink": "Go to My Courses"
+  "ctaLink": "Go to My Material"
 },
   "gaming": {
   "headerTitle": "Further Gaming 🎮",
@@ -226,7 +236,11 @@
     "wrongRemove": "The correct solution was to remove the word",
     "wrongReplace": "The correct correction was",
     "newExercise": "New exercise"
-    }
+    },
+    "alreadyPlayed": {
+    "title": "You already played today",
+    "text": "Come back tomorrow to play again."
+  }
   }
   },
   "auth": {}

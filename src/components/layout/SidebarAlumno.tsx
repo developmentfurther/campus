@@ -53,7 +53,6 @@ const chatSection = [
 
 const menuPersonal = [
   { id: "perfil", label: t("sidebar.profile"), icon: <FiUser size={16} /> },
-  { id: "events", label: t("sidebar.events"), icon: <FiCalendar size={16} /> },
 ];
 
 
@@ -123,7 +122,7 @@ const menuPersonal = [
             <span className="text-sm font-medium text-gray-800 truncate max-w-[150px]">
               {user?.email}
             </span>
-            <span className="text-xs text-gray-500">Alumno</span>
+            <span className="text-xs text-gray-500"> {t("sidebar.user")} </span>
           </div>
         </div>
 

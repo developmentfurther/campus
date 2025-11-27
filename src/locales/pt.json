@@ -15,7 +15,8 @@
     "logout": "Sair",
     "chatSection": "Chat",
   "chatbot": "Chat Conversacional",
-  "chatHistory": "Histórico"
+  "chatHistory": "Histórico",
+  "user": "Estudante"
   },
   "profile": {
   "title": "Meu Perfil",
@@ -59,62 +60,67 @@
    "dashboard": {
     "loading": "Carregando...",
     "hello": "Olá, {{name}}",
+    "welcomeFull": "Bem-vindo de volta!",
     "welcome": "Bem-vindo de volta.",
     "language": "Idioma",
     "level": "Nível",
     "unassigned": "Não atribuído",
-    "announcements": "Anúncios",
-    "announcements.new": "novos",
-    "noAnnouncements": "Nenhum anúncio disponível.",
+    "announcements": "Avisos",
+    "announcementsNew": "novo",
+    "noAnnouncements": "Não há avisos disponíveis.",
     "activity": "Atividade",
     "noActivity": "Nenhuma atividade recente.",
-    "quickTitle": "Acesso Rápido"
+    "quickTitle": "Acesso rápido",
+    "activeCoursesLabel": "Materiais ativos",
+    "certificatesLabel": "Certificados",
+    "time": {
+    "days": "Há {{count}} dias",
+    "hours": "Há {{count}} horas",
+    "minutes": "Há {{count}} minutos",
+    "justNow": "Agora mesmo"
+  }
   },
   "quick": {
     "material": "Material Acadêmico",
-    "material.desc": "Acesse seu conteúdo de aprendizado",
+    "materialDesc": "Acesse seu conteúdo de aprendizagem",
     "certificates": "Certificados",
-    "certificates.desc": "Consulte suas conquistas",
+    "certificatesDesc": "Veja suas conquistas",
     "gaming": "Jogos",
-    "gaming.desc": "Jogos diários para praticar seu idioma",
-    "chat": "Chat IA",
-    "chat.desc": "Prática conversacional com IA",
-    "history": "Histórico IA",
-    "history.desc": "Consulte sessões anteriores e feedback",
+    "gamingDesc": "Jogos diários para praticar o idioma",
+    "chat": "Chat com IA",
+    "chatDesc": "Prática de conversação com IA",
+    "history": "Histórico da IA",
+    "historyDesc": "Revise sessões anteriores e feedback",
     "profile": "Meu Perfil",
-    "profile.desc": "Configurações da conta",
+    "profileDesc": "Configurações da conta",
     "go": "Acessar"
   },
   "courses": {
-    "loading": "Carregando seus cursos...",
-  "title": "Meus Cursos",
-  "subtitle": "Aqui você pode ver seus módulos ativos, seu progresso e seu histórico acadêmico.",
-  "emptyMessage": "Você ainda não está matriculado em nenhum curso.",
-  "emptyHint": "Assim que você se matricular, seus cursos aparecerão aqui.",
-
-  "untitled": "Curso sem título",
-  "generalCategory": "Geral",
-
-  "units": "Unidades",
-  "duration": "Duração",
-  "progress": "Progresso",
-  "teacher": "Professor",
-  "noTeacher": "N/A",
-
-  "lessonsCompleted": "{{done}} de {{total}} aulas concluídas",
-
-  "continue": "Continuar",
-  "review": "Revisar curso",
-  "viewDetails": "Ver detalhes"
+    "loading": "Carregando seu material...",
+    "title": "Meu Material",
+    "subtitle": "Aqui você pode ver seus módulos ativos, seu progresso e seu histórico acadêmico.",
+    "emptyMessage": "Você ainda não está matriculado em nenhum curso.",
+    "emptyHint": "Assim que você se matricular, seu material aparecerá aqui.",
+    "untitled": "Curso sem título",
+    "generalCategory": "Geral",
+    "units": "Unidades",
+    "duration": "Duração",
+    "progress": "Progresso",
+    "teacher": "Professor",
+    "noTeacher": "N/A",
+    "lessonsCompleted": "{{done}} de {{total}} lições concluídas",
+    "continue": "Continuar",
+    "review": "Revisar curso",
+    "viewDetails": "Ver detalhes"
   },
   "certificates": {
   "title": "Certificados",
-  "subtitle": "Seus certificados aparecerão aqui quando você concluir um curso. Complete todas as aulas e avaliações necessárias para desbloquear seu certificado para download.",
+  "subtitle": "Seus certificados aparecerão aqui quando você concluir um material. Complete todas as aulas e avaliações necessárias para desbloquear seu certificado para download.",
 
   "emptyPreview": "A prévia do certificado estará disponível após a conclusão.",
   
   "ctaPrefix": "Pronto para conquistar um?",
-  "ctaLink": "Ir para Meus Cursos"
+  "ctaLink": "Ir para Meus Materiais"
 },
 "gaming": {
   "headerTitle": "Further Gaming 🎮",
@@ -227,7 +233,11 @@
     "wrongRemove": "A solução correta era remover a palavra",
     "wrongReplace": "A correção correta era",
     "newExercise": "Novo exercício"
-    }
+    },
+    "alreadyPlayed": {
+  "title": "Você já jogou hoje",
+  "text": "Volte amanhã para jogar novamente."
+}
   }
 },
   "auth": {}

@@ -12,11 +12,11 @@ import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
 
-export default function AlumnosPage() {
+export default function StudentsPage() {
   const { alumnos, loading } = useAuth();
   const [search, setSearch] = useState("");
 
-  // Filtrado por email
+  // Filter by email
   const filteredAlumnos = useMemo(() => {
     if (!Array.isArray(alumnos)) return [];
     return alumnos.filter((a) =>
@@ -24,7 +24,7 @@ export default function AlumnosPage() {
     );
   }, [alumnos, search]);
 
-  // Guardar aprendizaje (idioma / nivel)
+  // Update learning fields (language / level)
   const handleUpdateField = async (
     alumno: any,
     field: "learningLanguage" | "learningLevel",
@@ -32,7 +32,7 @@ export default function AlumnosPage() {
   ) => {
     try {
       if (!alumno.batchId || !alumno.uid) {
-        toast.error("No se puede actualizar este alumno.");
+        toast.error("Unable to update this student.");
         return;
       }
 
@@ -42,21 +42,19 @@ export default function AlumnosPage() {
 
       const data = snap.data();
 
-      // Encontrar la key user_X
       const userKey = Object.keys(data).find(
         (k) => k.startsWith("user_") && data[k].uid === alumno.uid
       );
       if (!userKey) return;
 
-      // UPDATE dinámico
       await updateDoc(batchRef, {
         [`${userKey}.${field}`]: value,
       });
 
-      toast.success("Actualizado correctamente");
+      toast.success("Updated successfully.");
     } catch (err) {
       console.error(err);
-      toast.error("Error al guardar los cambios");
+      toast.error("Error saving changes.");
     }
   };
 
@@ -67,15 +65,15 @@ export default function AlumnosPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
             <FiUser className="text-blue-600" />
-            Alumnos
+            Students
           </h1>
           <p className="text-gray-500 mt-1">
-            Gestiona todos los alumnos registrados en el campus.
+            Manage all registered students in the campus.
           </p>
         </div>
       </header>
 
-      {/* BUSCADOR */}
+      {/* SEARCH BAR */}
       <div className="relative max-w-md">
         <FiSearch
           size={18}
@@ -83,33 +81,34 @@ export default function AlumnosPage() {
         />
         <input
           type="text"
-          placeholder="Buscar alumno por email..."
+          placeholder="Search student by email..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
+          className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm 
+          focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
         />
       </div>
 
-      {/* LISTADO */}
+      {/* LIST */}
       {loading ? (
         <div className="text-center text-gray-500 py-10 bg-white rounded-xl border border-gray-200 shadow-sm">
-          Cargando alumnos...
+          Loading students...
         </div>
       ) : filteredAlumnos.length === 0 ? (
         <div className="text-center text-gray-500 py-10 bg-white rounded-xl border border-gray-200 shadow-sm">
-          No se encontraron alumnos.
+          No students found.
         </div>
       ) : (
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-100 text-gray-600 uppercase text-xs font-semibold">
               <tr>
-                <th className="text-left px-5 py-3">Alumno</th>
+                <th className="text-left px-5 py-3">Student</th>
                 <th className="text-left px-5 py-3">UID</th>
-                <th className="text-left px-5 py-3">Fecha creación</th>
-                <th className="text-left px-5 py-3">Idioma</th>
-                <th className="text-left px-5 py-3">Nivel</th>
-                <th className="text-left px-5 py-3">Estado</th>
+                <th className="text-left px-5 py-3">Creation Date</th>
+                <th className="text-left px-5 py-3">Language</th>
+                <th className="text-left px-5 py-3">Level</th>
+                <th className="text-left px-5 py-3">Status</th>
               </tr>
             </thead>
 
@@ -119,7 +118,7 @@ export default function AlumnosPage() {
                   key={i}
                   className="border-t border-gray-100 hover:bg-gray-50 transition"
                 >
-                  {/* ALUMNO */}
+                  {/* STUDENT */}
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
@@ -128,7 +127,7 @@ export default function AlumnosPage() {
 
                       <div className="flex flex-col">
                         <span className="font-medium text-gray-800">
-                          {a.email?.split("@")[0] || "Usuario"}
+                          {a.email?.split("@")[0] || "User"}
                         </span>
                         <span className="text-xs text-gray-500 flex items-center gap-1">
                           <FiMail size={12} />
@@ -141,38 +140,33 @@ export default function AlumnosPage() {
                   {/* UID */}
                   <td className="px-5 py-4 text-gray-600">{a.uid}</td>
 
-                  {/* FECHA */}
+                  {/* DATE */}
                   <td className="px-5 py-4 text-gray-600 flex items-center gap-1">
                     <FiCalendar size={12} className="text-gray-400" />
                     {a.createdAt
-                      ? new Date(a.createdAt).toLocaleDateString("es-AR")
+                      ? new Date(a.createdAt).toLocaleDateString("en-US")
                       : "N/A"}
                   </td>
 
-                  {/* IDIOMA */}
+                  {/* LANGUAGE */}
                   <td className="px-5 py-4">
                     <select
                       defaultValue={a.learningLanguage || a.idioma || ""}
                       onChange={(e) =>
-                        handleUpdateField(
-                          a,
-                          "learningLanguage",
-                          e.target.value
-                        )
+                        handleUpdateField(a, "learningLanguage", e.target.value)
                       }
                       className="border border-gray-300 rounded-md px-2 py-1 text-sm"
                     >
-                      <option value="" hidden disabled>—</option>
-                      <option value="en">Inglés</option>
-<option value="es">Español</option>
-<option value="pt">Portugués</option>
-<option value="fr">Francés</option>
-<option value="it">Italiano</option>
-
+                      <option value="" disabled hidden>—</option>
+                      <option value="en">English</option>
+                      <option value="es">Spanish</option>
+                      <option value="pt">Portuguese</option>
+                      <option value="fr">French</option>
+                      <option value="it">Italian</option>
                     </select>
                   </td>
 
-                  {/* NIVEL */}
+                  {/* LEVEL */}
                   <td className="px-5 py-4">
                     <select
                       defaultValue={a.learningLevel || a.nivel || ""}
@@ -191,12 +185,13 @@ export default function AlumnosPage() {
                     </select>
                   </td>
 
-                  {/* ESTADO */}
+                  {/* STATUS */}
                   <td className="px-5 py-4">
                     <span className="text-xs font-semibold bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full">
-                      Activo
+                      Active
                     </span>
                   </td>
+
                 </tr>
               ))}
             </tbody>

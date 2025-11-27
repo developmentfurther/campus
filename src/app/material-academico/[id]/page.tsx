@@ -191,8 +191,9 @@ useEffect(() => {
   (curso.unidades || []).forEach((u: any, idxU: number) => {
     const unitId = u.id || `unit-${idxU + 1}`;
 
-    const lessons = (u.lecciones || []).map((l: any, idxL: number) => {
+   const lessons = (u.lecciones || []).map((l: any, idxL: number) => {
   const lessonId = l.id || `lesson-${idxU + 1}-${idxL + 1}`;
+
   return {
     key: buildKey(unitId, lessonId),
     id: lessonId,
@@ -200,11 +201,15 @@ useEffect(() => {
     title: l.titulo || `Lección ${idxL + 1}`,
     description: l.descripcion || "",
     text: l.texto || "",
-    theory: l.teoria || "",   // ✅ nuevo campo markdown
+    theory: l.teoria || "",
     videoUrl: l.urlVideo || "",
+    pdfUrl: l.pdfUrl || "",
+    vocabulary: l.vocabulary || null,
+  
     ejercicios: Array.isArray(l.ejercicios) ? l.ejercicios : [],
   };
 });
+
 
 
 // 1️⃣ Introducción como primera lección (si tiene video o descripción)
@@ -382,7 +387,8 @@ function RenderVocabularyBlock({ vocab }: { vocab: any }) {
       <h3 className="text-blue-600 font-semibold text-lg">Vocabulary</h3>
 
       {/* MODO TABLA */}
-      {vocab.mode === "table" && (
+      {(!vocab.mode || vocab.mode === "table") && (
+
         <div className="overflow-x-auto max-w-[750px]">
           <table className="w-full bg-white border border-slate-300 rounded-xl text-sm overflow-hidden">
             <thead className="bg-slate-100 text-left">
@@ -1618,6 +1624,7 @@ const currentUnit = units[activeU];
                 </article>
               </div>
             )}
+
 
 {/* VOCABULARY */}
 {activeLesson?.vocabulary && (

@@ -33,10 +33,10 @@ export default function SidebarAdmin() {
   // 📘 Sección administrativa / académica
   const adminSection = [
     { id: "home", label: "Dashboard", icon: <FiHome size={16} /> },
-    { id: "material", label: "Material Académico", icon: <FiBookOpen size={16} /> },
-    { id: "alumnos", label: "Alumnos", icon: <FiUsers size={16} /> },
-    { id: "profesores", label: "Profesores", icon: <FiUser size={16} /> },
-    { id: "anuncios", label: "Anuncios", icon: <FiBell size={16}/> },
+    { id: "material", label: "Academic Material", icon: <FiBookOpen size={16} /> },
+    { id: "alumnos", label: "Students", icon: <FiUsers size={16} /> },
+    { id: "profesores", label: "Teachers", icon: <FiUser size={16} /> },
+    { id: "anuncios", label: "Announcements", icon: <FiBell size={16}/> },
 
   ];
 
@@ -49,19 +49,19 @@ export default function SidebarAdmin() {
   const chatSection = [
     {
       id: "chatbot",
-      label: "Chat Conversacional",
+      label: "AI Chat",
       icon: <FiMessageSquare size={16} />,
     },
     {
     id: "chat-history",
-    label: "Historial",
+    label: "AI History",
     icon: <FiClock size={16} />,
   },
   ];
 
   // 👤 Cuenta
   const accountSection = [
-    { id: "perfil", label: "Perfil", icon: <FiUser size={16} /> },
+    { id: "perfil", label: "Profile", icon: <FiUser size={16} /> },
   ];
 
   /* ============================================================
@@ -75,14 +75,14 @@ export default function SidebarAdmin() {
         <h1 className="text-xl font-bold text-gray-800 tracking-tight">
           Further Campus
         </h1>
-        <p className="text-xs text-gray-500 mt-1">Panel de administración</p>
+        <p className="text-xs text-gray-500 mt-1">Admin Panel</p>
       </div>
 
       {/* NAVIGATION */}
       <nav className="flex-1 px-3 py-5 overflow-y-auto">
 
         {/* ADMINISTRACIÓN */}
-        <SectionTitle>Administración</SectionTitle>
+        <SectionTitle>Administration</SectionTitle>
         <ul className="space-y-1 mb-6">
           {adminSection.map((item) => (
             <SidebarButton
@@ -144,7 +144,7 @@ export default function SidebarAdmin() {
             <span className="text-sm font-medium text-gray-800 truncate max-w-[150px]">
               {user?.email}
             </span>
-            <span className="text-xs text-gray-500">Administrador</span>
+            <span className="text-xs text-gray-500">Administrator</span>
           </div>
         </div>
 

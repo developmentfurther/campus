@@ -61,11 +61,12 @@ export default function MaterialAcademico() {
   /* ============================================================================
      🟦 Crear curso
      ============================================================================ */
-  const handleCourseCreated = async () => {
+   const handleCourseCreated = async () => {
     setIsCreateModalOpen(false);
-    toast.success("Curso creado correctamente");
+    toast.success("Course created successfully.");
     await reloadData();
   };
+
 
   /* ============================================================================
      ✏ Editar curso — instantáneo, sin fetch
@@ -88,15 +89,15 @@ export default function MaterialAcademico() {
      ============================================================================ */
   const handleDelete = async (id: string) => {
     try {
-      if (!confirm("¿Seguro que deseas eliminar este curso?")) return;
+      if (!confirm("Are you sure you want to delete this course?")) return;
 
       await deleteDoc(doc(db, "cursos", id));
-      toast.success("Curso eliminado correctamente");
+      toast.success("Course deleted successfully.");
 
       await reloadData();
     } catch (err) {
-      console.error("❌ Error eliminando curso:", err);
-      toast.error("Error al eliminar el curso");
+      console.error("❌ Error deleting course:", err);
+      toast.error("Error deleting the course.");
     }
   };
 
@@ -114,16 +115,17 @@ export default function MaterialAcademico() {
      ===================================================================================== */
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800 p-8 space-y-10">
+      
       {/* HEADER */}
       <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
             <FiBookOpen className="text-blue-600" />
-            Material Académico
+            Academic Material
           </h1>
 
           <p className="text-gray-500 mt-1">
-            Administra los cursos disponibles en el campus. Crea, edita o elimina material académico.
+            Manage the courses available in the campus. Create, edit, or delete academic material.
           </p>
         </div>
 
@@ -131,18 +133,18 @@ export default function MaterialAcademico() {
           onClick={() => setIsCreateModalOpen(true)}
           className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2"
         >
-          <FiPlus size={18} /> Nuevo Material
+          <FiPlus size={18} /> New Course
         </Button>
       </header>
 
-      {/* LISTADO */}
+      {/* LIST */}
       {loadingAllCursos ? (
         <div className="text-center text-gray-500 py-10 bg-white rounded-xl border border-gray-200 shadow-sm">
-          Cargando cursos...
+          Loading courses...
         </div>
       ) : localCourses.length === 0 ? (
         <div className="text-center text-gray-500 py-10 bg-white rounded-xl border border-gray-200 shadow-sm">
-          No hay cursos disponibles por el momento.
+          No courses available at the moment.
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -156,7 +158,7 @@ export default function MaterialAcademico() {
                 <div>
                   <h2 className="text-xl font-semibold text-gray-800">{course.title}</h2>
                   <p className="text-sm text-gray-500 line-clamp-2">
-                    {course.description || "Sin descripción"}
+                    {course.description || "No description"}
                   </p>
                 </div>
 
@@ -167,31 +169,31 @@ export default function MaterialAcademico() {
                       : "bg-gray-100 text-gray-500"
                   }`}
                 >
-                  {course.visible ? "Público" : "Oculto"}
+                  {course.visible ? "Public" : "Hidden"}
                 </span>
               </div>
 
               {/* STATS */}
               <div className="px-5 py-3 text-sm grid grid-cols-2 md:grid-cols-3 gap-2 border-b border-gray-100">
                 <div className="text-gray-500">
-                  <span className="font-medium text-gray-800">{course.unidades}</span> unidades
+                  <span className="font-medium text-gray-800">{course.unidades}</span> units
                 </div>
                 <div className="text-gray-500">
-                  <span className="font-medium text-gray-800">{course.students}</span> alumnos
+                  <span className="font-medium text-gray-800">{course.students}</span> students
                 </div>
                 <div className="text-gray-500 hidden md:block">
-                  Creado: <span className="font-medium text-gray-800">{course.created}</span>
+                  Created: <span className="font-medium text-gray-800">{course.created}</span>
                 </div>
               </div>
 
-              {/* ACCIONES */}
+              {/* ACTIONS */}
               <div className="flex flex-wrap justify-end gap-3 p-5 border-t border-gray-100 bg-gray-50">
                 <Button
                   variant="outline"
-                  onClick={() => window.open(`/material-academico/${course.id}`, "_blank")}
+                  onClick={() => window.open(`/academic-material/${course.id}`, "_blank")}
                   className="border-blue-200 text-blue-600 hover:bg-blue-50 rounded-lg text-sm"
                 >
-                  Ver Material
+                  View
                 </Button>
 
                 <Button
@@ -199,7 +201,7 @@ export default function MaterialAcademico() {
                   onClick={() => handleEdit(course)}
                   className="border-gray-300 text-gray-700 hover:bg-gray-100 rounded-lg text-sm"
                 >
-                  Editar
+                  Edit
                 </Button>
 
                 <Button
@@ -207,7 +209,7 @@ export default function MaterialAcademico() {
                   onClick={() => handleDelete(course.id)}
                   className="border-red-200 text-red-600 hover:bg-red-50 rounded-lg text-sm"
                 >
-                  Eliminar
+                  Delete
                 </Button>
               </div>
             </div>
@@ -216,7 +218,7 @@ export default function MaterialAcademico() {
       )}
 
       {/* =====================================================================================
-         MODAL: CREAR CURSO
+         MODAL: CREATE COURSE
          ===================================================================================== */}
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
         <DialogOverlay className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40" />
@@ -227,7 +229,7 @@ export default function MaterialAcademico() {
                      [&>button.absolute.right-4.top-4]:hidden"
         >
           <VisuallyHidden>
-            <DialogTitle>Crear Curso</DialogTitle>
+            <DialogTitle>Create Course</DialogTitle>
           </VisuallyHidden>
 
           {isCreateModalOpen && (
@@ -240,7 +242,7 @@ export default function MaterialAcademico() {
       </Dialog>
 
       {/* =====================================================================================
-         MODAL: EDITAR CURSO
+         MODAL: EDIT COURSE
          ===================================================================================== */}
       <Dialog open={isModalOpen} onOpenChange={handleCloseModal}>
         <DialogOverlay className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40" />
@@ -251,7 +253,7 @@ export default function MaterialAcademico() {
                      [&>button.absolute.right-4.top-4]:hidden"
         >
           <VisuallyHidden>
-            <DialogTitle>Editar Curso</DialogTitle>
+            <DialogTitle>Edit Course</DialogTitle>
           </VisuallyHidden>
 
           {isModalOpen && fullCourseData && (

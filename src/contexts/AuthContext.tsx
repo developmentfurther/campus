@@ -133,9 +133,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
      ========================================================== */
   const loadAlumnos = async () => {
   try {
+    const alumnosCampus = []; // alumnos reales
+    const alumnosRaw = [];    // alumnos importados
+
+    // 1) Leer alumnos reales del campus
     const alumnosRef = collection(db, "alumnos");
     const snap = await getDocs(alumnosRef);
-    const allUsers: any[] = [];
 
     snap.forEach((batchDoc) => {
       const data = batchDoc.data();
@@ -143,27 +146,72 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (key.startsWith("user_")) {
           const u = data[key];
 
-          allUsers.push({
+          alumnosCampus.push({
             uid: u.uid,
             email: u.email,
             role: u.role,
             batchId: batchDoc.id,
             userKey: key,
-
-            // 🔥 CAMPOS IMPORTANTES QUE FALTABAN
-            learningLanguage: u.learningLanguage || u.idioma || "",
-            learningLevel: u.learningLevel || u.nivel || "",
+            createdAt: u.createdAt ?? null,
+            learningLanguage: u.learningLanguage || "",
+            learningLevel: u.learningLevel || "",
+            estadoAlumno: "Active",
           });
         }
       }
     });
 
-    setAlumnos(allUsers);
+    // 2) Leer alumnos importados (raw)
+    const raw = await loadAlumnosRaw();
+
+    // 3) Combinar ambos
+    const all = [...alumnosCampus, ...raw];
+
+    setAlumnos(all);
   } catch (err) {
     console.error("❌ [AuthContext] Error cargando alumnos:", err);
   }
 };
 
+
+const loadAlumnosRaw = async () => {
+  try {
+    const rawRef = collection(db, "alumnos_raw");
+    const snap = await getDocs(rawRef);
+
+    const list: any[] = [];
+
+    snap.forEach((batchDoc) => {
+      const batchData = batchDoc.data();
+      const batchId = batchDoc.id;
+
+      for (const key in batchData) {
+        if (key.startsWith("user_")) {
+          const u = batchData[key];
+
+          list.push({
+            userKey: key,
+            batchId,
+            email: u.email,
+            nombre: u.nombre,
+            learningLanguage: u.learningLanguage,
+            learningLevel: u.learningLevel,
+            estadoAlumno: u.estadoAlumno ?? "N/A",
+
+            // Los raw NO tienen uid, createdAt → default
+            uid: null,
+            createdAt: null,
+          });
+        }
+      }
+    });
+
+    return list;
+  } catch (err) {
+    console.error("❌ Error loading alumnos_raw:", err);
+    return [];
+  }
+};
 
 
   async function loadRecentActivity(uid: string, profile: any, cursos: any[]) {

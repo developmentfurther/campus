@@ -15,7 +15,8 @@
     "logout": "Déconnexion",
     "chatSection": "Chat",
   "chatbot": "Chat Conversationnel",
-  "chatHistory": "Historique"
+  "chatHistory": "Historique",
+  "user": "Étudiant"
   },
   "profile": {
   "title": "Mon Profil",
@@ -59,59 +60,64 @@
   "dashboard": {
     "loading": "Chargement...",
     "hello": "Bonjour, {{name}}",
+    "welcomeFull": "Bon retour !",
     "welcome": "Bon retour.",
     "language": "Langue",
     "level": "Niveau",
     "unassigned": "Non attribué",
     "announcements": "Annonces",
-    "announcements.new": "nouveaux",
+    "announcementsNew": "nouveau",
     "noAnnouncements": "Aucune annonce disponible.",
     "activity": "Activité",
     "noActivity": "Aucune activité récente.",
-    "quickTitle": "Accès Rapide"
+    "quickTitle": "Accès rapide",
+    "activeCoursesLabel": "Matériel actif",
+    "certificatesLabel": "Certificats"
   },
   "quick": {
     "material": "Matériel Académique",
-    "material.desc": "Accédez à votre contenu d’apprentissage",
+    "materialDesc": "Accédez à votre contenu d’apprentissage",
     "certificates": "Certificats",
-    "certificates.desc": "Consultez vos réussites",
+    "certificatesDesc": "Voir vos réussites",
     "gaming": "Jeux",
-    "gaming.desc": "Jeux quotidiens pour pratiquer votre langue",
+    "gamingDesc": "Jeux quotidiens pour pratiquer la langue",
     "chat": "Chat IA",
-    "chat.desc": "Pratique conversationnelle avec l’IA",
+    "chatDesc": "Pratique conversationnelle avec l’IA",
     "history": "Historique IA",
-    "history.desc": "Consultez vos sessions précédentes",
+    "historyDesc": "Consultez vos sessions et retours précédents",
     "profile": "Mon Profil",
-    "profile.desc": "Paramètres du compte",
-    "go": "Aller"
+    "profileDesc": "Paramètres du compte",
+    "go": "Aller maintenant",
+    "time": {
+    "days": "Il y a {{count}} jours",
+    "hours": "Il y a {{count}} heures",
+    "minutes": "Il y a {{count}} minutes",
+    "justNow": "À l’instant"
+  }
   },
   "courses": {
-    "loading": "Chargement de vos cours...",
-  "title": "Mes Cours",
-  "subtitle": "Ici, vous pouvez voir vos modules actifs, votre progression et votre historique académique.",
-  "emptyMessage": "Vous n'êtes inscrit à aucun cours pour le moment.",
-  "emptyHint": "Une fois inscrit, vos cours apparaîtront ici.",
-
-  "untitled": "Cours sans titre",
-  "generalCategory": "Général",
-
-  "units": "Unités",
-  "duration": "Durée",
-  "progress": "Progression",
-  "teacher": "Professeur",
-  "noTeacher": "N/A",
-
-  "lessonsCompleted": "{{done}} sur {{total}} leçons complétées",
-
-  "continue": "Continuer",
-  "review": "Revoir le cours",
-  "viewDetails": "Voir les détails"
+    "loading": "Chargement de votre matériel...",
+    "title": "Mon Matériel",
+    "subtitle": "Ici, vous pouvez voir vos modules actifs, vos progrès et votre historique académique.",
+    "emptyMessage": "Vous n’êtes inscrit à aucun cours pour le moment.",
+    "emptyHint": "Une fois inscrit, votre matériel apparaîtra ici.",
+    "untitled": "Cours sans titre",
+    "generalCategory": "Général",
+    "units": "Unités",
+    "duration": "Durée",
+    "progress": "Progrès",
+    "teacher": "Professeur",
+    "noTeacher": "N/A",
+    "lessonsCompleted": "{{done}} sur {{total}} leçons complétées",
+    "continue": "Continuer",
+    "review": "Revoir le cours",
+    "viewDetails": "Voir les détails"
   },
   "certificates": {
   "title": "Certificats",
   "subtitle": "Vos certificats apparaîtront ici une fois que vous aurez terminé un cours. Complétez toutes les leçons et évaluations requises pour débloquer votre certificat téléchargeable.",
 
-  "emptyPreview": "L’aperçu du certificat sera disponible après la validation du cours.",
+  "emptyPreview": "L’aperçu du certificat sera disponible après la validation du matériel.",
   
   "ctaPrefix": "Prêt à en obtenir un ?",
   "ctaLink": "Aller à Mes Cours"
@@ -226,7 +232,11 @@
     "wrongRemove": "La solution correcte était de supprimer le mot",
     "wrongReplace": "La correction correcte était",
     "newExercise": "Nouvel exercice"
-    }
+    },
+    "alreadyPlayed": {
+  "title": "Vous avez déjà joué aujourd'hui",
+  "text": "Revenez demain pour rejouer."
+}
   }
   },
   "auth": {}

@@ -20,7 +20,9 @@ const GAME_ID = "sentence_builder";
 
 export default function SentenceBuilder() {
   const { t } = useI18n();
-  const { user, role } = useAuth();
+  const { user, role, userProfile } = useAuth();
+
+  const lang = userProfile?.learningLanguage?.toLowerCase() || "en";
 
   const [original, setOriginal] = useState<string[]>([]);
   const [pool, setPool] = useState<string[]>([]);
@@ -44,7 +46,7 @@ export default function SentenceBuilder() {
       setSentence([]);
       setStatus("playing");
 
-      const res = await fetch(`/api/games/sentence-builder?lang=${role === "alumno" ? "en" : "en"}`);
+      const res = await fetch(`/api/games/sentence-builder?lang=${lang}`);
       const data = await res.json();
 
       setOriginal(data.words);

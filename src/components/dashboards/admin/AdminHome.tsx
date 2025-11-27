@@ -17,49 +17,49 @@ export default function AdminHome() {
   const cards = [
     {
       id: "alumnos",
-      label: "Alumnos",
-      desc: "Gestioná perfiles, progreso académico, idiomas y accesos.",
-      extra: "Acceso completo al listado, edición y control por batch.",
+      label: "Students",
+      desc: "Manage student profiles, academic progress, languages, and access settings.",
+      extra: "Full access to student list, editing tools, and batch control.",
       icon: <FiUsers size={26} />,
       color: "bg-blue-50 text-blue-600",
     },
     {
       id: "material",
-      label: "Material Académico",
-      desc: "Creá y administrá cursos, unidades, lecciones y exámenes.",
-      extra: "Control de contenido, videos, PDFs, cierres y evaluaciones.",
+      label: "Academic Material",
+      desc: "Create and manage courses, units, lessons, and examinations.",
+      extra: "Control over content, videos, PDFs, closing sections, and evaluations.",
       icon: <FiBookOpen size={26} />,
       color: "bg-indigo-50 text-indigo-600",
     },
     {
       id: "profesores",
-      label: "Profesores",
-      desc: "Administración completa del staff docente.",
-      extra: "Actualizá perfiles, idiomas, permisos y acceso a materiales.",
+      label: "Teachers",
+      desc: "Complete administration of the teaching staff.",
+      extra: "Update profiles, languages, permissions, and access to materials.",
       icon: <FiActivity size={26} />,
       color: "bg-emerald-50 text-emerald-600",
     },
     {
       id: "anuncios",
-      label: "Anuncios",
-      desc: "Publicá avisos globales segmentados por idioma.",
-      extra: "Visible instantáneamente para alumnos según su idioma nativo.",
+      label: "Announcements",
+      desc: "Publish global announcements segmented by language.",
+      extra: "Instantly visible to students based on native language.",
       icon: <FiBell size={26} />,
       color: "bg-orange-50 text-orange-600",
     },
     {
       id: "chatbot",
-      label: "Chat Conversacional",
-      desc: "Vista administrativa del chat impulsado por IA.",
-      extra: "Supervisá sesiones, feedback y comportamiento lingüístico.",
+      label: "AI Chat",
+      desc: "Administrative view of the AI-powered conversational chat.",
+      extra: "Monitor sessions, feedback, and linguistic behavior.",
       icon: <FiMessageCircle size={26} />,
       color: "bg-purple-50 text-purple-600",
     },
     {
       id: "perfil",
-      label: "Mi Perfil",
-      desc: "Actualizá tus datos personales y credenciales.",
-      extra: "Acceso directo a ajustes de cuenta y preferencia de idioma.",
+      label: "My Profile",
+      desc: "Update your personal information and credentials.",
+      extra: "Direct access to account settings and language preferences.",
       icon: <FiUser size={26} />,
       color: "bg-gray-100 text-gray-700",
     },
@@ -67,17 +67,18 @@ export default function AdminHome() {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800 p-8 space-y-10">
+      
       {/* HEADER */}
       <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Panel Administrativo</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
           <p className="text-gray-500 mt-1">
-            Accesos rápidos a las herramientas de gestión del Campus.
+            Quick access to the main management tools of the campus.
           </p>
         </div>
         <div className="flex items-center gap-3 text-sm text-gray-500">
           <FiCalendar size={16} />
-          {new Date().toLocaleDateString("es-AR", {
+          {new Date().toLocaleDateString("en-US", {
             weekday: "long",
             month: "short",
             day: "numeric",
@@ -111,7 +112,7 @@ export default function AdminHome() {
 
       {/* FOOTER */}
       <footer className="text-center text-xs text-gray-400 pt-8 border-t border-gray-100">
-        © {new Date().getFullYear()} Further Campus — Panel Administrativo
+        © {new Date().getFullYear()} Further Campus — Admin Panel
       </footer>
     </div>
   );
