@@ -8,6 +8,7 @@ import {
   updateUserGameAttempt,
 } from "@/lib/games/attempts";
 import { motion } from "framer-motion";
+import GameBlockedModal from "@/components/ui/GameBlockedModal";
 
 type GameStatus = "playing" | "won" | "lost";
 
@@ -187,21 +188,14 @@ export default function SentenceBuilder() {
   // Bloqueado (ya jugó hoy)
   if (blocked && role === "alumno") {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="bg-white rounded-3xl shadow-2xl p-12 text-center max-w-md"
-        >
-          <div className="text-7xl mb-6">⏰</div>
-          <h2 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-4">
-            {t("gaming.games.sentenceBuilder.alreadyPlayedTitle")}
-          </h2>
-          <p className="text-slate-600 text-lg">
-           {t("gaming.games.sentenceBuilder.alreadyPlayedText")}
-          </p>
-        </motion.div>
-      </div>
+      <GameBlockedModal
+      emoji="⏳"
+      title={t("gaming.games.idioms.blockedTitle")}
+      message={t("gaming.games.idioms.blockedMessage")}
+      nextAvailableLabel={t("gaming.games.shared.nextAvailable")}
+      hoursLabel={t("gaming.games.shared.hours")}
+      minutesLabel={t("gaming.games.shared.minutes")}
+    />
     );
   }
 

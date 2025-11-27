@@ -190,7 +190,7 @@ export default function MaterialAcademico() {
               <div className="flex flex-wrap justify-end gap-3 p-5 border-t border-gray-100 bg-gray-50">
                 <Button
                   variant="outline"
-                  onClick={() => window.open(`/academic-material/${course.id}`, "_blank")}
+                  onClick={() => window.open(`/material-academico/${course.id}`, "_blank")}
                   className="border-blue-200 text-blue-600 hover:bg-blue-50 rounded-lg text-sm"
                 >
                   View

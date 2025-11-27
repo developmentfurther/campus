@@ -131,10 +131,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   /* ==========================================================
      🔹 Cargar alumnos (para admin o profesor) => Lee todos los documentos en la coleccion alumnos
      ========================================================== */
-  const loadAlumnos = async () => {
+/* ==========================================================
+   🔹 Cargar alumnos (VERSIÓN CORREGIDA)
+   ========================================================== */
+const loadAlumnos = async () => {
   try {
-    const alumnosCampus = []; // alumnos reales
-    const alumnosRaw = [];    // alumnos importados
+    const alumnosCampus = []; 
+    const alumnosRaw = [];    
 
     // 1) Leer alumnos reales del campus
     const alumnosRef = collection(db, "alumnos");
@@ -146,6 +149,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (key.startsWith("user_")) {
           const u = data[key];
 
+          // 🔥 NORMALIZACIÓN: buscar en todos los campos posibles
+          const rawLanguage = u.learningLanguage || u.idioma || u.language || "";
+          const rawLevel = u.learningLevel || u.nivel || "";
+
           alumnosCampus.push({
             uid: u.uid,
             email: u.email,
@@ -153,35 +160,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             batchId: batchDoc.id,
             userKey: key,
             createdAt: u.createdAt ?? null,
-            learningLanguage: u.learningLanguage || "",
-            learningLevel: u.learningLevel || "",
+            // ✅ Guardar normalizado Y el original
+            learningLanguage: rawLanguage.toString().toLowerCase().trim(),
+            learningLevel: rawLevel.toString().toUpperCase().trim(),
             estadoAlumno: "Active",
+            // 📝 Info adicional para display
+            nombre: u.firstName && u.lastName 
+              ? `${u.firstName} ${u.lastName}` 
+              : u.nombre || u.email?.split("@")[0] || "Unknown",
           });
         }
       }
     });
 
     // 2) Leer alumnos importados (raw)
-    const raw = await loadAlumnosRaw();
-
-    // 3) Combinar ambos
-    const all = [...alumnosCampus, ...raw];
-
-    setAlumnos(all);
-  } catch (err) {
-    console.error("❌ [AuthContext] Error cargando alumnos:", err);
-  }
-};
-
-
-const loadAlumnosRaw = async () => {
-  try {
     const rawRef = collection(db, "alumnos_raw");
-    const snap = await getDocs(rawRef);
+    const snapRaw = await getDocs(rawRef);
 
-    const list: any[] = [];
-
-    snap.forEach((batchDoc) => {
+    snapRaw.forEach((batchDoc) => {
       const batchData = batchDoc.data();
       const batchId = batchDoc.id;
 
@@ -189,16 +185,20 @@ const loadAlumnosRaw = async () => {
         if (key.startsWith("user_")) {
           const u = batchData[key];
 
-          list.push({
+          // 🔥 NORMALIZACIÓN idéntica a la de arriba
+          const rawLanguage = u.learningLanguage || u.idioma || u.language || "";
+          const rawLevel = u.learningLevel || u.nivel || "";
+
+          alumnosRaw.push({
             userKey: key,
             batchId,
             email: u.email,
-            nombre: u.nombre,
-            learningLanguage: u.learningLanguage,
-            learningLevel: u.learningLevel,
+            nombre: u.nombre || u.email?.split("@")[0] || "Unknown",
+            learningLanguage: rawLanguage.toString().toLowerCase().trim(),
+            learningLevel: rawLevel.toString().toUpperCase().trim(),
             estadoAlumno: u.estadoAlumno ?? "N/A",
-
-            // Los raw NO tienen uid, createdAt → default
+            
+            // Los raw NO tienen uid, createdAt
             uid: null,
             createdAt: null,
           });
@@ -206,13 +206,17 @@ const loadAlumnosRaw = async () => {
       }
     });
 
-    return list;
+    // 3) Combinar ambos
+    const all = [...alumnosCampus, ...alumnosRaw];
+    
+    console.log("✅ Alumnos cargados:", all.length);
+    console.log("📊 Ejemplo de datos:", all[0]);
+
+    setAlumnos(all);
   } catch (err) {
-    console.error("❌ Error loading alumnos_raw:", err);
-    return [];
+    console.error("❌ [AuthContext] Error cargando alumnos:", err);
   }
 };
-
 
   async function loadRecentActivity(uid: string, profile: any, cursos: any[]) {
   setLoadingActivity(true);

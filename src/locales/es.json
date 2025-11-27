@@ -237,7 +237,16 @@
     "alreadyPlayed": {
   "title": "Ya jugaste hoy",
   "text": "Volvé mañana para jugar otra vez."
-}
+},
+ "shared": {
+      "nextAvailable": "Próximo juego disponible en:",
+      "hours": "horas",
+      "minutes": "minutos"
+    },
+    "idioms": {
+      "blockedTitle": "¡Ya jugaste hoy!",
+      "blockedMessage": "Vuelve mañana para un nuevo desafío"
+    }
   }
   },
   "auth": {}

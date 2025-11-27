@@ -8,6 +8,7 @@ import {
   userPlayedToday,
   updateUserGameAttempt,
 } from "@/lib/games/attempts";
+import GameBlockedModal from "@/components/ui/GameBlockedModal";
 
 type GameStatus = "playing" | "won" | "lost";
 const GAME_ID = "hangman";
@@ -253,7 +254,7 @@ export default function Hangman() {
         // Esperar 2 segundos antes de bloquear para mostrar el resultado
         setTimeout(() => {
           setBlocked(true);
-        }, 2000);
+        }, 1000);
       } catch (err) {
         console.error("❌ Error guardando intento:", err);
       }
@@ -330,21 +331,14 @@ export default function Hangman() {
   // Bloqueado (ya jugó hoy)
   if (blocked && role === "alumno") {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="bg-white rounded-3xl shadow-2xl p-12 text-center max-w-md"
-        >
-          <div className="text-7xl mb-6">⏰</div>
-          <h2 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-4">
-            {t("gaming.games.hangman.alreadyPlayedTitle") || "Ya jugaste hoy"}
-          </h2>
-          <p className="text-slate-600 text-lg">
-            {t("gaming.games.hangman.alreadyPlayedText") || "Vuelve mañana para jugar de nuevo"}
-          </p>
-        </motion.div>
-      </div>
+      <GameBlockedModal
+      emoji="⏳"
+      title={t("gaming.games.idioms.blockedTitle")}
+      message={t("gaming.games.idioms.blockedMessage")}
+      nextAvailableLabel={t("gaming.games.shared.nextAvailable")}
+      hoursLabel={t("gaming.games.shared.hours")}
+      minutesLabel={t("gaming.games.shared.minutes")}
+    />
     );
   }
 

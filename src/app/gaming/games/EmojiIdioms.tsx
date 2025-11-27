@@ -6,8 +6,8 @@ import { useI18n } from "@/contexts/I18nContext";
 import { userPlayedToday, updateUserGameAttempt } from "@/lib/games/attempts";
 import { getIdiomsBank, IdiomItem } from "@/lib/games/idioms";
 import { motion } from "framer-motion";
+import GameBlockedModal from "@/components/ui/GameBlockedModal";
 
-// Normaliza textos
 function norm(s: string) {
   return s
     .toLowerCase()
@@ -17,7 +17,6 @@ function norm(s: string) {
 }
 
 type Item = IdiomItem;
-
 const GAME_ID = "idioms";
 
 export default function EmojiIdioms() {
@@ -31,13 +30,10 @@ export default function EmojiIdioms() {
   const [input, setInput] = useState("");
   const [revealed, setRevealed] = useState(false);
   const [wrongCount, setWrongCount] = useState(0);
-
   const [blocked, setBlocked] = useState(false);
   const [checkingAttempt, setCheckingAttempt] = useState(true);
 
-  // ===========================================
   // Verificación de intento diario
-  // ===========================================
   useEffect(() => {
     const check = async () => {
       if (!user) return setCheckingAttempt(false);
@@ -56,9 +52,7 @@ export default function EmojiIdioms() {
     check();
   }, [user, role]);
 
-  // ===========================================
   // Cargar idiom al cambiar idioma o estado
-  // ===========================================
   useEffect(() => {
     if (!checkingAttempt && !blocked) {
       const random = BANK[Math.floor(Math.random() * BANK.length)];
@@ -67,27 +61,16 @@ export default function EmojiIdioms() {
       setRevealed(false);
       setWrongCount(0);
     }
-  }, [checkingAttempt, blocked, lang]);
+  }, [checkingAttempt, blocked, lang, BANK]);
 
-  // ===========================================
-  // Handler principal
-  // ===========================================
-  const correct =
-    revealed && item && item.answers.some((a) => norm(a) === norm(input));
+  // ⭐ NUEVO: Limpiar item cuando se bloquea
+  useEffect(() => {
+    if (blocked && role === "alumno") {
+      setItem(null);
+    }
+  }, [blocked, role]);
 
-  const onCheck = () => {
-    if (!item) return;
-    if (correct) return;
-
-    const ok = item.answers.some((a) => norm(a) === norm(input));
-    setRevealed(true);
-
-    if (!ok) setWrongCount((c) => c + 1);
-  };
-
-  // ===========================================
   // Guardar intento si acierta
-  // ===========================================
   useEffect(() => {
     const save = async () => {
       if (!revealed || !item) return;
@@ -102,13 +85,24 @@ export default function EmojiIdioms() {
     };
 
     save();
-  }, [revealed, item, user, role]);
+  }, [revealed, item, user, role, input]); // ⭐ Agregado 'input' a dependencias
 
-  // ===========================================
+  const correct =
+    revealed && item && item.answers.some((a) => norm(a) === norm(input));
+
+  const onCheck = () => {
+    if (!item) return;
+    if (correct) return;
+    if (blocked) return; // ⭐ Prevenir checks si está bloqueado
+
+    const ok = item.answers.some((a) => norm(a) === norm(input));
+    setRevealed(true);
+
+    if (!ok) setWrongCount((c) => c + 1);
+  };
+
   // Pistas progresivas
-  // ===========================================
   const hints: string[] = [];
-
   if (item) {
     if (wrongCount >= 1)
       hints.push(
@@ -151,12 +145,7 @@ export default function EmojiIdioms() {
     }
   }
 
-  // ===========================================
-  // UI – Estados iniciales
-  // ===========================================
- 
-
-   // Verificando intento
+  // UI - Verificando intento
   if (checkingAttempt) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -170,31 +159,24 @@ export default function EmojiIdioms() {
     );
   }
 
-  // Bloqueado (ya jugó hoy)
+  // UI - Bloqueado
   if (blocked && role === "alumno") {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="bg-white rounded-3xl shadow-2xl p-12 text-center max-w-md"
-        >
-          <div className="text-7xl mb-6">⏰</div>
-          <h2 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-4">
-            {t("gaming.games.emojiIdioms.alreadyPlayedTitle")}
-          </h2>
-          <p className="text-slate-600 text-lg">
-            {t("gaming.games.emojiIdioms.alreadyPlayedText")}
-          </p>
-        </motion.div>
-      </div>
+      <GameBlockedModal
+      emoji="⏳"
+      title={t("gaming.games.idioms.blockedTitle")}
+      message={t("gaming.games.idioms.blockedMessage")}
+      nextAvailableLabel={t("gaming.games.shared.nextAvailable")}
+      hoursLabel={t("gaming.games.shared.hours")}
+      minutesLabel={t("gaming.games.shared.minutes")}
+    />
     );
   }
 
-  // Cargando palabra
+  // UI - Cargando
   if (!item) {
     return (
-       <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="relative w-24 h-24 mx-auto mb-6">
             <div className="absolute inset-0 rounded-full border-8 border-purple-200" />
@@ -203,12 +185,9 @@ export default function EmojiIdioms() {
         </div>
       </div>
     );
-  } 
+  }
 
-
-  // ===========================================
-  // UI – Juego principal
-  // ===========================================
+  // UI - Juego principal
   return (
     <div className="max-w-2xl mx-auto px-6 py-8">
       <div className="rounded-2xl border p-8 shadow-sm bg-white">
@@ -222,7 +201,7 @@ export default function EmojiIdioms() {
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            disabled={correct}
+            disabled={correct || blocked}
             placeholder={t("gaming.games.emojiIdioms.inputPlaceholder")}
             className="flex-1 border p-3 rounded-lg"
             onKeyDown={(e) => e.key === "Enter" && onCheck()}
@@ -230,9 +209,9 @@ export default function EmojiIdioms() {
 
           <button
             onClick={onCheck}
-            disabled={correct || !input.trim()}
+            disabled={correct || !input.trim() || blocked}
             className={`px-4 py-2 rounded-lg text-white transition ${
-              correct || !input.trim()
+              correct || !input.trim() || blocked
                 ? "bg-slate-400 cursor-not-allowed"
                 : "bg-blue-600 hover:bg-blue-700"
             }`}

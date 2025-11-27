@@ -240,7 +240,16 @@
     "alreadyPlayed": {
     "title": "You already played today",
     "text": "Come back tomorrow to play again."
-  }
+  },
+  "shared": {
+      "nextAvailable": "Next game available in:",
+      "hours": "hours",
+      "minutes": "minutes"
+    },
+    "idioms": {
+      "blockedTitle": "You've already played today!",
+      "blockedMessage": "Come back tomorrow for a new challenge"
+    }
   }
   },
   "auth": {}
