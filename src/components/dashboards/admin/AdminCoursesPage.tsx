@@ -133,18 +133,18 @@ export default function MaterialAcademico() {
           onClick={() => setIsCreateModalOpen(true)}
           className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2"
         >
-          <FiPlus size={18} /> New Course
+          <FiPlus size={18} /> New Material
         </Button>
       </header>
 
       {/* LIST */}
       {loadingAllCursos ? (
         <div className="text-center text-gray-500 py-10 bg-white rounded-xl border border-gray-200 shadow-sm">
-          Loading courses...
+          Loading materials...
         </div>
       ) : localCourses.length === 0 ? (
         <div className="text-center text-gray-500 py-10 bg-white rounded-xl border border-gray-200 shadow-sm">
-          No courses available at the moment.
+          No material available at the moment.
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -229,7 +229,7 @@ export default function MaterialAcademico() {
                      [&>button.absolute.right-4.top-4]:hidden"
         >
           <VisuallyHidden>
-            <DialogTitle>Create Course</DialogTitle>
+            <DialogTitle>Create Material</DialogTitle>
           </VisuallyHidden>
 
           {isCreateModalOpen && (
