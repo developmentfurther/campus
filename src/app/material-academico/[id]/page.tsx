@@ -1702,7 +1702,7 @@ const currentUnit = units[activeU];
     
     {/* Logo fijo al fondo */}
 
- {/* Logo fijo al fondo */}
+ {/* Logo fijo al fondo
      <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white via-white to-transparent">
         <div className="w-full h-px bg-slate-200 mb-4" />
         <div className="flex justify-center">
@@ -1714,7 +1714,7 @@ const currentUnit = units[activeU];
             className="opacity-90"
           />
         </div>
-      </div>
+      </div> */}
 
     </aside>
 

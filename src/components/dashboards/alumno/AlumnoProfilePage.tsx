@@ -126,9 +126,7 @@ export default function AlumnoProfilePage() {
       <div className="min-h-screen bg-gray-50 p-8 space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-xl font-bold">{t("profile.title")}</h1>
-          <Button onClick={handleSave} className="bg-blue-600 text-white flex items-center gap-2">
-            <FiEdit2 /> {t("profile.save")}
-          </Button>
+          
         </div>
 
         {/* DATOS PERSONALES */}
