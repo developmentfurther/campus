@@ -25,41 +25,38 @@ import {
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { toast } from "sonner";
 import { db } from "@/lib/firebase";
-import { doc, updateDoc, deleteField } from "firebase/firestore";
-import { addProfesorToBatch } from "@/lib/profesorBatches";
+import { doc, updateDoc } from "firebase/firestore";
 
-export default function TeachersPage() {
-  const {
-    profesores,
-    loadProfesores,
-    loadingProfesores,
-    reloadData,
-  } = useAuth();
+export default function ProfesoresPage() {
+  const { profesores, loadProfesores, loadingProfesores } = useAuth();
 
   const [search, setSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingProfesor, setEditingProfesor] = useState<any | null>(null);
+  const [editing, setEditing] = useState<any | null>(null);
+
   const [formData, setFormData] = useState({
-    nombre: "",
-    apellido: "",
+    firstName: "",
+    lastName: "",
     email: "",
-    idioma: "",
-    nivel: "",
+    idiomas: [] as { idioma: string; nivel: string }[],
     createdAt: "",
   });
 
-  // Load professors on mount if empty
+  /* =========================================================
+     LOAD ON MOUNT
+  ========================================================= */
   useEffect(() => {
-    if (!profesores?.length) {
-      loadProfesores?.();
-    }
+    if (!profesores?.length) loadProfesores?.();
   }, [profesores]);
 
-  // 🔹 Filter list dynamically
-  const filteredProfesores = useMemo(() => {
+  /* =========================================================
+     FILTER LIST
+  ========================================================= */
+  const filtered = useMemo(() => {
     if (!Array.isArray(profesores)) return [];
-    return profesores.filter((p) => {
-      const q = search.toLowerCase();
+    const q = search.toLowerCase();
+
+    return profesores.filter((p: any) => {
       return (
         p.email?.toLowerCase().includes(q) ||
         p.nombre?.toLowerCase().includes(q) ||
@@ -69,268 +66,251 @@ export default function TeachersPage() {
   }, [profesores, search]);
 
   /* =========================================================
-     🔹 DELETE TEACHER
+     OPEN CREATE
   ========================================================= */
-  const handleDelete = async (id: string) => {
-    try {
-      const confirmDelete = confirm("Are you sure you want to delete this teacher?");
-      if (!confirmDelete) return;
-
-      const ref = doc(db, "profesores", "batch_1");
-
-      await updateDoc(ref, {
-        [id]: deleteField(),
-      });
-
-      toast.success("Teacher deleted successfully.");
-      await loadProfesores?.();
-    } catch (err) {
-      console.error("❌ Error deleting teacher:", err);
-      toast.error("Error deleting teacher.");
-    }
-  };
-
-  /* =========================================================
-     🔹 SAVE TEACHER (CREATE / EDIT)
-  ========================================================= */
-  const handleSave = async () => {
-    const { nombre, apellido, email, idioma, nivel, createdAt } = formData;
-
-    if (!email || !nombre || !apellido || !idioma || !nivel) {
-      toast.error("Please complete all fields.");
-      return;
-    }
-
-    try {
-      const ref = doc(db, "profesores", "batch_1");
-
-      if (editingProfesor) {
-        // UPDATE existing teacher
-        await updateDoc(ref, {
-          [`${editingProfesor.id}`]: {
-            ...editingProfesor,
-            nombre,
-            apellido,
-            email,
-            idioma,
-            nivel,
-            createdAt: createdAt
-              ? new Date(createdAt).toISOString()
-              : new Date().toISOString(),
-          },
-        });
-
-        toast.success("Teacher updated successfully.");
-      } else {
-        // CREATE new teacher
-        await addProfesorToBatch({
-          nombre,
-          apellido,
-          email,
-          idioma,
-          nivel,
-          createdAt: createdAt
-            ? new Date(createdAt).toISOString()
-            : new Date().toISOString(),
-        });
-
-        toast.success("Teacher created successfully.");
-      }
-
-      setIsModalOpen(false);
-      setEditingProfesor(null);
-      setFormData({
-        nombre: "",
-        apellido: "",
-        email: "",
-        idioma: "",
-        nivel: "",
-        createdAt: "",
-      });
-
-      await loadProfesores?.();
-    } catch (err) {
-      console.error("❌ Error saving teacher:", err);
-      toast.error("Error saving teacher.");
-    }
-  };
-
-  /* =========================================================
-     🔹 OPEN CREATE MODAL
-  ========================================================= */
-  const openModalForCreate = () => {
-    setEditingProfesor(null);
+  const openCreate = () => {
+    setEditing(null);
     setFormData({
-      nombre: "",
-      apellido: "",
+      firstName: "",
+      lastName: "",
       email: "",
-      idioma: "",
-      nivel: "",
+      idiomas: [],
       createdAt: "",
     });
     setIsModalOpen(true);
   };
 
   /* =========================================================
-     🔹 OPEN EDIT MODAL
+     OPEN EDIT
   ========================================================= */
-  const openModalForEdit = (profesor: any) => {
-    setEditingProfesor(profesor);
-    setFormData({
-      nombre: profesor.nombre || "",
-      apellido: profesor.apellido || "",
-      email: profesor.email || "",
-      idioma: profesor.idioma || "",
-      nivel: profesor.nivel || "",
-      createdAt: profesor.createdAt
-        ? profesor.createdAt?.toDate
-          ? profesor.createdAt.toDate().toISOString().slice(0, 10)
-          : profesor.createdAt.slice(0, 10)
-        : "",
-    });
-    setIsModalOpen(true);
+ const openEdit = (prof: any) => {
+  setEditing(prof);
+
+  const idiomas = Array.isArray(prof.idiomasProfesor)
+    ? prof.idiomasProfesor
+    : [];
+
+  setFormData({
+    firstName: prof.nombre || "",
+    lastName: prof.apellido || "",
+    email: prof.email || "",
+    createdAt: prof.createdAt
+      ? new Date(
+          prof.createdAt?.toDate
+            ? prof.createdAt.toDate()
+            : prof.createdAt
+        )
+          .toISOString()
+          .slice(0, 10)
+      : "",
+    idiomas: idiomas.length > 0 ? idiomas : [{ idioma: "", nivel: "" }],
+  });
+
+  setIsModalOpen(true);
+};
+
+
+  /* =========================================================
+     SAVE
+  ========================================================= */
+  const handleSave = async () => {
+    if (!editing) {
+      toast.error("Solo se puede editar profesores existentes.");
+      return;
+    }
+
+    if (!formData.firstName || !formData.lastName || !formData.email) {
+      toast.error("Complete name and email.");
+      return;
+    }
+
+    try {
+      const ref = doc(db, "alumnos", editing.batchId);
+
+      await updateDoc(ref, {
+        [`${editing.userKey}.firstName`]: formData.firstName,
+        [`${editing.userKey}.lastName`]: formData.lastName,
+        [`${editing.userKey}.email`]: formData.email,
+        [`${editing.userKey}.idiomasProfesor`]: formData.idiomas,
+        [`${editing.userKey}.createdAt`]:
+          formData.createdAt || new Date().toISOString(),
+      });
+
+      toast.success("Teacher updated.");
+
+      setIsModalOpen(false);
+      setEditing(null);
+
+      loadProfesores?.();
+    } catch (err) {
+      console.error(err);
+      toast.error("Error updating teacher.");
+    }
   };
 
   /* =========================================================
-     🔹 RENDER
+     DELETE
   ========================================================= */
+  const deleteTeacher = async (prof: any) => {
+    const ok = confirm("Delete this teacher?");
+    if (!ok) return;
 
+    try {
+      const ref = doc(db, "alumnos", prof.batchId);
+
+      await updateDoc(ref, {
+        [`${prof.userKey}.role`]: "alumno",
+        [`${prof.userKey}.idiomasProfesor`]: [],
+      });
+
+      toast.success("Teacher removed (role reverted to alumno).");
+      loadProfesores?.();
+    } catch (err) {
+      console.error(err);
+      toast.error("Error removing teacher.");
+    }
+  };
+
+  /* =========================================================
+     ADD LANGUAGE ENTRY
+  ========================================================= */
+  const addIdioma = () => {
+    setFormData({
+      ...formData,
+      idiomas: [...formData.idiomas, { idioma: "", nivel: "" }],
+    });
+  };
+
+  /* =========================================================
+     RENDER
+  ========================================================= */
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-800 p-8 space-y-10">
+    <div className="min-h-screen p-8 space-y-10 bg-gray-50 text-gray-800">
 
       {/* HEADER */}
       <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+          <h1 className="text-3xl font-bold flex items-center gap-2">
             <FiUser className="text-blue-600" />
             Teachers
           </h1>
-          <p className="text-gray-500 mt-1">
-            Manage campus teachers. Create, edit, or remove instructors.
+          <p className="text-gray-500">
+            Manage and edit campus instructors.
           </p>
         </div>
 
         <Button
-          onClick={openModalForCreate}
+          onClick={openCreate}
           className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+          disabled
         >
-          <FiPlus size={16} /> New Teacher
+          <FiPlus size={16} /> New Teacher (Disabled)
         </Button>
       </header>
 
-      {/* SEARCH BAR */}
+      {/* SEARCH */}
       <div className="relative max-w-md">
-        <FiSearch size={18} className="absolute left-3 top-3 text-gray-400" />
+        <FiSearch className="absolute left-3 top-3 text-gray-400" />
         <input
           type="text"
-          placeholder="Search teacher by name or email..."
+          placeholder="Search..."
+          className="w-full pl-10 pr-3 py-2 border rounded-lg shadow-sm"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm 
-          focus:ring-2 focus:ring-blue-500 outline-none bg-white shadow-sm"
         />
       </div>
 
       {/* LIST */}
       {loadingProfesores ? (
-        <div className="text-center text-gray-500 py-10 bg-white rounded-xl border shadow-sm">
+        <div className="text-center py-10 bg-white rounded-xl border shadow-sm">
           Loading teachers...
         </div>
-      ) : filteredProfesores.length === 0 ? (
-        <div className="text-center text-gray-500 py-10 bg-white rounded-xl border shadow-sm">
-          No teachers registered.
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-10 bg-white rounded-xl border shadow-sm">
+          No teachers found.
         </div>
       ) : (
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-          
-          {/* TABLE */}
-          <table className="w-full text-sm table-auto border-collapse">
-            <thead className="bg-gray-100 text-gray-600 uppercase text-xs font-semibold">
+        <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-100 text-gray-600 uppercase text-xs">
               <tr>
-                <th className="px-5 py-3 text-left w-[35%]">Teacher</th>
-                <th className="px-5 py-3 text-left w-[20%]">Language</th>
-                <th className="px-5 py-3 text-left w-[20%]">Level</th>
-                <th className="px-5 py-3 text-left w-[15%]">Registration Date</th>
-                <th className="px-5 py-3 text-left w-[10%]">Actions</th>
+                <th className="px-5 py-3 text-left">Teacher</th>
+                <th className="px-5 py-3 text-left">Languages</th>
+                <th className="px-5 py-3 text-left">Since</th>
+                <th className="px-5 py-3 text-left">Actions</th>
               </tr>
             </thead>
 
             <tbody>
-              {filteredProfesores.map((p, i) => (
-                <tr
-                  key={i}
-                  className="border-t border-gray-100 hover:bg-gray-50 transition"
-                >
+              {filtered.map((p: any, i: number) => (
+                <tr key={i} className="border-t hover:bg-gray-50">
                   {/* NAME */}
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
-                        {p.nombre?.charAt(0)?.toUpperCase() ?? "T"}
+                      <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+                        {p.nombre?.charAt(0)?.toUpperCase()}
                       </div>
-                      <div className="flex flex-col">
-                        <span className="font-medium text-gray-800">
+                      <div>
+                        <div className="font-medium">
                           {p.nombre} {p.apellido}
-                        </span>
-                        <span className="text-xs text-gray-500 flex items-center gap-1">
-                          <FiMail size={12} />
-                          {p.email}
-                        </span>
+                        </div>
+                        <div className="text-xs text-gray-500 flex items-center gap-1">
+                          <FiMail size={12} /> {p.email}
+                        </div>
                       </div>
                     </div>
                   </td>
 
-                  {/* LANGUAGE */}
-                  <td className="px-5 py-4 text-gray-600">
-                    <span className="inline-flex items-center gap-1">
-                      <FiGlobe size={12} className="text-gray-400" />
-                      {p.idioma || "-"}
-                    </span>
-                  </td>
-
-                  {/* LEVEL */}
-                  <td className="px-5 py-4 text-gray-600">
-                    <span className="inline-flex items-center gap-1">
-                      <FiFlag size={12} className="text-gray-400" />
-                      {p.nivel || "-"}
-                    </span>
+                  {/* LANGUAGES */}
+                  <td className="px-5 py-4">
+                    {p.idiomasProfesor?.length === 0 ? (
+                      <span className="text-gray-400 text-xs">No languages</span>
+                    ) : (
+                      <div className="flex flex-col gap-1">
+                        {p.idiomasProfesor.map((it: any, idx: number) => (
+                          <div
+                            key={idx}
+                            className="flex items-center gap-2 text-xs text-gray-700"
+                          >
+                            <FiGlobe size={12} /> {it.idioma} —
+                            <FiFlag size={12} /> {it.nivel}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </td>
 
                   {/* DATE */}
                   <td className="px-5 py-4 text-gray-600">
-                    <span className="inline-flex items-center gap-1">
-                      <FiCalendar size={12} className="text-gray-400" />
-                      {p.createdAt ? (
-                        new Date(
+                    {p.createdAt
+                      ? new Date(
                           p.createdAt?.toDate
                             ? p.createdAt.toDate()
                             : p.createdAt
-                        ).toLocaleDateString("en-US")
-                      ) : (
-                        "N/A"
-                      )}
-                    </span>
+                        ).toLocaleDateString()
+                      : "N/A"}
                   </td>
 
                   {/* ACTIONS */}
-                  <td className="px-5 py-4 flex gap-2">
+                  <td className="px-5 py-4 flex gap-3">
                     <button
-                      onClick={() => openModalForEdit(p)}
-                      className="flex items-center gap-1 text-blue-600 hover:text-blue-800 text-xs font-semibold"
+                      onClick={() => openEdit(p)}
+                      className="text-blue-600 hover:text-blue-800 text-xs flex items-center gap-1"
                     >
                       <FiEdit2 size={12} /> Edit
                     </button>
 
                     <button
-                      onClick={() => handleDelete(p.id)}
-                      className="flex items-center gap-1 text-red-600 hover:text-red-800 text-xs font-semibold"
+                      onClick={() => deleteTeacher(p)}
+                      className="text-red-600 hover:text-red-800 text-xs flex items-center gap-1"
                     >
                       <FiTrash2 size={12} /> Delete
                     </button>
                   </td>
-
                 </tr>
               ))}
             </tbody>
+
           </table>
         </div>
       )}
@@ -338,169 +318,150 @@ export default function TeachersPage() {
       {/* MODAL */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogPortal>
-          <DialogOverlay className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" />
+          <DialogOverlay className="fixed inset-0 bg-black/40 backdrop-blur-sm" />
           <DialogContent
             className="
-              fixed left-1/2 top-1/2 z-50
+              fixed left-1/2 top-1/2
               -translate-x-1/2 -translate-y-1/2
-              w-[92vw] max-w-md
-              rounded-xl border bg-white p-6 shadow-2xl
-              max-h-[90vh] overflow-y-auto
-              focus:outline-none
+              z-50 w-[92vw] max-w-md
+              rounded-xl bg-white p-6 shadow-xl
             "
           >
             <VisuallyHidden>
               <DialogTitle>
-                {editingProfesor ? "Edit Teacher" : "New Teacher"}
+                {editing ? "Edit Teacher" : "Create Teacher"}
               </DialogTitle>
             </VisuallyHidden>
 
-            {/* TITLE ROW */}
-            <div className="mb-5 flex items-center justify-between">
-              <h2 className="flex items-center gap-2 text-xl font-semibold text-gray-800">
-                <FiUser className="text-blue-600" />
-                {editingProfesor ? "Edit Teacher" : "New Teacher"}
-              </h2>
-            </div>
+            <h2 className="text-xl font-semibold flex items-center gap-2 mb-4">
+              <FiUser className="text-blue-600" />
+              Edit Teacher
+            </h2>
 
-            {/* FORM */}
-            <div className="space-y-5">
-
-              {/* NAME / LAST NAME */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex flex-col">
-                  <label className="text-sm font-medium text-gray-600 mb-1">
-                    First Name
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="John"
-                    value={formData.nombre}
-                    onChange={(e) =>
-                      setFormData({ ...formData, nombre: e.target.value })
-                    }
-                    className="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div className="flex flex-col">
-                  <label className="text-sm font-medium text-gray-600 mb-1">
-                    Last Name
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Doe"
-                    value={formData.apellido}
-                    onChange={(e) =>
-                      setFormData({ ...formData, apellido: e.target.value })
-                    }
-                    className="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
+            <div className="space-y-4">
+              {/* FIRST / LAST NAME */}
+              <div className="grid grid-cols-2 gap-4">
+                <input
+                  className="border p-2 rounded"
+                  placeholder="First name"
+                  value={formData.firstName}
+                  onChange={(e) =>
+                    setFormData({ ...formData, firstName: e.target.value })
+                  }
+                />
+                <input
+                  className="border p-2 rounded"
+                  placeholder="Last name"
+                  value={formData.lastName}
+                  onChange={(e) =>
+                    setFormData({ ...formData, lastName: e.target.value })
+                  }
+                />
               </div>
 
               {/* EMAIL */}
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-1">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  placeholder="teacher@further.edu"
-                  value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
-                  className="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-                />
+              <input
+                className="border p-2 rounded w-full"
+                placeholder="Email"
+                value={formData.email}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
+              />
+
+              {/* LANGUAGES */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">Languages</span>
+                  <Button
+                    size="sm"
+                    onClick={addIdioma}
+                    className="text-xs bg-blue-500 text-white"
+                  >
+                    Add
+                  </Button>
+                </div>
+
+                <div className="space-y-3">
+                  {formData.idiomas.map((it, idx) => (
+                    <div
+                      key={idx}
+                      className="flex gap-2 items-center border p-2 rounded"
+                    >
+                      <select
+                        className="border p-1 rounded flex-1"
+                        value={it.idioma}
+                        onChange={(e) => {
+                          const updated = [...formData.idiomas];
+                          updated[idx].idioma = e.target.value;
+                          setFormData({ ...formData, idiomas: updated });
+                        }}
+                      >
+                        <option value="">Idioma</option>
+                        <option value="ingles">Inglés</option>
+                        <option value="espanol">Español</option>
+                        <option value="portugues">Portugués</option>
+                        <option value="italiano">Italiano</option>
+                        <option value="frances">Francés</option>
+                      </select>
+
+                      <select
+                        className="border p-1 rounded flex-1"
+                        value={it.nivel}
+                        onChange={(e) => {
+                          const updated = [...formData.idiomas];
+                          updated[idx].nivel = e.target.value;
+                          setFormData({ ...formData, idiomas: updated });
+                        }}
+                      >
+                        <option value="">Nivel</option>
+                        <option value="A1">A1</option>
+                        <option value="A2">A2</option>
+                        <option value="B1">B1</option>
+                        <option value="B2">B2</option>
+                        <option value="B2.5">B2.5</option>
+                        <option value="C1">C1</option>
+                        <option value="C2">C2</option>
+                      </select>
+
+                      <FiX
+                        className="cursor-pointer text-red-500"
+                        onClick={() => {
+                          const updated = formData.idiomas.filter(
+                            (_, j) => j !== idx
+                          );
+                          setFormData({ ...formData, idiomas: updated });
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* DATE */}
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-1">
-                  Registration Date
-                </label>
-                <input
-                  type="date"
-                  value={formData.createdAt || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, createdAt: e.target.value })
-                  }
-                  className="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              {/* LANGUAGE & LEVEL */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-                {/* LANGUAGE */}
-                <div className="flex flex-col">
-                  <label className="text-sm font-medium text-gray-600 mb-1">
-                    Language
-                  </label>
-                  <select
-                    value={formData.idioma}
-                    onChange={(e) =>
-                      setFormData({ ...formData, idioma: e.target.value })
-                    }
-                    className="w-full rounded-lg border px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="" disabled hidden>
-                      Select language
-                    </option>
-                    <option value="English">English</option>
-                    <option value="Spanish">Spanish</option>
-                    <option value="Portuguese">Portuguese</option>
-                    <option value="Italian">Italian</option>
-                    <option value="French">French</option>
-                  </select>
-                </div>
-
-                {/* LEVEL */}
-                <div className="flex flex-col">
-                  <label className="text-sm font-medium text-gray-600 mb-1">
-                    Level
-                  </label>
-                  <select
-                    value={formData.nivel}
-                    onChange={(e) =>
-                      setFormData({ ...formData, nivel: e.target.value })
-                    }
-                    className="w-full rounded-lg border px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="" disabled hidden>
-                      Select level
-                    </option>
-                    <option value="A1">A1 - Beginner</option>
-                    <option value="A2">A2 - Elementary</option>
-                    <option value="B1">B1 - Intermediate</option>
-                    <option value="B2">B2 - Upper Intermediate</option>
-                    <option value="C1">C1 - Advanced</option>
-                    <option value="C2">C2 - Mastery</option>
-                  </select>
-                </div>
-
-              </div>
+              <input
+                className="border p-2 rounded w-full"
+                type="date"
+                value={formData.createdAt}
+                onChange={(e) =>
+                  setFormData({ ...formData, createdAt: e.target.value })
+                }
+              />
             </div>
 
-            {/* ACTION BUTTONS */}
-            <div className="mt-6 flex justify-end gap-3">
+            {/* ACTIONS */}
+            <div className="mt-6 flex justify-end gap-2">
               <Button
                 variant="outline"
                 onClick={() => setIsModalOpen(false)}
-                className="rounded-lg border-gray-300 px-4 text-gray-700 hover:bg-gray-100"
               >
                 Cancel
               </Button>
 
-              <Button
-                onClick={handleSave}
-                className="rounded-lg bg-blue-600 px-4 text-white hover:bg-blue-700"
-              >
-                {editingProfesor ? "Save Changes" : "Create Teacher"}
+              <Button className="bg-blue-600 text-white" onClick={handleSave}>
+                Save
               </Button>
             </div>
-
           </DialogContent>
         </DialogPortal>
       </Dialog>

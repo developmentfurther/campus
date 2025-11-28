@@ -3,7 +3,7 @@
 import { useDashboardUI } from "@/stores/useDashboardUI";
 import ProfesorHomePage from "./ProfesorHomePage";
 import ProfesorCoursesPage from "./ProfesorCoursesPage";
-import ProfesorEntregasPage from "./ProfesorEntregasPage";
+import ProfesorPerfil from "./ProfesorPerfil";
 // import ProfesorStudentsPage from "./ProfesorStudentsPage"; // futuro
 
 export default function ProfesorDashboard() {
@@ -13,14 +13,12 @@ export default function ProfesorDashboard() {
     case "home":
       return <ProfesorHomePage />;
 
-    case "evaluaciones":
-      return <ProfesorEntregasPage />;
 
     case "cursos":
       return <ProfesorCoursesPage />;
 
-    // case "alumnos":
-    //   return <ProfesorStudentsPage />;
+    case "perfil":
+      return <ProfesorPerfil />;
 
     default:
       return <ProfesorHomePage />;

@@ -628,7 +628,7 @@ function ExerciseRunner({
       correct: prev.score?.correct,
       total: prev.score?.total,
     });
-  }, [currentExerciseKey]); // 🔧 SOLO depende de currentExerciseKey
+  }, [currentExerciseKey, prevProgress]); // 🔧 SOLO depende de currentExerciseKey
 
   // ✅ Evaluación (sin cambios en la lógica interna)
   const evaluate = async () => {
@@ -924,53 +924,191 @@ function ExerciseRunner({
     );
   };
 
-  const renderFillBlank = (ex: any, answers: any, submitted: boolean, handleAnswer: any) => {
+const renderFillBlank = (ex, answers, submitted, handleAnswer) => {
+  const parts = ex.sentence.split("***");
+
   return (
-    <div className="space-y-3 max-w-[650px]">
-      {ex.answers.map((_: any, idx: number) => {
-        const userAns = answers[ex.id]?.[idx] || "";
-        const correct = ex.answers[idx];
+    <div className="text-lg leading-relaxed max-w-[700px] flex flex-wrap gap-2">
+      {parts.map((part, i) => (
+        <span key={i} className="flex items-center gap-2">
+          {part}
 
-        const isCorrect =
-          submitted &&
-          userAns.trim().toLowerCase() === correct.trim().toLowerCase();
-
-        const base =
-          "px-4 py-2 rounded-xl bg-white border text-sm transition w-full";
-
-        const color = !submitted
-          ? "border-slate-300 focus:ring-2 focus:ring-blue-300"
-          : isCorrect
-          ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-          : "border-rose-300 bg-rose-50 text-rose-700";
-
-        return (
-          <div key={idx} className="space-y-1">
+          {i < ex.answers.length && (
             <input
               type="text"
               disabled={submitted}
-              className={`${base} ${color}`}
-              placeholder={`Respuesta ${idx + 1}`}
-              value={userAns}
+              className={`px-3 py-1 rounded-lg border ${
+                submitted
+                  ? answers[ex.id]?.[i]?.trim().toLowerCase() === ex.answers[i].trim().toLowerCase()
+                    ? "bg-emerald-50 border-emerald-300 text-emerald-800"
+                    : "bg-rose-50 border-rose-300 text-rose-800"
+                  : "border-slate-300"
+              }`}
+              value={answers[ex.id]?.[i] || ""}
               onChange={(e) => {
-                const val = e.target.value;
-                const current = Array.isArray(answers[ex.id])
-                  ? [...answers[ex.id]]
-                  : [];
-                current[idx] = val;
-                handleAnswer(ex.id, current);
+                const arr = Array.isArray(answers[ex.id]) ? [...answers[ex.id]] : [];
+                arr[i] = e.target.value;
+                handleAnswer(ex.id, arr);
               }}
             />
+          )}
+        </span>
+      ))}
+    </div>
+  );
+};
 
-            {/* Feedback si es incorrecto */}
-            {submitted && !isCorrect && (
+const renderText = (ex: any, answers: any, submitted: boolean, handleAnswer: any) => {
+  const key = ex.id;
+  const userText = answers[key] || "";
+  const max = ex.maxLength || 500;
+
+  const isValid = submitted && userText.trim().length > 0;
+
+  return (
+    <div className="space-y-4 max-w-[700px]">
+      {/* Consigna */}
+      <p className="font-medium text-slate-900">{ex.prompt}</p>
+
+      {/* Textarea */}
+      <textarea
+        rows={4}
+        disabled={submitted}
+        maxLength={max}
+        value={userText}
+        onChange={(e) => handleAnswer(key, e.target.value)}
+        className={`w-full p-3 rounded-xl border text-sm bg-white transition
+          ${
+            !submitted
+              ? "border-slate-300 focus:ring-2 focus:ring-blue-300"
+              : isValid
+              ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+              : "border-rose-300 bg-rose-50 text-rose-700"
+          }`}
+      />
+
+      {/* Feedback */}
+      {submitted && !isValid && (
+        <p className="text-xs text-rose-600">Este campo no puede estar vacío.</p>
+      )}
+
+      <p className="text-xs text-slate-400">
+        Máximo {max} caracteres • Usaste {userText.length}
+      </p>
+    </div>
+  );
+};
+
+
+const renderMatching = (ex: any, answers: any, submitted: boolean, handleAnswer: any) => {
+  return (
+    <div className="space-y-4 max-w-[650px]">
+
+      {ex.pairs.map((pair: any, idx: number) => {
+        const key = `${ex.id}::${idx}`;
+        const selected = answers[key] ?? "";
+
+        return (
+          <div key={idx} className="p-4 border rounded-xl bg-white space-y-2">
+            <p className="font-medium text-slate-700">Emparejar:</p>
+
+            <div className="flex gap-4 items-center">
+              <span className="font-semibold text-slate-900">{pair.left}</span>
+
+              <select
+                disabled={submitted}
+                className="border rounded-lg px-3 py-2"
+                value={selected}
+                onChange={(e) => handleAnswer(key, e.target.value)}
+              >
+                <option value="">Seleccionar...</option>
+                {ex.pairs.map((p: any, j: number) => (
+                  <option key={j} value={p.right}>
+                    {p.right}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {submitted && selected !== pair.right && (
               <p className="text-xs text-rose-600">
-                Correcta: <b>{correct}</b>
+                Correcto: <b>{pair.right}</b>
               </p>
             )}
           </div>
         );
       })}
+    </div>
+  );
+};
+
+const renderReorder = (ex: any, answers: any, submitted: boolean, handleAnswer: any) => {
+  const key = ex.id;
+
+  // Crear estado inicial (si no existe)
+  const currentOrder =
+    answers[key] ??
+    ex.items.map((_: any, idx: number) => idx); // orden inicial
+
+  const move = (from: number, to: number) => {
+    if (submitted) return;
+    if (to < 0 || to >= currentOrder.length) return;
+
+    const newOrder = [...currentOrder];
+    [newOrder[from], newOrder[to]] = [newOrder[to], newOrder[from]];
+
+    handleAnswer(key, newOrder);
+  };
+
+  const isCorrect =
+    submitted &&
+    JSON.stringify(currentOrder) === JSON.stringify(ex.correctOrder);
+
+  return (
+    <div className="space-y-4 max-w-[700px]">
+      <h4 className="font-semibold text-slate-900">{ex.title}</h4>
+
+      <div className="space-y-2">
+        {currentOrder.map((itemIndex: number, pos: number) => (
+          <div
+            key={pos}
+            className={`flex items-center justify-between p-3 rounded-lg border bg-white ${
+              submitted
+                ? isCorrect
+                  ? "border-emerald-300 bg-emerald-50"
+                  : "border-rose-300 bg-rose-50"
+                : "border-slate-300"
+            }`}
+          >
+            <span className="text-slate-800">{ex.items[itemIndex]}</span>
+
+            {!submitted && (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => move(pos, pos - 1)}
+                  className="px-2 py-1 rounded bg-slate-200 hover:bg-slate-300 text-xs"
+                >
+                  ↑
+                </button>
+                <button
+                  onClick={() => move(pos, pos + 1)}
+                  className="px-2 py-1 rounded bg-slate-200 hover:bg-slate-300 text-xs"
+                >
+                  ↓
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {submitted && !isCorrect && (
+        <p className="text-xs text-rose-600">
+          Orden correcto:
+          <br />
+          {ex.correctOrder.map((i: number) => ex.items[i]).join(" → ")}
+        </p>
+      )}
     </div>
   );
 };
@@ -1190,11 +1328,20 @@ const renderSentenceCorrection = (
             </h4>
           )}
 
+{ex.type === "matching" &&
+  renderMatching(ex, answers, submitted, handleAnswer)}
 
 {ex.type === "speaking" && renderSpeaking(ex)}
 
 {ex.type === "fill_blank" &&
   renderFillBlank(ex, answers, submitted, handleAnswer)}
+
+{ex.type === "text" &&
+  renderText(ex, answers, submitted, handleAnswer)}
+
+{ex.type === "reorder" &&
+  renderReorder(ex, answers, submitted, handleAnswer)}
+
 
 {ex.type === "reflection" &&
   renderReflection(ex, answers, submitted, handleAnswer)}
@@ -1589,12 +1736,13 @@ const currentUnit = units[activeU];
             {resolvedVideoUrl && (
               <div className="aspect-video rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
                 <iframe
-                  id="vimeo-player"
-                  src={resolvedVideoUrl}
-                  className="w-full h-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
+  id="vimeo-player"
+  src={resolvedVideoUrl}
+  className="w-full h-full"
+  allow="autoplay; fullscreen; picture-in-picture; encrypted-media; web-share"
+  allowFullScreen
+/>
+
               </div>
             )}
 

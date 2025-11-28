@@ -153,6 +153,8 @@ const loadAlumnos = async () => {
           const rawLanguage = u.learningLanguage || u.idioma || u.language || "";
           const rawLevel = u.learningLevel || u.nivel || "";
 
+          if (u.role === "profesor" || u.role === "admin") continue;
+
           alumnosCampus.push({
             uid: u.uid,
             email: u.email,
@@ -442,35 +444,47 @@ const getCourseById = async (id: string) => {
 const loadProfesores = async () => {
   setLoadingProfesores(true);
   try {
-    const profesoresRef = collection(db, "profesores");
-    const snap = await getDocs(profesoresRef);
-    const allProfes: any[] = [];
+    const profesoresList = [];
+
+    const alumnosRef = collection(db, "alumnos");
+    const snap = await getDocs(alumnosRef);
 
     snap.forEach((batchDoc) => {
       const data = batchDoc.data();
 
       for (const key in data) {
-        // 🔥 Aceptar AMBOS formatos
-        if (key.startsWith("profesor_") || key.startsWith("prof_")) {
-          allProfes.push({
-            id: key,
-            batchId: batchDoc.id,
-            ...data[key],
-          });
+        // Buscamos usuarios dentro del batch
+        if (key.startsWith("user_")) {
+          const u = data[key];
+
+          // 🔥 Filtrar solo PROFESORES
+          if (u.role === "profesor") {
+            profesoresList.push({
+              uid: u.uid,
+              email: u.email,
+              nombre: u.firstName || u.nombre || "",
+              apellido: u.lastName || "",
+              idiomasProfesor: u.idiomasProfesor || [],
+              batchId: batchDoc.id,
+              userKey: key,
+              createdAt: u.createdAt ?? null,
+            });
+          }
         }
       }
     });
 
-    setProfesores(allProfes);
-    console.log("✅ Profesores cargados:", allProfes.length);
+    setProfesores(profesoresList);
+    console.log("👨‍🏫 Profesores cargados:", profesoresList.length);
 
   } catch (err) {
-    console.error("❌ [AuthContext] Error cargando profesores:", err);
+    console.error("❌ Error cargando profesores:", err);
     toast.error("Error cargando profesores");
   } finally {
     setLoadingProfesores(false);
   }
 };
+
 
 
 /* ==========================================================
@@ -625,14 +639,19 @@ const getCourseProgress = async (uid: string, courseId: string) => {
       loadAnuncios?.()
     ]);
   } else if (role === "alumno") {
-    await Promise.all([
-      loadAlumnos?.(),
-      loadMisCursos?.(user.uid),
-    ]);
-  } else {
-    // fallback (profesor u otros)
-    await loadAllCursos?.();
-  }
+  await Promise.all([
+    loadAlumnos?.(),
+    loadMisCursos?.(user.uid),
+  ]);
+} else if (role === "profesor") {
+  await Promise.all([
+    loadAllCursos?.(),
+    loadProfesores?.(),
+  ]);
+} else {
+  await loadAllCursos?.();
+}
+
 };
 
   /* ==========================================================
@@ -669,37 +688,51 @@ const getCourseProgress = async (uid: string, courseId: string) => {
         }
 
         // 🔥 PASO 4: Obtener datos completos del batch
-        if (profile?.batchId && profile?.userKey) {
-          const batchRef = doc(db, "alumnos", profile.batchId);
-          const snap = await getDoc(batchRef);
+        // 🔥 PASO 4: Obtener datos completos del batch
+if (profile?.batchId && profile?.userKey) {
+  const batchRef = doc(db, "alumnos", profile.batchId);
+  const snap = await getDoc(batchRef);
 
-          if (snap.exists()) {
-            const data = snap.data()[profile.userKey] || {};
-            profile = {
-              ...profile,
-              ...data,
-            };
-          }
-        }
+  if (snap.exists()) {
+    const data = snap.data()[profile.userKey] || {};
 
-        // 🔥 PASO 5: Unificar campos de idioma
-        const resolvedLanguage =
-          profile?.learningLanguage || 
-          profile?.language ||
-          profile?.idioma ||
-          "en";
+    // 🔥 Unificar datos del usuario
+    profile = { ...profile, ...data };
 
-        profile = {
-          ...profile,
-          learningLanguage: resolvedLanguage,
-          language: resolvedLanguage,
-          idioma: resolvedLanguage,
-        };
+    // ⚠️ Si es PROFESOR, inicializar idiomas si no existen
+    if (profile.role === "profesor") {
+      profile.idiomasProfesor = Array.isArray(data.idiomasProfesor)
+        ? data.idiomasProfesor
+        : [];
 
-        setUserProfile(profile);
-        setLang(resolvedLanguage);
+      // 👇 NO aplicar lógica de idioma del alumno
+      setLang("en"); // o idioma por defecto global
+    }
+  }
+}
 
-        console.log("🌍 Idioma final del usuario:", resolvedLanguage);
+
+        if (profile.role === "profesor") {
+  // 🔥 NO usar idiomas de alumno
+  setUserProfile(profile);
+} else {
+  // 🔥 Alumno sí usa learningLanguage
+  const resolvedLanguage =
+    profile?.learningLanguage ||
+    profile?.language ||
+    profile?.idioma ||
+    "en";
+
+  profile = {
+    ...profile,
+    learningLanguage: resolvedLanguage,
+    language: resolvedLanguage,
+    idioma: resolvedLanguage,
+  };
+
+  setUserProfile(profile);
+  setLang(resolvedLanguage);
+}
 
         // 🔥 PASO 6: Determinar rol
         const resolvedRole = profile?.role || "alumno";
@@ -711,14 +744,22 @@ const getCourseProgress = async (uid: string, courseId: string) => {
         // 🔥 PASO 8: Cargar datos según rol
         if (resolvedRole === "alumno") {
   await loadMisCursos(firebaseUser.uid);
-  await loadAnuncios(); // 👈 NUEVO
-} else {
-  await Promise.all([
-    loadAllCursos(),
-    loadProfesores(),
-  ]);
-  await loadAnuncios(); // 👈 NUEVO
+  await loadAnuncios();
 }
+
+if (resolvedRole === "profesor") {
+  await loadAllCursos();
+  await loadProfesores();
+  await loadAnuncios();
+}
+
+if (resolvedRole === "admin") {
+  await loadAlumnos();
+  await loadAllCursos();
+  await loadProfesores();
+  await loadAnuncios();
+}
+
 
       } else {
         // Usuario no logueado

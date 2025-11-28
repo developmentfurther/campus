@@ -53,19 +53,19 @@ export default function AnuncioModal({ mode, anuncio, onClose, onSaved }) {
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl p-6 w-full max-w-lg space-y-4">
         <h2 className="text-xl font-bold">
-          {mode === "create" ? "Crear anuncio" : "Editar anuncio"}
+          {mode === "create" ? "Create announcement" : "Edit announcement"}
         </h2>
 
         <input
           className="w-full p-3 border rounded"
-          placeholder="Título"
+          placeholder="Title"
           value={titulo}
           onChange={(e) => setTitulo(e.target.value)}
         />
 
         <input
           className="w-full p-3 border rounded"
-          placeholder="Subtítulo"
+          placeholder="Subtitle"
           value={subtitulo}
           onChange={(e) => setSubtitulo(e.target.value)}
         />
@@ -73,7 +73,7 @@ export default function AnuncioModal({ mode, anuncio, onClose, onSaved }) {
         <textarea
           className="w-full p-3 border rounded"
           rows={4}
-          placeholder="Contenido breve del anuncio..."
+          placeholder="Brief content of the announcement..."
           value={contenido}
           onChange={(e) => setContenido(e.target.value)}
         />
@@ -92,10 +92,10 @@ export default function AnuncioModal({ mode, anuncio, onClose, onSaved }) {
 
         <div className="flex gap-3 justify-end">
           <Button variant="outline" onClick={onClose}>
-            Cancelar
+            Cancel
           </Button>
           <Button onClick={handleSave} disabled={loading}>
-            {loading ? "Guardando..." : "Guardar"}
+            {loading ? "Saving..." : "Save"}
           </Button>
         </div>
       </div>

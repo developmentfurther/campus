@@ -27,14 +27,11 @@ export default function SidebarProfesor() {
   // 📘 Menús
   const menuCampus = [
     { id: "home", label: "Campus", icon: <FiHome size={16} /> },
-    { id: "cursos", label: "Mis cursos", icon: <FiBookOpen size={16} /> },
-    { id: "alumnos", label: "Alumnos", icon: <FiUsers size={16} /> },
-    { id: "evaluaciones", label: "Evaluaciones", icon: <FiClipboard size={16} /> },
+    { id: "cursos", label: "My Materials", icon: <FiBookOpen size={16} /> },
   ];
 
   const menuPersonal = [
-    { id: "perfil", label: "Perfil", icon: <FiUser size={16} /> },
-    { id: "mensajes", label: "Mensajes", icon: <FiMessageSquare size={16} /> },
+    { id: "perfil", label: "Profile", icon: <FiUser size={16} /> }
   ];
 
   return (
@@ -44,12 +41,12 @@ export default function SidebarProfesor() {
         <h1 className="text-xl font-bold text-gray-800 tracking-tight">
           Further Campus
         </h1>
-        <p className="text-xs text-gray-500 mt-1">Portal del profesor</p>
+        <p className="text-xs text-gray-500 mt-1">Teacher Portal</p>
       </div>
 
       {/* NAVIGATION */}
       <nav className="flex-1 px-3 py-5 overflow-y-auto">
-        <SectionTitle>Mi Campus</SectionTitle>
+        <SectionTitle>My Campus</SectionTitle>
         <ul className="space-y-1 mb-6">
           {menuCampus.map((item) => (
             <SidebarButton
@@ -63,7 +60,7 @@ export default function SidebarProfesor() {
           ))}
         </ul>
 
-        <SectionTitle>Mi Cuenta</SectionTitle>
+        <SectionTitle>My Account</SectionTitle>
         <ul className="space-y-1">
           {menuPersonal.map((item) => (
             <SidebarButton
@@ -97,7 +94,7 @@ export default function SidebarProfesor() {
           className="flex items-center justify-center gap-2 w-full px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium text-sm transition"
         >
           <FiLogOut size={16} />
-          Cerrar sesión
+          Log Out
         </button>
 
         <p className="text-xs text-gray-400 text-center mt-5">

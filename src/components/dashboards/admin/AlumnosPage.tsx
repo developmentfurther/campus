@@ -15,7 +15,7 @@ import { db } from "@/lib/firebase";
 import { toast } from "sonner";
 
 export default function StudentsPage() {
-  const { alumnos, loading } = useAuth();
+  const { alumnos, loading, reloadData  } = useAuth();
 
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -114,10 +114,14 @@ const filteredAlumnos = useMemo(() => {
       if (!userKey) return;
 
       await updateDoc(batchRef, {
-        [`${userKey}.${field}`]: value,
-      });
+  [`${userKey}.${field}`]: value,
+});
 
-      toast.success("Updated successfully.");
+// 🔥 Esto refresca el listado en tiempo real
+await reloadData?.();
+
+toast.success("Updated successfully.");
+
     } catch (err) {
       console.error(err);
       toast.error("Error saving changes.");
