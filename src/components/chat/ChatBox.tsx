@@ -1,13 +1,16 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { FiSend, FiStopCircle } from "react-icons/fi";
+import { FiSend, FiStopCircle, FiZap } from "react-icons/fi";
 import clsx from "clsx";
 import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/lib/firebase";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import MessageBubble from "./MessageBubble";
 import TypingIndicator from "./TypingIndicator";
+import Image from "next/image";
+import { useI18n } from "@/contexts/I18nContext";
+
 
 /* =============================================
    🔤 Markdown => HTML (negrita, cursiva)
@@ -60,6 +63,8 @@ interface Message {
 
 export default function ChatBox() {
   const { userProfile, user } = useAuth();
+  const { t } = useI18n();
+
 
   const rawLang = userProfile?.learningLanguage?.toLowerCase() || "en";
   const language = languageKeyMap[rawLang] ?? "english";
@@ -71,7 +76,7 @@ export default function ChatBox() {
   if (!userProfile) {
     return (
       <div className="p-6 text-gray-500 text-center">
-        Loading chat configuration...
+        {t("chat.loadingProfile")}
       </div>
     );
   }
@@ -79,7 +84,7 @@ export default function ChatBox() {
   if (!language || !level) {
     return (
       <div className="p-6 text-gray-500 text-center">
-        Please complete your profile to start the conversational chat.
+        {t("chat.incompleteProfile")}
       </div>
     );
   }
@@ -226,7 +231,8 @@ export default function ChatBox() {
         ...prev,
         {
           role: "assistant",
-          content: "The tutor had a small connection issue but you can continue normally.",
+          content: t("chat.errors.connection")
+
         },
       ]);
     } finally {
@@ -257,9 +263,8 @@ export default function ChatBox() {
           role: "assistant",
           content: `
 <div style="color:#b91c1c; background:#fee2e2; padding:12px; border-radius:8px; border:1px solid #fecaca;">
-<strong>⚠️ Conversation too short</strong><br/>
-You need to chat a little more before requesting a summary.<br/>
-Try sending a few more messages!
+<strong>${t("chat.errors.shortConversationTitle")}</strong><br/>
+${t("chat.errors.shortConversationBody")}
 </div>
           `,
         },
@@ -288,9 +293,8 @@ Try sending a few more messages!
             role: "assistant",
             content: `
 <div style="color:#b91c1c; background:#fee2e2; padding:12px; border-radius:8px; border:1px solid #fecaca;">
-<strong>⚠️ Conversation too short</strong><br/>
-The system needs more content to generate useful feedback.<br/>
-Try chatting a bit more before finishing.
+<strong>${t("chat.errors.shortTitle")}</strong><br/>
+${t("chat.errors.shortBody2")}
 </div>
             `,
           },
@@ -306,9 +310,8 @@ Try chatting a bit more before finishing.
             role: "assistant",
             content: `
 <div style="color:#92400e; background:#fef3c7; padding:12px; border-radius:8px; border:1px solid #fde68a;">
-<strong>⚠️ Partial Summary</strong><br/>
-The model was overloaded and could not generate a full summary.<br/>
-Please try again in a moment.
+<strong>${t("chat.errors.partialTitle")}</strong><br/>
+${t("chat.errors.partialBody")}
 </div>
             `,
           },
@@ -373,69 +376,121 @@ Please try again.
   };
 
   /* =============================================
-     UI Final
+     UI Final - OPTIMIZADO
   ============================================= */
   return (
-    <div className="w-full max-w-3xl mx-auto bg-white rounded-xl shadow-lg border flex flex-col h-[80vh] overflow-hidden">
+    <div className="w-full max-w-4xl mx-auto flex flex-col h-[85vh]">
+      
+      {/* Main container */}
+      <div className="flex flex-col h-full rounded-3xl overflow-hidden shadow-2xl border-2 border-[#EE7203]">
 
-      {/* HEADER */}
-      <div className="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-xl">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-800">Language Tutor</h2>
-          <p className="text-xs text-gray-500">
-            {language.toUpperCase()} · Level {level}
-          </p>
+        {/* HEADER */}
+        <div className="px-8 py-5 bg-gradient-to-r from-[#0C212D] to-[#112C3E] border-b border-[#EE7203]/30">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-4">
+              {/* Avatar */}
+              <div className="relative">
+                <Image
+                  src="/images/avatar.png"
+                  alt="Mr Further"
+                  width={52}
+                  height={52}
+                  className="rounded-full border-2 border-[#EE7203] object-cover"
+                />
+                <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-[#10b981] rounded-full border-2 border-[#0C212D]"></div>
+              </div>
+
+              <div>
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  Mr Further
+                  <FiZap className="text-[#EE7203]" size={16} />
+                </h2>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="px-2 py-0.5 bg-[#EE7203] text-white text-xs font-bold rounded uppercase">
+                    {language}
+                  </span>
+                  <span className="text-white/50 text-xs">•</span>
+                  <span className="text-white/70 text-xs">Level {level}</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={finishConversation}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 text-white font-semibold text-sm hover:bg-[#FF3816] transition-colors duration-200"
+            >
+              <FiStopCircle size={16} />
+              {t("chat.endConversation")}
+            </button>
+          </div>
         </div>
 
-        <button
-          onClick={finishConversation}
-          className="flex items-center gap-2 bg-red-100 text-red-600 px-3 py-2 rounded-lg hover:bg-red-200 transition"
-        >
-          <FiStopCircle size={16} />
-          End conversation
-        </button>
-      </div>
+        {/* CHAT AREA */}
+        <div className="flex-1 overflow-y-auto bg-gray-50">
+          <div className="p-6 space-y-4">
+            {messages.map((msg, idx) => (
+              <MessageBubble
+                key={idx}
+                role={msg.role}
+                content={msg.role === "assistant" ? formatMarkdown(msg.content) : msg.content}
+                corrections={msg.corrections}
+              />
+            ))}
 
-      {/* CHAT AREA */}
-<div className="flex-1 overflow-y-auto">
-  <div className="p-4 space-y-4 overflow-visible relative">
-    {messages.map((msg, idx) => (
-      <MessageBubble
-        key={idx}
-        role={msg.role}
-        content={msg.role === "assistant" ? formatMarkdown(msg.content) : msg.content}
-        corrections={msg.corrections}
-      />
-    ))}
+            {isTyping && <TypingIndicator />}
+            
+            {isAnalyzing && (
+              <div className="flex items-center gap-2 text-xs text-[#EE7203] font-medium">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#EE7203]"></div>
+                {t("chat.analyzing")}
+              </div>
+            )}
+            <div ref={chatEndRef}></div>
+          </div>
+        </div>
 
-    {isTyping && <TypingIndicator />}
-    {isAnalyzing && (
-      <div className="text-xs text-gray-400 italic">
-        Analyzing your message...
-      </div>
-    )}
-    <div ref={chatEndRef}></div>
-  </div>
-</div>
+        {/* INPUT AREA */}
+        <div className="p-6 bg-white border-t border-gray-200">
+          <div className="flex items-end gap-3">
+            <div className="flex-1 relative">
+              <textarea
+                className="w-full border-2 border-gray-200 rounded-xl p-3 pr-10 resize-none focus:outline-none focus:border-[#EE7203] focus:ring-2 focus:ring-[#EE7203]/20 min-h-[56px] max-h-[120px] transition-colors"
+                placeholder={t("chat.inputPlaceholder")}
+                value={input}
+                onKeyDown={handleKey}
+                onChange={(e) => setInput(e.target.value)}
+              />
+              
+              {input.length > 0 && (
+                <div className="absolute bottom-2 right-3 text-xs text-gray-400">
+                  {input.length}
+                </div>
+              )}
+            </div>
 
+            <button
+              onClick={handleSend}
+              disabled={!input.trim()}
+              className="flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white hover:shadow-lg hover:shadow-[#EE7203]/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 hover:scale-105 active:scale-95"
+            >
+              <FiSend size={20} />
+            </button>
+          </div>
 
+          {/* Tips */}
+          <div className="mt-3 flex items-center gap-3 text-xs text-gray-500">
+            <div className="flex items-center gap-1">
+              <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-[10px]">Enter</kbd>
+              <span>send</span>
+            </div>
+            <span>•</span>
+            <div className="flex items-center gap-1">
+              <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-[10px]">Shift+Enter</kbd>
+              <span>new line</span>
+            </div>
+          </div>
+        </div>
 
-      {/* INPUT */}
-      <div className="p-4 border-t bg-gray-50 rounded-b-xl flex items-center gap-3">
-        <textarea
-          className="flex-1 border rounded-lg p-3 resize-none focus:ring-2 focus:ring-blue-500 min-h-[50px] max-h-[120px]"
-          placeholder="Write your message..."
-          value={input}
-          onKeyDown={handleKey}
-          onChange={(e) => setInput(e.target.value)}
-        />
-
-        <button
-          onClick={handleSend}
-          className="bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition flex items-center justify-center"
-        >
-          <FiSend size={20} />
-        </button>
       </div>
     </div>
   );

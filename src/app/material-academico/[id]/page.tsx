@@ -295,11 +295,8 @@ useEffect(() => {
     if (data?.byLesson) {
       // ✅ Normalizamos todas las keys para evitar duplicados en memoria
 const normalized: Record<string, any> = {};
-Object.entries(data.byLesson || {}).forEach(([key, val]: [string, any]) => {
-  const cleanKey = key
-    .replace("closing-course", "closing")
-    .replace("closing::", "closing-course::");
-  normalized[cleanKey] = val;
+Object.entries(data.byLesson || {}).forEach(([key, val]) => {
+  normalized[key] = val; // NO TOCAR KEYS
 });
 setProgress(normalized);
 
@@ -336,6 +333,12 @@ setProgress(normalized);
     () => units[activeU]?.lessons?.[activeL] || null,
     [units, activeU, activeL]
   );
+
+  useEffect(() => {
+  if (activeLesson) {
+    console.log("🔑 LessonKey ACTUAL:", activeLesson.key);
+  }
+}, [activeLesson]);
 
 
 function normalizeVimeo(url: string) {
@@ -518,6 +521,9 @@ await saveCourseProgress(user.uid, courseId, {
   }
 };
 
+function makeKey(exId: string, qId?: string) {
+  return qId ? `${exId}::${qId}` : exId;
+}
 
 
   /* =========================================================
@@ -549,38 +555,26 @@ function computeStats(byLesson: any, totalLessons: number) {
    💾 Guardar progreso (reemplaza el setProgress actual)
    ========================================================= */
 
+/* ============================================================
+   🧠 ExerciseRunner — VERSIÓN LIMPIA Y CORREGIDA (INTERNA)
+   ============================================================ */
 
-
-
-
-
-/* =========================================================
-   🧠 ExerciseRunner — versión avanzada completa (TSX)
-   ========================================================= */
-
-
-/* =========================================================
-   🧠 ExerciseRunner — VERSIÓN CORREGIDA
-   ========================================================= */
-/* =========================================================
-   🧠 ExerciseRunner — VERSIÓN CORREGIDA
-   ========================================================= */
 function ExerciseRunner({
   ejercicios,
   lessonKey,
-  exerciseIndex, // 🆕 NUEVO: índice del ejercicio actual
+  exerciseIndex,
+  courseId,
   batchId,
   userKey,
-  courseId,
   onSubmit,
 }: {
   ejercicios: any[];
   lessonKey: string;
-  exerciseIndex: number; // 🆕 NUEVO
+  exerciseIndex: number;
+  courseId: string;
   batchId: string;
   userKey: string;
-  courseId: string;
-  onSubmit?: (result: { correct: number; total: number }) => void;
+  onSubmit?: (r: { correct: number; total: number }) => void;
 }) {
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [submitted, setSubmitted] = useState(false);
@@ -591,191 +585,723 @@ function ExerciseRunner({
     total?: number;
   } | null>(null);
 
-  const { user, saveCourseProgress } = useAuth();
-  const prevProgress = (progress as any) || {};
+  const { user, saveCourseProgress, getCourseProgress } = useAuth();
 
-  // 🆕 CONSTRUIR KEY ÚNICA POR EJERCICIO
-  const currentExerciseKey = `${lessonKey}::ex${exerciseIndex}`;
+  // 🔥 KEY GLOBAL ÚNICA
+  const currentExerciseKey = useMemo(
+    () => `${lessonKey}::ex${exerciseIndex}`,
+    [lessonKey, exerciseIndex]
+  );
 
-  // Manejar respuesta individual
-  const handleAnswer = (id: string, value: any) => {
-    if (submitted) return;
-    setAnswers((prev) => ({ ...prev, [id]: value }));
-  };
+  // 🔑 KEYS INTERNAS (input-level)
+  const makeLocalKey = (exId: string, subId?: string) =>
+    subId
+      ? `${currentExerciseKey}::${exId}::${subId}`
+      : `${currentExerciseKey}::${exId}`;
 
-  // 🆕 Cargar estado previo DEL EJERCICIO ESPECÍFICO
+  /** =====================================================================================
+   * 🧠 RESTORE ESTADO ANTES GUARDADO
+   ===================================================================================== */
   useEffect(() => {
-    const prev = prevProgress?.[currentExerciseKey];
+    async function load() {
+      if (!user?.uid) return;
 
-    if (!prev?.exSubmitted) {
-      // Si no hay intento previo, resetear todo
-      setSubmitted(false);
-      setFeedback(null);
-      setAnswers({});
-      return;
-    }
+      const fullProgress = await getCourseProgress(user.uid, courseId);
+      const prev = fullProgress?.byLesson?.[currentExerciseKey];
 
-    // Si hay intento previo, cargar ese estado
-    setSubmitted(true);
-
-    if (prev.score?.answers) {
-      setAnswers(prev.score.answers);
-    }
-
-    setFeedback({
-      ok: prev.exPassed,
-      msg: prev.exPassed ? "¡Correcto!" : "Intento previo registrado.",
-      correct: prev.score?.correct,
-      total: prev.score?.total,
-    });
-  }, [currentExerciseKey, prevProgress]); // 🔧 SOLO depende de currentExerciseKey
-
-  // ✅ Evaluación (sin cambios en la lógica interna)
-  const evaluate = async () => {
-    if (submitted) return;
-
-    const ex = ejercicios[0];
-    if (!ex) return;
-
-    let correct = 0;
-    let totalItems = 1;
-
-    // [... tu lógica de evaluación existente ...]
-    const evalMC = (ex: any) => {
-      const a = answers[ex.id];
-      return a === ex.correctIndex;
-    };
-
-    const evalTF = (ex: any) => {
-      const a = answers[ex.id];
-      return a === ex.answer;
-    };
-
-    const evalFill = (ex: any) => {
-      const a = answers[ex.id];
-      return (
-        Array.isArray(a) &&
-        Array.isArray(ex.answers) &&
-        a.every(
-          (v, i) =>
-            v?.trim()?.toLowerCase() ===
-            ex.answers[i]?.trim()?.toLowerCase()
-        )
-      );
-    };
-
-    const evalReadingOrListening = (ex: any) => {
-      let okCount = 0;
-      const totalQ = ex.questions?.length || 0;
-
-      ex.questions.forEach((q: any) => {
-        const qKey = `${ex.id}::${q.id}`;
-        const ans = answers[qKey];
-
-        let isOk = false;
-
-        if (q.kind === "mc") {
-          isOk = ans === q.correctIndex;
-        } else if (q.kind === "tf") {
-          isOk = ans === q.answer;
-        }
-
-        if (isOk) okCount++;
-      });
-
-      correct = okCount;
-      totalItems = totalQ || 1;
-    };
-
-    switch (ex.type) {
-      case "multiple_choice":
-        totalItems = 1;
-        correct = evalMC(ex) ? 1 : 0;
-        break;
-
-      case "true_false":
-        totalItems = 1;
-        correct = evalTF(ex) ? 1 : 0;
-        break;
-
-      case "fill_blank":
-        totalItems = 1;
-        correct = evalFill(ex) ? 1 : 0;
-        break;
-
-      case "reading":
-      case "listening":
-        evalReadingOrListening(ex);
-        break;
-
-      case "sentence_correction": {
-        const a = answers[ex.id];
-        if (typeof a === "string") {
-          const matched = ex.correctAnswers.some(
-            (ans: string) =>
-              ans.trim().toLowerCase() === a.trim().toLowerCase()
-          );
-          correct = matched ? 1 : 0;
-        } else {
-          correct = 0;
-        }
-        totalItems = 1;
-        break;
-      }
-
-      case "speaking":
-      case "reflection":
-      case "vocabulary":
-        correct = 1;
-        totalItems = 1;
-        break;
-
-      default:
-        correct = 0;
-        totalItems = 1;
-        break;
-    }
-
-    const passed = correct === totalItems;
-
-    setSubmitted(true);
-    setFeedback({
-      ok: passed,
-      msg: passed
-        ? "✅ ¡Ejercicio completado!"
-        : "❌ Hay respuestas incorrectas.",
-      correct,
-      total: totalItems,
-    });
-
-    try {
-      if (!userProfile?.batchId || !userProfile?.userKey) {
-        console.error("❌ No hay batchId o userKey en userProfile");
+      if (!prev?.exSubmitted) {
+        setSubmitted(false);
+        setAnswers({});
+        setFeedback(null);
         return;
       }
 
-      if (user?.uid && saveCourseProgress) {
-        // 🆕 GUARDAR CON LA KEY ÚNICA DEL EJERCICIO
-        await saveCourseProgress(user.uid, courseId, {
-          [currentExerciseKey]: {
-            exSubmitted: true,
-            exPassed: passed,
-            score: { correct, total: totalItems, answers },
-          },
-        });
+      // 🟢 Ya había respondido → restaurar
+      setSubmitted(true);
 
-        console.log("✅ Progreso guardado para:", currentExerciseKey);
+      const ex = ejercicios[0];
+      const restored: Record<string, any> = {};
+
+      if (!ex) return;
+
+      // restore según tipo
+      if (ex.type === "reading" || ex.type === "listening") {
+        ex.questions.forEach((q: any) => {
+          const key = makeLocalKey(ex.id, q.id);
+          restored[key] = prev.score?.answers?.[key];
+        });
+      } else if (ex.type === "fill_blank") {
+        const key = makeLocalKey(ex.id);
+        restored[key] = prev.score?.answers?.[key] || [];
+      } else if (ex.type === "matching") {
+        ex.pairs.forEach((_: any, idx: number) => {
+          const key = makeLocalKey(ex.id, String(idx));
+          restored[key] = prev.score?.answers?.[key];
+        });
+      } else if (ex.type === "reflection") {
+        const n = ex.ideasCount || 3;
+        for (let i = 0; i < n; i++) {
+          const key = makeLocalKey(ex.id, `idea${i}`);
+          restored[key] = prev.score?.answers?.[key];
+        }
+      } else {
+        const key = makeLocalKey(ex.id);
+        restored[key] = prev.score?.answers?.[key];
       }
-    } catch (err) {
-      console.error("🔥 Error guardando resultado:", err);
+
+      setAnswers(restored);
+
+      setFeedback({
+        ok: prev.exPassed,
+        msg: prev.exPassed ? "Ejercicio aprobado" : "Intento previo guardado",
+        correct: prev.score.correct,
+        total: prev.score.total,
+      });
     }
 
-    onSubmit?.({ correct, total: totalItems });
+    load();
+  }, [user?.uid, courseId, currentExerciseKey, ejercicios]);
+
+/* ============================================================
+   🧠 EVALUATE — versión limpia y estable
+   ============================================================ */
+const evaluate = async () => {
+  if (submitted) return;
+
+  const ex = ejercicios[0];
+  if (!ex) return;
+
+  let correct = 0;
+  let totalItems = 1;
+
+  // ============================================================
+  // 🔸 Helpers por tipo de ejercicio
+  // ============================================================
+
+  // MC
+  const evalMC = (ex: any) => {
+    const key = makeLocalKey(ex.id);
+    const val = answers[key];
+    return val === ex.correctIndex;
   };
 
-  // [... resto del código de renderizado sin cambios ...]
+  // True / False
+  const evalTF = (ex: any) => {
+    const key = makeLocalKey(ex.id);
+    const val = answers[key];
+    return val === ex.answer;
+  };
+
+  // Fill blanks
+  const evalFillBlank = (ex: any) => {
+    const key = makeLocalKey(ex.id);
+    const arr = answers[key];
+    if (!Array.isArray(arr)) return false;
+
+    return arr.every(
+      (v, i) =>
+        String(v).trim().toLowerCase() ===
+        String(ex.answers[i]).trim().toLowerCase()
+    );
+  };
+
+  // Reading / Listening
+  const evalReadingListening = (ex: any) => {
+    let ok = 0;
+
+    ex.questions.forEach((q: any) => {
+      const key = makeLocalKey(ex.id, q.id);
+      const ans = answers[key];
+      let isCorrect = false;
+
+      if (q.kind === "mc") isCorrect = ans === q.correctIndex;
+      if (q.kind === "tf") isCorrect = ans === q.answer;
+
+      if (isCorrect) ok++;
+    });
+
+    correct = ok;
+    totalItems = ex.questions.length;
+  };
+
+  // Reorder
+  const evalReorder = (ex: any) => {
+    const key = makeLocalKey(ex.id);
+    const userOrder = answers[key];
+    return JSON.stringify(userOrder) === JSON.stringify(ex.correctOrder);
+  };
+
+  // Matching
+  const evalMatching = (ex: any) => {
+    let ok = 0;
+    ex.pairs.forEach((pair: any, idx: number) => {
+      const key = makeLocalKey(ex.id, String(idx));
+      const sel = answers[key];
+      if (sel === pair.right) ok++;
+    });
+    correct = ok;
+    totalItems = ex.pairs.length;
+  };
+
+  // Reflection
+  const evalReflection = (ex: any) => {
+    let ok = 0;
+    const n = ex.ideasCount || 3;
+
+    for (let i = 0; i < n; i++) {
+      const key = makeLocalKey(ex.id, `idea${i}`);
+      const txt = answers[key];
+      if (txt?.trim()) ok++;
+    }
+
+    correct = ok;
+    totalItems = n;
+  };
+
+  // Sentence correction
+  const evalSentenceCorrection = (ex: any) => {
+    const key = makeLocalKey(ex.id);
+    const ans = answers[key];
+    if (!ans) return false;
+
+    return ex.correctAnswers.some(
+      (x: string) =>
+        x.trim().toLowerCase() === String(ans).trim().toLowerCase()
+    );
+  };
+
+  // Text / Speaking (auto-pass)
+  const evalTextOrSpeaking = () => {
+    correct = 1;
+    totalItems = 1;
+  };
+
+  // ============================================================
+  // 🔥 SWITCH PRINCIPAL
+  // ============================================================
+  switch (ex.type) {
+    case "multiple_choice":
+      correct = evalMC(ex) ? 1 : 0;
+      totalItems = 1;
+      break;
+    case "true_false":
+      correct = evalTF(ex) ? 1 : 0;
+      totalItems = 1;
+      break;
+    case "fill_blank":
+      correct = evalFillBlank(ex) ? 1 : 0;
+      totalItems = 1;
+      break;
+    case "reading":
+    case "listening":
+      evalReadingListening(ex);
+      break;
+    case "reorder":
+      correct = evalReorder(ex) ? 1 : 0;
+      totalItems = 1;
+      break;
+    case "matching":
+      evalMatching(ex);
+      break;
+    case "reflection":
+      evalReflection(ex);
+      break;
+    case "sentence_correction":
+      correct = evalSentenceCorrection(ex) ? 1 : 0;
+      totalItems = 1;
+      break;
+    case "text":
+    case "speaking":
+      evalTextOrSpeaking();
+      break;
+    default:
+      correct = 0;
+      totalItems = 1;
+  }
+
+  const passed = correct === totalItems;
+
+  // ============================================================
+  // 🔵 Actualizar UI antes de guardar
+  // ============================================================
+  setSubmitted(true);
+  setFeedback({
+    ok: passed,
+    msg: passed ? "✔️ ¡Correcto!" : "❌ Intento registrado",
+    correct,
+    total: totalItems,
+  });
+
+  // ============================================================
+  // 💾 Guardar en Firestore después
+  // ============================================================
+  try {
+    if (!user?.uid) return;
+
+    await saveCourseProgress(user.uid, courseId, {
+      [currentExerciseKey]: {
+        exSubmitted: true,
+        exPassed: passed,
+        score: {
+          correct,
+          total: totalItems,
+          answers: { ...answers }, // todas las respuestas
+        },
+      },
+    });
+  } catch (err) {
+    console.error("❌ Error guardando:", err);
+    toast.error("No se pudo guardar tu progreso");
+  }
+
+  // Callback al padre
+  onSubmit?.({ correct, total: totalItems });
+};
+
+
+// 🟢 Manejar cambios de inputs
+const handleAnswer = (key: string, value: any) => {
+  if (submitted) return; // luego de enviar no permite cambios
+  setAnswers((prev) => ({
+    ...prev,
+    [key]: value,
+  }));
+};
+
+/* ============================================================
+   🔍 RENDERERS POR TIPO DE EJERCICIO
+   ============================================================ */
+
+const renderReading = (ex: any) => {
+  return (
+    <div className="space-y-6">
+      {/* Texto */}
+      <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 max-w-[800px]">
+        {ex.title && (
+          <h4 className="font-semibold text-slate-900 mb-2 text-lg">
+            {ex.title}
+          </h4>
+        )}
+        <p className="text-slate-700 whitespace-pre-line leading-relaxed break-words">
+          {ex.text}
+        </p>
+      </div>
+
+      {/* Preguntas */}
+      <div className="space-y-4 max-w-[800px]">
+        {ex.questions.map((q: any, idx: number) => {
+          const qKey = makeLocalKey(ex.id, q.id);
+          const val = answers[qKey];
+          let isCorrect = false;
+
+          if (submitted) {
+            if (q.kind === "mc") isCorrect = val === q.correctIndex;
+            if (q.kind === "tf") isCorrect = val === q.answer;
+          }
+
+          return (
+            <div
+              key={q.id}
+              className="border border-slate-300 rounded-xl p-4 bg-white"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <h5 className="font-medium mb-2 text-slate-800">
+                  {idx + 1}. {q.prompt}
+                </h5>
+
+                {submitted && (
+                  <span
+                    className={`text-xs px-2 py-1 rounded-full ${
+                      isCorrect
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                        : "bg-rose-50 text-rose-700 border border-rose-200"
+                    }`}
+                  >
+                    {isCorrect ? "Correcto" : "Incorrecto"}
+                  </span>
+                )}
+              </div>
+
+              {/* MC */}
+              {q.kind === "mc" &&
+                q.options.map((opt: string, i: number) => {
+                  const selected = val === i;
+                  const isOptCorrect = i === q.correctIndex;
+
+                  const base =
+                    "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition";
+
+                  const color = submitted
+                    ? isOptCorrect
+                      ? "bg-emerald-50 border-emerald-300"
+                      : selected
+                      ? "bg-rose-50 border-rose-300"
+                      : "bg-white border-slate-200"
+                    : selected
+                    ? "bg-blue-50 border-blue-300"
+                    : "bg-white border-slate-300 hover:bg-slate-100";
+
+                  return (
+                    <label key={i} className={`${base} ${color}`}>
+                      <input
+                        type="radio"
+                        disabled={submitted}
+                        checked={selected}
+                        onChange={() => handleAnswer(qKey, i)}
+                      />
+                      <span>{opt}</span>
+                    </label>
+                  );
+                })}
+
+              {/* TRUE/FALSE */}
+              {q.kind === "tf" && (
+                <div className="flex gap-3">
+                  {[true, false].map((v) => {
+                    const selected = val === v;
+                    const isOptCorrect = q.answer === v;
+
+                    const base =
+                      "flex items-center gap-3 px-4 py-2 rounded-lg border cursor-pointer transition";
+
+                    const color = submitted
+                      ? isOptCorrect
+                        ? "bg-emerald-50 border-emerald-300"
+                        : selected
+                        ? "bg-rose-50 border-rose-300"
+                        : "bg-white border-slate-200"
+                      : selected
+                      ? "bg-blue-50 border-blue-300"
+                      : "bg-white border-slate-300 hover:bg-slate-100";
+
+                    return (
+                      <label key={String(v)} className={`${base} ${color}`}>
+                        <input
+                          type="radio"
+                          disabled={submitted}
+                          checked={selected}
+                          onChange={() => handleAnswer(qKey, v)}
+                        />
+                        <span>{v ? "True" : "False"}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+
+              {submitted && !isCorrect && (
+                <div className="text-xs text-rose-600 mt-2">
+                  {q.kind === "mc" &&
+                    `Correct answer: ${q.options[q.correctIndex]}`}
+                  {q.kind === "tf" &&
+                    `Correct answer: ${q.answer ? "True" : "False"}`}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+const renderFillBlank = (ex: any) => {
+  const key = makeLocalKey(ex.id);
+  const parts = ex.sentence.split("***");
+  const current = answers[key] || [];
+
+  return (
+    <div className="space-y-4 max-w-[750px]">
+      {parts.map((part: string, i: number) => (
+        <div key={i} className="space-y-2">
+          {/* Texto del fragmento anterior */}
+          {part.trim() && (
+            <p className="text-slate-800 text-base leading-relaxed">
+              {part}
+            </p>
+          )}
+
+          {/* Input SOLO si corresponde */}
+          {i < ex.answers.length && (
+            <input
+              type="text"
+              disabled={submitted}
+              value={current[i] || ""}
+              className={`w-full px-4 py-2 rounded-lg border text-base ${
+                submitted
+                  ? current[i]?.trim()?.toLowerCase() ===
+                    ex.answers[i].trim().toLowerCase()
+                    ? "bg-emerald-50 border-emerald-300 text-emerald-800"
+                    : "bg-rose-50 border-rose-300 text-rose-800"
+                  : "border-slate-300 focus:ring-2 focus:ring-blue-300"
+              }`}
+              placeholder={`Respuesta ${i + 1}`}
+              onChange={(e) => {
+                const copy = [...current];
+                copy[i] = e.target.value;
+                handleAnswer(key, copy);
+              }}
+            />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+
+const renderText = (ex: any) => {
+  const key = makeLocalKey(ex.id);
+  const txt = answers[key] || "";
+  const max = ex.maxLength || 400;
+
+  return (
+    <div className="space-y-3 max-w-[800px]">
+      <p className="font-medium text-slate-800">{ex.prompt}</p>
+
+      <textarea
+        rows={4}
+        disabled={submitted}
+        value={txt}
+        maxLength={max}
+        onChange={(e) => handleAnswer(key, e.target.value)}
+        className={`w-full p-3 rounded-xl border text-sm bg-white transition ${
+          submitted
+            ? txt.trim()
+              ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+              : "border-rose-300 bg-rose-50 text-rose-700"
+            : "border-slate-300 focus:ring-2 focus:ring-blue-300"
+        }`}
+      />
+
+      <p className="text-xs text-slate-500">
+        Máximo {max} caracteres — Usaste {txt.length}
+      </p>
+
+      {submitted && !txt.trim() && (
+        <p className="text-xs text-rose-600">
+          Este campo no puede estar vacío.
+        </p>
+      )}
+    </div>
+  );
+};
+
+const renderMatching = (ex: any) => {
+  return (
+    <div className="space-y-4 max-w-[750px]">
+      {ex.pairs.map((pair: any, idx: number) => {
+        const key = makeLocalKey(ex.id, String(idx));
+        const val = answers[key] || "";
+
+        return (
+          <div key={idx} className="p-4 border rounded-xl bg-white space-y-2">
+            <p className="font-medium text-slate-700">Emparejar:</p>
+
+            <div className="flex items-center gap-4">
+              <span className="font-semibold text-slate-900">{pair.left}</span>
+
+              <select
+                disabled={submitted}
+                value={val}
+                onChange={(e) => handleAnswer(key, e.target.value)}
+                className="px-3 py-2 border rounded-lg"
+              >
+                <option value="">Seleccionar…</option>
+                {ex.pairs.map((p: any, j: number) => (
+                  <option key={j} value={p.right}>
+                    {p.right}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {submitted && val !== pair.right && (
+              <p className="text-xs text-rose-600">
+                Correcto: <b>{pair.right}</b>
+              </p>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+const renderReorder = (ex: any) => {
+  const key = makeLocalKey(ex.id);
+  const current = answers[key] ?? ex.items.map((_: any, i: number) => i);
+
+  const move = (from: number, to: number) => {
+    if (submitted) return;
+    if (to < 0 || to >= current.length) return;
+
+    const copy = [...current];
+    [copy[from], copy[to]] = [copy[to], copy[from]];
+    handleAnswer(key, copy);
+  };
+
+  const isCorrect =
+    submitted &&
+    JSON.stringify(current) === JSON.stringify(ex.correctOrder);
+
+  return (
+    <div className="space-y-3 max-w-[750px]">
+      <h4 className="font-semibold text-slate-900">{ex.title}</h4>
+
+      {current.map((idx: number, pos: number) => (
+        <div
+          key={pos}
+          className={`flex items-center justify-between p-3 rounded-lg border bg-white ${
+            submitted
+              ? isCorrect
+                ? "border-emerald-300 bg-emerald-50"
+                : "border-rose-300 bg-rose-50"
+              : "border-slate-300"
+          }`}
+        >
+          <span>{ex.items[idx]}</span>
+
+          {!submitted && (
+            <div className="flex gap-2">
+              <button
+                className="px-2 py-1 bg-slate-200 hover:bg-slate-300 rounded text-xs"
+                onClick={() => move(pos, pos - 1)}
+              >
+                ↑
+              </button>
+              <button
+                className="px-2 py-1 bg-slate-200 hover:bg-slate-300 rounded text-xs"
+                onClick={() => move(pos, pos + 1)}
+              >
+                ↓
+              </button>
+            </div>
+          )}
+        </div>
+      ))}
+
+      {submitted && !isCorrect && (
+        <div className="text-xs text-rose-600">
+          Orden correcto:
+          <br />
+          {ex.correctOrder.map((i: number) => ex.items[i]).join(" → ")}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const renderReflection = (ex: any) => {
+  const n = ex.ideasCount || 3;
+
+  return (
+    <div className="space-y-4 max-w-[750px]">
+      <p className="font-medium text-slate-900">{ex.prompt}</p>
+
+      {[...Array(n)].map((_, i) => {
+        const key = makeLocalKey(ex.id, `idea${i}`);
+        const txt = answers[key] || "";
+
+        return (
+          <div key={i} className="space-y-1">
+            <textarea
+              rows={3}
+              disabled={submitted}
+              value={txt}
+              onChange={(e) => handleAnswer(key, e.target.value)}
+              placeholder={`Idea ${i + 1}`}
+              className={`w-full p-3 rounded-xl bg-white border text-sm transition ${
+                submitted
+                  ? txt.trim()
+                    ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                    : "border-rose-300 bg-rose-50 text-rose-700"
+                  : "border-slate-300 focus:ring-2 focus:ring-blue-300"
+              }`}
+            />
+
+            {submitted && !txt.trim() && (
+              <span className="text-xs text-rose-500">
+                * Esta idea no puede estar vacía.
+              </span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+const renderSentenceCorrection = (ex: any) => {
+  const key = makeLocalKey(ex.id);
+  const val = answers[key] || "";
+
+  const isCorrect =
+    submitted &&
+    ex.correctAnswers.some(
+      (ans: string) =>
+        ans.trim().toLowerCase() === val.trim().toLowerCase()
+    );
+
+  return (
+    <div className="space-y-4 max-w-[750px]">
+      <p className="font-medium text-slate-900">Corrige esta frase:</p>
+
+      <p className="italic text-slate-600">“{ex.incorrect}”</p>
+
+      <input
+        type="text"
+        disabled={submitted}
+        value={val}
+        onChange={(e) => handleAnswer(key, e.target.value)}
+        className={`w-full p-3 rounded-xl border bg-white text-sm ${
+          submitted
+            ? isCorrect
+              ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+              : "border-rose-300 bg-rose-50 text-rose-700"
+            : "border-slate-300 focus:ring-2 focus:ring-blue-300"
+        }`}
+        placeholder="Escribí la frase corregida"
+      />
+
+      {submitted && !isCorrect && (
+        <p className="text-xs text-rose-600">
+          Respuesta correcta:
+          <br />
+          <b>{ex.correctAnswers[0]}</b>
+        </p>
+      )}
+    </div>
+  );
+};
+
+const renderSpeaking = (ex: any) => {
+  return (
+    <div className="space-y-4 max-w-[750px]">
+      <h4 className="font-semibold text-slate-800">{ex.title}</h4>
+
+      <ul className="list-disc pl-6 space-y-2 text-slate-700">
+        {ex.bullets?.map((b: string, i: number) => (
+          <li key={i}>{b}</li>
+        ))}
+      </ul>
+
+      {ex.notes && (
+        <p className="text-sm text-slate-500 italic">{ex.notes}</p>
+      )}
+
+      <p className="text-xs text-slate-500">
+        * Este ejercicio no es auto-evaluable.
+      </p>
+    </div>
+  );
+};
+
+  /* ============================================================
+     💡 SOLUCIÓN MOSTRADA DESPUÉS DE ENVIAR
+     ============================================================ */
   const renderSolution = (ex: any) => {
-    if (feedback?.ok) return null;
+    if (feedback?.ok) return null; // si aprobó, no mostramos solución
 
     switch (ex.type) {
       case "multiple_choice":
@@ -802,492 +1328,11 @@ function ExerciseRunner({
     }
   };
 
-  const renderReading = (ex: any) => {
-    return (
-      <div className="space-y-6">
-        <div className="bg-slate-50 border border-slate-200 rounded-xl p-5">
-          <h4 className="font-semibold text-slate-900 mb-3 text-lg">
-            {ex.title || "Reading"}
-          </h4>
-          <p className="text-slate-700 whitespace-pre-line leading-relaxed break-words max-w-[750px]">
-            {ex.text}
-          </p>
-        </div>
-
-        <div className="space-y-4">
-          {ex.questions.map((q: any, idx: number) => {
-            const qKey = `${ex.id}::${q.id}`;
-            const current = answers[qKey];
-            let isCorrect = false;
-
-            if (submitted) {
-              if (q.kind === "mc") {
-                isCorrect = current === q.correctIndex;
-              } else if (q.kind === "tf") {
-                isCorrect = current === q.answer;
-              }
-            }
-
-            return (
-              <div key={q.id} className="border border-slate-300 rounded-xl p-4 bg-white">
-                <div className="flex items-start justify-between gap-3">
-                  <h5 className="font-medium mb-2">
-                    {idx + 1}. {q.prompt}
-                  </h5>
-
-                  {submitted && (
-                    <span
-                      className={`text-xs px-2 py-1 rounded-full ${
-                        isCorrect
-                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                          : "bg-rose-50 text-rose-700 border border-rose-200"
-                      }`}
-                    >
-                      {isCorrect ? "Correcto" : "Incorrecto"}
-                    </span>
-                  )}
-                </div>
-
-                {q.kind === "mc" && (
-                  <div className="space-y-2">
-                    {q.options.map((opt: string, optIdx: number) => {
-                      const selected = current === optIdx;
-                      const isOptCorrect = optIdx === q.correctIndex;
-                      const base = "flex items-center gap-3 p-3 rounded-lg border cursor-pointer";
-                      const color = submitted
-                        ? isOptCorrect
-                          ? "bg-emerald-50 border-emerald-300"
-                          : selected
-                          ? "bg-rose-50 border-rose-300"
-                          : "bg-slate-50 border-slate-200"
-                        : selected
-                        ? "bg-blue-50 border-blue-300"
-                        : "bg-slate-50 border-slate-300 hover:bg-slate-100";
-
-                      return (
-                        <label key={optIdx} className={`${base} ${color}`}>
-                          <input
-                            type="radio"
-                            disabled={submitted}
-                            checked={selected}
-                            onChange={() => handleAnswer(qKey, optIdx)}
-                          />
-                          <span>{opt}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {q.kind === "tf" && (
-                  <div className="flex gap-4">
-                    {[true, false].map((val) => {
-                      const selected = current === val;
-                      const isOptCorrect = q.answer === val;
-                      const base = "flex items-center gap-3 px-4 py-2 rounded-lg border cursor-pointer";
-                      const color = submitted
-                        ? isOptCorrect
-                          ? "bg-emerald-50 border-emerald-300"
-                          : selected
-                          ? "bg-rose-50 border-rose-300"
-                          : "bg-slate-50 border-slate-200"
-                        : selected
-                        ? "bg-blue-50 border-blue-300"
-                        : "bg-slate-50 border-slate-300 hover:bg-slate-100";
-
-                      return (
-                        <label key={String(val)} className={`${base} ${color}`}>
-                          <input
-                            type="radio"
-                            disabled={submitted}
-                            checked={selected}
-                            onChange={() => handleAnswer(qKey, val)}
-                          />
-                          <span>{val ? "True" : "False"}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {submitted && !isCorrect && (
-                  <div className="mt-2 text-xs text-rose-600">
-                    {q.kind === "mc" && `Correct answer: ${q.options[q.correctIndex]}`}
-                    {q.kind === "tf" && `Correct answer: ${q.answer ? "True" : "False"}`}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
-
-const renderFillBlank = (ex, answers, submitted, handleAnswer) => {
-  const parts = ex.sentence.split("***");
-
-  return (
-    <div className="text-lg leading-relaxed max-w-[700px] flex flex-wrap gap-2">
-      {parts.map((part, i) => (
-        <span key={i} className="flex items-center gap-2">
-          {part}
-
-          {i < ex.answers.length && (
-            <input
-              type="text"
-              disabled={submitted}
-              className={`px-3 py-1 rounded-lg border ${
-                submitted
-                  ? answers[ex.id]?.[i]?.trim().toLowerCase() === ex.answers[i].trim().toLowerCase()
-                    ? "bg-emerald-50 border-emerald-300 text-emerald-800"
-                    : "bg-rose-50 border-rose-300 text-rose-800"
-                  : "border-slate-300"
-              }`}
-              value={answers[ex.id]?.[i] || ""}
-              onChange={(e) => {
-                const arr = Array.isArray(answers[ex.id]) ? [...answers[ex.id]] : [];
-                arr[i] = e.target.value;
-                handleAnswer(ex.id, arr);
-              }}
-            />
-          )}
-        </span>
-      ))}
-    </div>
-  );
-};
-
-const renderText = (ex: any, answers: any, submitted: boolean, handleAnswer: any) => {
-  const key = ex.id;
-  const userText = answers[key] || "";
-  const max = ex.maxLength || 500;
-
-  const isValid = submitted && userText.trim().length > 0;
-
-  return (
-    <div className="space-y-4 max-w-[700px]">
-      {/* Consigna */}
-      <p className="font-medium text-slate-900">{ex.prompt}</p>
-
-      {/* Textarea */}
-      <textarea
-        rows={4}
-        disabled={submitted}
-        maxLength={max}
-        value={userText}
-        onChange={(e) => handleAnswer(key, e.target.value)}
-        className={`w-full p-3 rounded-xl border text-sm bg-white transition
-          ${
-            !submitted
-              ? "border-slate-300 focus:ring-2 focus:ring-blue-300"
-              : isValid
-              ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-              : "border-rose-300 bg-rose-50 text-rose-700"
-          }`}
-      />
-
-      {/* Feedback */}
-      {submitted && !isValid && (
-        <p className="text-xs text-rose-600">Este campo no puede estar vacío.</p>
-      )}
-
-      <p className="text-xs text-slate-400">
-        Máximo {max} caracteres • Usaste {userText.length}
-      </p>
-    </div>
-  );
-};
-
-
-const renderMatching = (ex: any, answers: any, submitted: boolean, handleAnswer: any) => {
-  return (
-    <div className="space-y-4 max-w-[650px]">
-
-      {ex.pairs.map((pair: any, idx: number) => {
-        const key = `${ex.id}::${idx}`;
-        const selected = answers[key] ?? "";
-
-        return (
-          <div key={idx} className="p-4 border rounded-xl bg-white space-y-2">
-            <p className="font-medium text-slate-700">Emparejar:</p>
-
-            <div className="flex gap-4 items-center">
-              <span className="font-semibold text-slate-900">{pair.left}</span>
-
-              <select
-                disabled={submitted}
-                className="border rounded-lg px-3 py-2"
-                value={selected}
-                onChange={(e) => handleAnswer(key, e.target.value)}
-              >
-                <option value="">Seleccionar...</option>
-                {ex.pairs.map((p: any, j: number) => (
-                  <option key={j} value={p.right}>
-                    {p.right}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {submitted && selected !== pair.right && (
-              <p className="text-xs text-rose-600">
-                Correcto: <b>{pair.right}</b>
-              </p>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-};
-
-const renderReorder = (ex: any, answers: any, submitted: boolean, handleAnswer: any) => {
-  const key = ex.id;
-
-  // Crear estado inicial (si no existe)
-  const currentOrder =
-    answers[key] ??
-    ex.items.map((_: any, idx: number) => idx); // orden inicial
-
-  const move = (from: number, to: number) => {
-    if (submitted) return;
-    if (to < 0 || to >= currentOrder.length) return;
-
-    const newOrder = [...currentOrder];
-    [newOrder[from], newOrder[to]] = [newOrder[to], newOrder[from]];
-
-    handleAnswer(key, newOrder);
-  };
-
-  const isCorrect =
-    submitted &&
-    JSON.stringify(currentOrder) === JSON.stringify(ex.correctOrder);
-
-  return (
-    <div className="space-y-4 max-w-[700px]">
-      <h4 className="font-semibold text-slate-900">{ex.title}</h4>
-
-      <div className="space-y-2">
-        {currentOrder.map((itemIndex: number, pos: number) => (
-          <div
-            key={pos}
-            className={`flex items-center justify-between p-3 rounded-lg border bg-white ${
-              submitted
-                ? isCorrect
-                  ? "border-emerald-300 bg-emerald-50"
-                  : "border-rose-300 bg-rose-50"
-                : "border-slate-300"
-            }`}
-          >
-            <span className="text-slate-800">{ex.items[itemIndex]}</span>
-
-            {!submitted && (
-              <div className="flex gap-2">
-                <button
-                  onClick={() => move(pos, pos - 1)}
-                  className="px-2 py-1 rounded bg-slate-200 hover:bg-slate-300 text-xs"
-                >
-                  ↑
-                </button>
-                <button
-                  onClick={() => move(pos, pos + 1)}
-                  className="px-2 py-1 rounded bg-slate-200 hover:bg-slate-300 text-xs"
-                >
-                  ↓
-                </button>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {submitted && !isCorrect && (
-        <p className="text-xs text-rose-600">
-          Orden correcto:
-          <br />
-          {ex.correctOrder.map((i: number) => ex.items[i]).join(" → ")}
-        </p>
-      )}
-    </div>
-  );
-};
-
-
-
-const renderSpeaking = (ex: any) => {
-  return (
-    <div className="space-y-4 max-w-[700px]">
-      {/* Título del ejercicio */}
-      {ex.title && (
-        <h4 className="text-lg font-semibold text-slate-900">{ex.title}</h4>
-      )}
-
-      {/* Bullets */}
-      <ul className="list-disc pl-6 space-y-2 text-slate-700">
-        {ex.bullets.map((item: string, idx: number) => (
-          <li key={idx} className="leading-relaxed">
-            {item}
-          </li>
-        ))}
-      </ul>
-
-      {/* Notas opcionales */}
-      {ex.notes && (
-        <p className="text-sm text-slate-500 italic">
-          {ex.notes}
-        </p>
-      )}
-
-      {/* Mensaje de que no es auto-evaluable */}
-      <p className="text-xs text-slate-500 border-t pt-3">
-        * Este ejercicio no es auto-evaluable. Tu progreso se registra al avanzar.
-      </p>
-    </div>
-  );
-};
-
-const renderReflection = (
-  ex: any,
-  answers: any,
-  submitted: boolean,
-  handleAnswer: any
-) => {
-  const totalIdeas = ex.ideasCount || 3;
-
-  return (
-    <div className="space-y-6 max-w-[700px]">
-      
-      {/* CONSIGNA */}
-      <div className="bg-slate-50 border border-slate-200 rounded-xl p-5">
-        <h4 className="font-semibold text-slate-900 mb-2">
-          {ex.title || "Reflection"}
-        </h4>
-        <p className="text-slate-700 whitespace-pre-line leading-relaxed">
-          {ex.prompt}
-        </p>
-      </div>
-
-      {/* CAMPOS DE RESPUESTA */}
-      <div className="space-y-4">
-        {[...Array(totalIdeas)].map((_, idx) => {
-          const key = `${ex.id}::idea${idx}`;
-          const userText = answers[key] || "";
-
-          const base =
-            "w-full p-3 rounded-lg border bg-white text-sm focus:ring-2 transition";
-
-          const color = !submitted
-            ? "border-slate-300 focus:ring-blue-300"
-            : userText.trim().length > 0
-            ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-            : "border-rose-300 bg-rose-50 text-rose-700";
-
-          return (
-            <div key={idx} className="space-y-1">
-              <textarea
-                rows={3}
-                disabled={submitted}
-                className={`${base} ${color}`}
-                placeholder={`Idea ${idx + 1}`}
-                value={userText}
-                onChange={(e) => handleAnswer(key, e.target.value)}
-              />
-
-              {/* Feedback para ideas vacías */}
-              {submitted && userText.trim().length === 0 && (
-                <p className="text-xs text-rose-600">
-                  * Esta idea no puede estar vacía.
-                </p>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* NOTA */}
-      <p className="text-xs text-slate-500">
-        * Este ejercicio no es auto-evaluable. Se registra tu participación.
-      </p>
-    </div>
-  );
-};
-
-const renderSentenceCorrection = (
-  ex: any,
-  answers: any,
-  submitted: boolean,
-  handleAnswer: any
-) => {
-  const userAns = answers[ex.id] || "";
-
-  // Determinar si es correcto cuando submitted = true
-  const isCorrect =
-    submitted &&
-    typeof userAns === "string" &&
-    ex.correctAnswers.some(
-      (a: string) =>
-        a.trim().toLowerCase() === userAns.trim().toLowerCase()
-    );
-
-  const base =
-    "w-full p-3 rounded-xl border text-sm transition bg-white";
-
-  const color = !submitted
-    ? "border-slate-300 focus:ring-2 focus:ring-blue-300"
-    : isCorrect
-    ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-    : "border-rose-300 bg-rose-50 text-rose-700";
-
-  return (
-    <div className="space-y-5 max-w-[700px]">
-      {/* Frase incorrecta */}
-      <div className="bg-slate-50 border border-slate-200 rounded-xl p-5">
-        <h4 className="font-semibold text-slate-900 mb-3">
-          Corregí la siguiente frase:
-        </h4>
-
-        <p className="italic text-slate-700">
-          “{ex.incorrect}”
-        </p>
-      </div>
-
-      {/* Input del alumno */}
-      <div className="space-y-1">
-        <input
-          type="text"
-          disabled={submitted}
-          placeholder="Escribí la frase corregida"
-          className={`${base} ${color}`}
-          value={userAns}
-          onChange={(e) => handleAnswer(ex.id, e.target.value)}
-        />
-
-        {/* Feedback si está mal */}
-        {submitted && !isCorrect && (
-          <p className="text-xs text-rose-600">
-            Respuesta correcta:
-            {" "}
-            <b>{ex.correctAnswers[0]}</b>
-            {ex.correctAnswers.length > 1 &&
-              ` (o variantes aceptadas: ${ex.correctAnswers
-                .slice(1)
-                .join(", ")})`}
-          </p>
-        )}
-      </div>
-
-      {/* Nota */}
-      <p className="text-xs text-slate-500">
-        * Evaluación exacta (sin mayúsculas / minúsculas).
-      </p>
-    </div>
-  );
-};
-
-
-
-
+  /* ============================================================
+     🔚 JSX FINAL DEL EJERCICIO
+     ============================================================ */
+  const ex = ejercicios[0];
+  if (!ex) return null;
 
   return (
     <motion.div
@@ -1296,6 +1341,7 @@ const renderSentenceCorrection = (
       transition={{ duration: 0.35, ease: "easeOut" }}
       className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6"
     >
+      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -1305,158 +1351,169 @@ const renderSentenceCorrection = (
         <div className="w-10 h-10 rounded-xl bg-blue-600/10 text-blue-600 grid place-items-center text-xl">
           🧠
         </div>
-        <h3 className="text-xl font-semibold text-slate-900">Ejercicio</h3>
+        <div>
+          <h3 className="text-xl font-semibold text-slate-900">Ejercicio</h3>
+          
+        </div>
       </motion.div>
 
-      {ejercicios.map((ex) => (
-        <motion.div
-          key={ex.id}
-          initial={{ opacity: 0, y: 20, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ delay: 0.05 }}
-          className={`rounded-xl p-5 border ${
-            submitted
-              ? feedback?.ok
-                ? "bg-emerald-50 border-emerald-300"
-                : "bg-rose-50 border-rose-300"
-              : "bg-slate-50 border-slate-200"
-          }`}
-        >
-          {ex.type !== "reading" && ex.type !== "listening" && (
+      {/* Card del ejercicio */}
+      <motion.div
+        initial={{ opacity: 0, y: 20, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ delay: 0.05 }}
+        className={`rounded-xl p-5 border ${
+          submitted
+            ? feedback?.ok
+              ? "bg-emerald-50 border-emerald-300"
+              : "bg-rose-50 border-rose-300"
+            : "bg-slate-50 border-slate-200"
+        }`}
+      >
+        {/* Título / prompt principal (menos para reading/listening que ya tienen su propio header) */}
+        {ex.type !== "reading" &&
+          ex.type !== "listening" &&
+          (ex.question || ex.prompt || ex.statement) && (
             <h4 className="font-semibold text-slate-900 mb-4 text-lg">
               {ex.question || ex.prompt || ex.statement}
             </h4>
           )}
 
-{ex.type === "matching" &&
-  renderMatching(ex, answers, submitted, handleAnswer)}
+        {/* 🔀 Selección de renderer según tipo */}
+        {ex.type === "reading" && renderReading(ex)}
 
-{ex.type === "speaking" && renderSpeaking(ex)}
+        {ex.type === "listening" && (
+          <div className="space-y-6">
+            {ex.audioUrl && (
+              <audio
+                controls
+                src={ex.audioUrl}
+                className="w-full max-w-md"
+              />
+            )}
+            {renderReading(ex)}
+          </div>
+        )}
 
-{ex.type === "fill_blank" &&
-  renderFillBlank(ex, answers, submitted, handleAnswer)}
+        {ex.type === "fill_blank" && renderFillBlank(ex)}
+        {ex.type === "text" && renderText(ex)}
+        {ex.type === "matching" && renderMatching(ex)}
+        {ex.type === "reorder" && renderReorder(ex)}
+        {ex.type === "reflection" && renderReflection(ex)}
+        {ex.type === "sentence_correction" && renderSentenceCorrection(ex)}
+        {ex.type === "speaking" && renderSpeaking(ex)}
 
-{ex.type === "text" &&
-  renderText(ex, answers, submitted, handleAnswer)}
+        {/* MULTIPLE CHOICE */}
+        {ex.type === "multiple_choice" && (
+          <div className="flex flex-col gap-3 max-w-[750px]">
+            {ex.options.map((opt: string, idx: number) => {
+              const key = makeLocalKey(ex.id);
+              const val = answers[key];
+              const isSelected = val === idx;
+              const isCorrectOpt = idx === ex.correctIndex;
 
-{ex.type === "reorder" &&
-  renderReorder(ex, answers, submitted, handleAnswer)}
-
-
-{ex.type === "reflection" &&
-  renderReflection(ex, answers, submitted, handleAnswer)}
-{ex.type === "sentence_correction" &&
-  renderSentenceCorrection(ex, answers, submitted, handleAnswer)}
-
-
-
-          {/* MULTIPLE CHOICE */}
-          {ex.type === "multiple_choice" && (
-            <div className="flex flex-col gap-3">
-              {ex.options.map((opt: string, idx: number) => {
-                const isSelected = answers[ex.id] === idx;
-                const isCorrect = idx === ex.correctIndex;
-                const base = "flex items-center gap-3 p-4 rounded-xl cursor-pointer transition border";
-                const color = submitted
-                  ? isCorrect
-                    ? "bg-emerald-50 border-emerald-300"
-                    : isSelected
-                    ? "bg-rose-50 border-rose-300"
-                    : "bg-white border-slate-200"
+              const base =
+                "flex items-center gap-3 p-4 rounded-xl cursor-pointer transition border text-sm";
+              const color = submitted
+                ? isCorrectOpt
+                  ? "bg-emerald-50 border-emerald-300"
                   : isSelected
-                  ? "bg-blue-50 border-blue-300 text-blue-700 shadow-sm"
-                  : "bg-white border-slate-300 hover:bg-slate-100";
+                  ? "bg-rose-50 border-rose-300"
+                  : "bg-white border-slate-200"
+                : isSelected
+                ? "bg-blue-50 border-blue-300 text-blue-700 shadow-sm"
+                : "bg-white border-slate-300 hover:bg-slate-100";
 
-                return (
-                  <motion.label
-                    key={idx}
-                    whileHover={!submitted ? { scale: 1.02 } : {}}
-                    whileTap={!submitted ? { scale: 0.98 } : {}}
-                    className={base + " " + color}
-                  >
-                    <input
-                      type="radio"
-                      name={ex.id}
-                      disabled={submitted}
-                      checked={isSelected}
-                      onChange={() => handleAnswer(ex.id, idx)}
-                    />
-                    <span className="text-sm">{opt}</span>
-                  </motion.label>
-                );
-              })}
-              {submitted && renderSolution(ex)}
-            </div>
-          )}
+              return (
+                <motion.label
+                  key={idx}
+                  whileHover={!submitted ? { scale: 1.02 } : {}}
+                  whileTap={!submitted ? { scale: 0.97 } : {}}
+                  className={base + " " + color}
+                >
+                  <input
+                    type="radio"
+                    className="hidden"
+                    disabled={submitted}
+                    checked={isSelected}
+                    onChange={() => handleAnswer(key, idx)}
+                  />
+                  <span className="w-6 h-6 rounded-full border border-slate-300 flex items-center justify-center text-xs">
+                    {String.fromCharCode(65 + idx)}
+                  </span>
+                  <span>{opt}</span>
+                </motion.label>
+              );
+            })}
 
-          {/* TRUE/FALSE */}
-          {ex.type === "true_false" && (
-            <div className="flex gap-4">
-              {["Verdadero", "Falso"].map((label, idx) => {
-                const val = idx === 0;
-                const isSelected = answers[ex.id] === val;
-                const isCorrect = ex.answer === val;
-                const base = "flex items-center gap-3 px-6 py-3 rounded-xl cursor-pointer border transition";
-                const color = submitted
-                  ? isCorrect
-                    ? "bg-emerald-50 border-emerald-300"
-                    : isSelected
-                    ? "bg-rose-50 border-rose-300"
-                    : "bg-white border-slate-200"
+            {submitted && renderSolution(ex)}
+          </div>
+        )}
+
+        {/* TRUE / FALSE */}
+        {ex.type === "true_false" && (
+          <div className="flex flex-wrap gap-3 max-w-[750px]">
+            {[
+              { label: "Verdadero", value: true },
+              { label: "Falso", value: false },
+            ].map((opt) => {
+              const key = makeLocalKey(ex.id);
+              const val = answers[key];
+              const isSelected = val === opt.value;
+              const isCorrectOpt = ex.answer === opt.value;
+
+              const base =
+                "flex items-center gap-3 px-6 py-3 rounded-xl cursor-pointer border transition text-sm font-medium";
+              const color = submitted
+                ? isCorrectOpt
+                  ? "bg-emerald-50 border-emerald-300"
                   : isSelected
-                  ? "bg-blue-50 border-blue-300 text-blue-700 shadow-sm"
-                  : "bg-white border-slate-300 hover:bg-slate-100";
+                  ? "bg-rose-50 border-rose-300"
+                  : "bg-white border-slate-200"
+                : isSelected
+                ? "bg-blue-50 border-blue-300 text-blue-700 shadow-sm"
+                : "bg-white border-slate-300 hover:bg-slate-100";
 
-                return (
-                  <motion.label
-                    key={label}
-                    whileHover={!submitted ? { scale: 1.02 } : {}}
-                    whileTap={!submitted ? { scale: 0.96 } : {}}
-                    className={base + " " + color}
-                  >
-                    <input
-                      type="radio"
-                      name={ex.id}
-                      disabled={submitted}
-                      checked={isSelected}
-                      onChange={() => handleAnswer(ex.id, val)}
-                    />
-                    <span className="font-medium">{label}</span>
-                  </motion.label>
-                );
-              })}
-              {submitted && renderSolution(ex)}
-            </div>
-          )}
+              return (
+                <motion.label
+                  key={opt.label}
+                  whileHover={!submitted ? { scale: 1.02 } : {}}
+                  whileTap={!submitted ? { scale: 0.97 } : {}}
+                  className={base + " " + color}
+                >
+                  <input
+                    type="radio"
+                    className="hidden"
+                    disabled={submitted}
+                    checked={isSelected}
+                    onChange={() => handleAnswer(key, opt.value)}
+                  />
+                  <span>{opt.label}</span>
+                </motion.label>
+              );
+            })}
 
-          {/* READING */}
-          {ex.type === "reading" && renderReading(ex)}
+            {submitted && renderSolution(ex)}
+          </div>
+        )}
+      </motion.div>
 
-          {/* LISTENING */}
-          {ex.type === "listening" && (
-            <div className="space-y-6">
-              <audio controls src={ex.audioUrl} className="w-full max-w-md" />
-              {renderReading(ex)}
-            </div>
-          )}
-        </motion.div>
-      ))}
-
+      {/* Botón de comprobar */}
       <motion.button
         onClick={evaluate}
         disabled={submitted}
         whileHover={!submitted ? { scale: 1.03 } : {}}
         whileTap={!submitted ? { scale: 0.97 } : {}}
-        className={`w-full py-3 rounded-xl font-semibold transition shadow-sm
-          ${
-            submitted
-              ? "bg-slate-300 text-slate-500 cursor-not-allowed"
-              : "bg-blue-600 text-white hover:bg-blue-700"
-          }`}
+        className={`w-full py-3 rounded-xl font-semibold transition shadow-sm ${
+          submitted
+            ? "bg-slate-300 text-slate-500 cursor-not-allowed"
+            : "bg-blue-600 text-white hover:bg-blue-700"
+        }`}
       >
         {submitted ? "Intento registrado" : "Comprobar respuestas"}
       </motion.button>
 
+      {/* Feedback numérico */}
       {submitted && feedback && (
         <div className="text-sm text-slate-700 mt-2">
           {typeof feedback.correct === "number" &&
@@ -1474,7 +1531,6 @@ const renderSentenceCorrection = (
     </motion.div>
   );
 }
-
 
 
 
@@ -1793,51 +1849,19 @@ const currentUnit = units[activeU];
 <ExerciseRunner
   ejercicios={[activeLesson.ejercicios[currentExercise]]}
   lessonKey={activeLesson.key}
-  exerciseIndex={currentExercise} // 🆕 AGREGAR ESTE PROP
+  exerciseIndex={currentExercise}
   batchId={userProfile?.batchId}
   userKey={userProfile?.userKey}
   courseId={courseId}
-  onSubmit={async ({ correct, total }) => {
-    const passed = correct === total;
+  onSubmit={() => {
+    // Esta función ahora solo debe avanzar o mostrar mensajes simples.
+    // NO DEBE GUARDAR EN FIRESTORE.
     
-    // 🆕 Construir la key única del ejercicio
-    const exerciseKey = `${activeLesson.key}::ex${currentExercise}`;
-
-    if (!user?.uid) {
-      toast.error("Inicia sesión para guardar tu progreso");
-      return;
-    }
-
-    try {
-      await saveCourseProgress(user.uid, courseId, {
-        [exerciseKey]: {
-          exSubmitted: true,
-          exPassed: passed,
-          score: { correct, total },
-        },
-      });
-
-      setProgress((prev) => ({
-        ...prev,
-        [exerciseKey]: {
-          ...(prev[exerciseKey] || {}),
-          exSubmitted: true,
-          exPassed: passed,
-          score: { correct, total },
-        },
-      }));
-
-      toast[passed ? "success" : "info"](
-        passed
-          ? "🎉 ¡Ejercicio aprobado!"
-          : "❌ Fallaste. Tu intento quedó guardado."
-      );
-    } catch (error) {
-      console.error("🔥 Error guardando progreso:", error);
-      toast.error("No se pudo guardar tu progreso");
-    }
+    // Si querés mantener toasts:
+    // toast.success("Ejercicio registrado");
   }}
 />
+
 
 
                       <div className="flex justify-between items-center pt-2 border-t border-slate-200">

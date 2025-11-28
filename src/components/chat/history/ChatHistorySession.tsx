@@ -3,7 +3,7 @@
 import { useDashboardUI } from "@/stores/useDashboardUI";
 import { useAuth } from "@/contexts/AuthContext";
 import MessageBubble from "./MessageBubble";
-import { FiArrowLeft } from "react-icons/fi";
+import { FiArrowLeft, FiCheckCircle, FiAlertCircle, FiAlertTriangle, FiTarget, FiZap } from "react-icons/fi";
 
 export default function ChatHistorySession() {
   const { chatSessions, userProfile } = useAuth();
@@ -89,114 +89,209 @@ export default function ChatHistorySession() {
   // Load the selected session
   const session = chatSessions.find((s) => s.id === sessionId);
   if (!session)
-    return <div className="p-6 text-gray-500">{tr.sessionNotFound}</div>;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center p-6">
+        <div className="text-center">
+          <div className="w-20 h-20 bg-gradient-to-br from-[#0C212D] to-[#112C3E] rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-2xl">
+            <FiAlertCircle className="text-white" size={36} />
+          </div>
+          <p className="text-[#112C3E] font-semibold text-lg">{tr.sessionNotFound}</p>
+        </div>
+      </div>
+    );
 
   const summary = session.summary || {};
 
   return (
-    <div className="p-6 w-full max-w-4xl mx-auto space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white p-6 md:p-10">
+      <div className="w-full max-w-5xl mx-auto space-y-8">
 
-      {/* Back Button */}
-      <button
-        onClick={() => setSection("chat-history")}
-        className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition"
-      >
-        <FiArrowLeft size={18} />
-        <span className="text-sm font-medium">{tr.back}</span>
-      </button>
+        {/* Back Button */}
+        <button
+          onClick={() => setSection("chat-history")}
+          className="group flex items-center gap-3 px-5 py-3 bg-white border-2 border-gray-200 rounded-xl hover:border-[#EE7203] hover:shadow-lg transition-all duration-300"
+        >
+          <FiArrowLeft className="text-[#112C3E] group-hover:text-[#EE7203] transform group-hover:-translate-x-1 transition-all duration-300" size={20} />
+          <span className="text-sm font-bold text-[#0C212D] group-hover:text-[#EE7203] transition-colors">{tr.back}</span>
+        </button>
 
-      {/* HEADER */}
-      <div className="bg-white rounded-2xl shadow border p-6 space-y-3">
-        <h1 className="text-2xl font-bold text-gray-900">
-          {tr.conversation} #{sessionId}
-        </h1>
+        {/* HEADER */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-[#0C212D] to-[#112C3E] rounded-3xl shadow-2xl p-8 text-white border-2 border-[#EE7203]/30">
+          
+          {/* Decorative elements */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-[#EE7203] opacity-10 rounded-full blur-3xl -mr-32 -mt-32"></div>
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-[#FF3816] opacity-10 rounded-full blur-3xl -ml-24 -mb-24"></div>
+          
+          <div className="relative z-10">
+            <h1 className="text-3xl font-black mb-4">
+              {tr.conversation} #{sessionId}
+            </h1>
 
-        <div className="flex flex-wrap gap-2 items-center text-sm">
-          <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full">
-            {tr.language}: {session.language?.toUpperCase()}
-          </span>
-          <span className="bg-purple-50 text-purple-700 px-3 py-1 rounded-full">
-            {tr.level}: {session.level}
-          </span>
-          <span className="text-gray-500">
-            {session.endedAt?.toDate?.().toLocaleString()}
-          </span>
+            <div className="flex flex-wrap gap-3 items-center">
+              <span className="px-4 py-2 bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white font-bold rounded-xl text-sm uppercase tracking-wide shadow-lg">
+                {tr.language}: {session.language?.toUpperCase()}
+              </span>
+              <span className="px-4 py-2 bg-white/10 backdrop-blur-sm text-white font-bold rounded-xl text-sm border border-white/20">
+                {tr.level}: {session.level}
+              </span>
+              <span className="text-white/60 text-sm font-medium">
+                {session.endedAt?.toDate?.().toLocaleString()}
+              </span>
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* SUMMARY */}
-      <div className="bg-white rounded-2xl shadow border p-6 space-y-6">
-        <h2 className="text-xl font-semibold text-gray-800">
-          {tr.feedback}
-        </h2>
+        {/* SUMMARY TITLE */}
+        <div className="flex items-center gap-3">
+          <div className="w-1.5 h-10 bg-gradient-to-b from-[#EE7203] to-[#FF3816] rounded-full"></div>
+          <h2 className="text-3xl font-black text-[#0C212D]">
+            {tr.feedback}
+          </h2>
+        </div>
 
+        {/* SUMMARY SECTIONS */}
         <div className="space-y-6">
 
-          {/* General Summary */}
-          <div className="bg-gray-50 rounded-xl p-4 border">
-            <h3 className="font-semibold text-gray-800 mb-2">{tr.assessment}</h3>
-            <p className="text-gray-700 leading-relaxed">
+          {/* General Assessment */}
+          <SummaryCard
+            icon={<FiTarget size={24} />}
+            title={tr.assessment}
+            gradient="from-[#0C212D] to-[#112C3E]"
+            bgColor="bg-gradient-to-br from-gray-50 to-white"
+            borderColor="border-[#0C212D]/20"
+          >
+            <p className="text-[#112C3E] leading-relaxed font-medium">
               {summary.feedbackSummary ?? ""}
             </p>
-          </div>
+          </SummaryCard>
 
           {/* Strengths */}
-          <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-            <h3 className="font-semibold text-green-800 mb-2">{tr.strengths}</h3>
-            <ul className="text-green-900 space-y-1 ml-4">
+          <SummaryCard
+            icon={<FiCheckCircle size={24} />}
+            title={tr.strengths}
+            gradient="from-[#10b981] to-[#059669]"
+            bgColor="bg-gradient-to-br from-green-50 to-emerald-50"
+            borderColor="border-green-200"
+          >
+            <ul className="space-y-2">
               {(summary.strengths ?? []).map((s: string, i: number) => (
-                <li key={i}>• {s}</li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Weak Points */}
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-            <h3 className="font-semibold text-red-800 mb-2">{tr.weakPoints}</h3>
-            <ul className="text-red-900 space-y-1 ml-4">
-              {(summary.weakPoints ?? []).map((w: string, i: number) => (
-                <li key={i}>• {w}</li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Common Mistakes */}
-          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-            <h3 className="font-semibold text-yellow-800 mb-2">{tr.commonMistakes}</h3>
-            <ul className="text-yellow-900 space-y-2 ml-4">
-              {(summary.commonMistakes ?? []).map((m: any, i: number) => (
-                <li key={i}>
-                  <mark className="bg-yellow-200 px-1 rounded">{m.error}</mark>{" "}
-                  → <b>{m.correction}</b>
-                  <span className="text-gray-700">({m.explanation})</span>
+                <li key={i} className="flex items-start gap-3 text-green-900">
+                  <span className="flex-shrink-0 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white text-xs font-bold mt-0.5">
+                    ✓
+                  </span>
+                  <span className="flex-1 font-medium">{s}</span>
                 </li>
               ))}
             </ul>
-          </div>
+          </SummaryCard>
 
-          {/* Exercises */}
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-            <h3 className="font-semibold text-blue-800 mb-2">{tr.exercises}</h3>
-            <ul className="text-blue-900 space-y-1 ml-4">
-              {(summary.suggestedExercises ?? []).map((e: string, i: number) => (
-                <li key={i}>• {e}</li>
+          {/* Weak Points */}
+          <SummaryCard
+            icon={<FiAlertCircle size={24} />}
+            title={tr.weakPoints}
+            gradient="from-[#FF3816] to-[#EE7203]"
+            bgColor="bg-gradient-to-br from-red-50 to-orange-50"
+            borderColor="border-red-200"
+          >
+            <ul className="space-y-2">
+              {(summary.weakPoints ?? []).map((w: string, i: number) => (
+                <li key={i} className="flex items-start gap-3 text-red-900">
+                  <span className="flex-shrink-0 w-6 h-6 bg-gradient-to-br from-[#FF3816] to-[#EE7203] rounded-full flex items-center justify-center text-white text-xs font-bold mt-0.5">
+                    !
+                  </span>
+                  <span className="flex-1 font-medium">{w}</span>
+                </li>
               ))}
             </ul>
-          </div>
+          </SummaryCard>
 
-          {/* Games */}
-          <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
-            <h3 className="font-semibold text-indigo-800 mb-2">{tr.games}</h3>
-            <ul className="text-indigo-900 space-y-1 ml-4">
-              {(summary.suggestedGames ?? []).map((g: string, i: number) => (
-                <li key={i}>• {g}</li>
+          {/* Common Mistakes */}
+          <SummaryCard
+            icon={<FiAlertTriangle size={24} />}
+            title={tr.commonMistakes}
+            gradient="from-[#EE7203] to-[#FF3816]"
+            bgColor="bg-gradient-to-br from-orange-50 to-red-50"
+            borderColor="border-orange-200"
+          >
+            <ul className="space-y-3">
+              {(summary.commonMistakes ?? []).map((m: any, i: number) => (
+                <li key={i} className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-orange-200">
+                  <div className="flex items-start gap-3 mb-2">
+                    <span className="px-3 py-1 bg-[#FF3816] text-white text-xs font-bold rounded-lg">
+                      {m.error}
+                    </span>
+                    <span className="text-gray-500">→</span>
+                    <span className="px-3 py-1 bg-[#10b981] text-white text-xs font-bold rounded-lg">
+                      {m.correction}
+                    </span>
+                  </div>
+                  <p className="text-sm text-[#112C3E]/80 ml-1">{m.explanation}</p>
+                </li>
               ))}
             </ul>
+          </SummaryCard>
+
+          {/* Exercises & Games Grid */}
+          <div className="grid md:grid-cols-2 gap-6">
+            
+            {/* Exercises */}
+            <SummaryCard
+              icon={<FiTarget size={20} />}
+              title={tr.exercises}
+              gradient="from-[#0C212D] to-[#112C3E]"
+              bgColor="bg-gradient-to-br from-blue-50 to-indigo-50"
+              borderColor="border-blue-200"
+              compact
+            >
+              <ul className="space-y-2">
+                {(summary.suggestedExercises ?? []).map((e: string, i: number) => (
+                  <li key={i} className="flex items-start gap-2 text-blue-900 text-sm">
+                    <span className="flex-shrink-0 text-[#EE7203] font-bold">•</span>
+                    <span className="flex-1">{e}</span>
+                  </li>
+                ))}
+              </ul>
+            </SummaryCard>
+
+            {/* Games */}
+            <SummaryCard
+              icon={<FiZap size={20} />}
+              title={tr.games}
+              gradient="from-[#EE7203] to-[#FF3816]"
+              bgColor="bg-gradient-to-br from-orange-50 to-red-50"
+              borderColor="border-orange-200"
+              compact
+            >
+              <ul className="space-y-2">
+                {(summary.suggestedGames ?? []).map((g: string, i: number) => (
+                  <li key={i} className="flex items-start gap-2 text-orange-900 text-sm">
+                    <span className="flex-shrink-0 text-[#FF3816] font-bold">🎮</span>
+                    <span className="flex-1">{g}</span>
+                  </li>
+                ))}
+              </ul>
+            </SummaryCard>
+
           </div>
 
         </div>
-      </div>
 
+      </div>
+    </div>
+  );
+}
+
+// Reusable Summary Card Component
+function SummaryCard({ icon, title, gradient, bgColor, borderColor, children, compact = false }) {
+  return (
+    <div className={`${bgColor} rounded-2xl border-2 ${borderColor} shadow-lg overflow-hidden`}>
+      <div className={`bg-gradient-to-r ${gradient} p-4 flex items-center gap-3`}>
+        <div className="text-white">{icon}</div>
+        <h3 className={`font-black text-white ${compact ? 'text-base' : 'text-xl'}`}>{title}</h3>
+      </div>
+      <div className={`${compact ? 'p-4' : 'p-6'}`}>
+        {children}
+      </div>
     </div>
   );
 }

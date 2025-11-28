@@ -20,7 +20,9 @@
   },
   "profile": {
   "title": "My Profile",
-  "save": "Save changes",
+  "subtitle": "Manage your personal information and learning settings",
+  "emailLabel": "Email",
+  "saveButton": "Save changes",
 
   "personalHeader": "Personal information",
   "firstName": "First name",
@@ -78,7 +80,9 @@
     "hours": "{{count}} hours ago",
     "minutes": "{{count}} minutes ago",
     "justNow": "Just now"
-  }
+    
+  },
+  "activityGamingPlayed": "You played"
   },
   "quick": {
     "material": "Academic Material",
@@ -115,7 +119,11 @@
 
   "continue": "Continue",
   "review": "Review course",
-  "viewDetails": "View details"
+  "viewDetails": "View details",
+  "resource": "Resource Library",
+  "level": "Course level",
+  "available": "Available material"
+  
   },
   "certificates": {
   "title": "Certificates",
@@ -252,5 +260,26 @@
     }
   }
   },
-  "auth": {}
+  "auth": {},
+  "chat": {
+  "headerTitle": "Mr Further",
+  "headerSubtitle": "{{LANG}} · Level {{LEVEL}}",
+
+  "inputPlaceholder": "Write your message...",
+  "sendButton": "Send",
+  "endConversation": "End conversation",
+
+  "loadingProfile": "Loading chat configuration...",
+  "incompleteProfile": "Please complete your profile to start the conversational chat.",
+
+  "analyzing": "Analyzing your message...",
+
+  "errors": {
+    "connection": "The tutor had a small connection issue but you can continue normally.",
+    "shortConversationTitle": "⚠️ Conversation too short",
+    "shortConversationBody": "You need to chat a little more before requesting a summary. Try sending a few more messages!",
+    "summaryError": "Something went wrong while generating your summary. Please try again."
+  }
+}
+
 }

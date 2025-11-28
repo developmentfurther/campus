@@ -2,7 +2,7 @@
 
 import { useDashboardUI } from "@/stores/useDashboardUI";
 import { useAuth } from "@/contexts/AuthContext";
-import { FiClock, FiChevronRight } from "react-icons/fi";
+import { FiClock, FiChevronRight, FiMessageSquare, FiAlertTriangle } from "react-icons/fi";
 
 export default function ChatHistoryList() {
   const { chatSessions, loadingChatSessions, userProfile } = useAuth();
@@ -43,7 +43,7 @@ export default function ChatHistoryList() {
   },
   fr: {
     loading: "Chargement de vos conversations…",
-    empty: "Vous n’avez pas encore de résumés de conversation.",
+    empty: "Vous n'avez pas encore de résumés de conversation.",
     title: "Historique des conversations",
     conversation: "Conversation",
     level: "Niveau",
@@ -65,67 +65,131 @@ export default function ChatHistoryList() {
 
   if (loadingChatSessions)
     return (
-      <div className="p-6 text-gray-500 text-center">
-        {tr.loading}
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center p-6">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-[#EE7203] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-[#112C3E] font-medium">{tr.loading}</p>
+        </div>
       </div>
     );
 
   if (!chatSessions?.length)
     return (
-      <div className="p-6 text-gray-500 text-center">
-        {tr.empty}
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center p-6">
+        <div className="text-center max-w-md">
+          <div className="bg-gradient-to-br from-[#0C212D] to-[#112C3E] w-24 h-24 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl">
+            <FiMessageSquare className="text-white" size={40} />
+          </div>
+          <h3 className="text-2xl font-black text-[#0C212D] mb-3">{tr.empty}</h3>
+          <p className="text-[#112C3E]/60 text-sm">Start a conversation to see your summaries here.</p>
+        </div>
       </div>
     );
 
   return (
-    <div className="w-full max-w-3xl mx-auto p-6">
-      <h1 className="text-2xl font-bold text-gray-900 mb-4">
-        {tr.title}
-      </h1>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white p-6 md:p-10">
+      <div className="max-w-5xl mx-auto">
+        
+        {/* HEADER */}
+        <div className="mb-10">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-1.5 h-10 bg-gradient-to-b from-[#EE7203] to-[#FF3816] rounded-full"></div>
+            <h1 className="text-4xl font-black text-[#0C212D]">
+              {tr.title}
+            </h1>
+          </div>
 
-      {/* ⚠️ AVISO (autotradu­cible) */}
-      <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-3 rounded-lg text-sm mb-6 flex gap-2 items-start">
-        <span className="text-xl">⚠️</span>
-        <p>{message}</p>
-      </div>
-
-      <div className="space-y-4">
-        {chatSessions.map((s) => (
-          <button
-            key={s.id}
-            onClick={() => {
-              setSessionId(s.id);
-              setSection("chat-session");
-            }}
-            className="w-full bg-white border rounded-2xl shadow-sm p-5 
-                       flex justify-between items-center hover:shadow-md 
-                       transition-all hover:border-gray-300"
-          >
-            <div className="flex flex-col gap-1 text-left">
-
-              <p className="font-semibold text-gray-900 text-lg">
-                {tr.conversation} #{s.id}
-              </p>
-
-              <div className="flex flex-wrap gap-2 text-sm">
-                <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full">
-                  {s.language?.toUpperCase() ?? "LANG"}
-                </span>
-                <span className="bg-purple-50 text-purple-700 px-3 py-1 rounded-full">
-                  {tr.level} {s.level}
-                </span>
+          {/* ⚠️ AVISO (autotradu­cible) */}
+          <div className="relative overflow-hidden bg-gradient-to-br from-[#FF3816]/10 to-[#EE7203]/5 border-2 border-[#FF3816]/30 rounded-2xl p-5 shadow-lg">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[#FF3816]/10 rounded-full blur-2xl -mr-16 -mt-16"></div>
+            <div className="relative flex gap-4 items-start">
+              <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-[#FF3816] to-[#EE7203] rounded-xl flex items-center justify-center shadow-lg">
+                <FiAlertTriangle className="text-white" size={20} />
               </div>
-
-              <p className="text-sm text-gray-500 flex items-center gap-2 mt-1">
-                <FiClock />
-                {s.endedAt?.toDate?.().toLocaleString() ?? "Unknown date"}
-              </p>
+              <div className="flex-1">
+                <p className="text-[#0C212D] font-medium leading-relaxed">{message}</p>
+              </div>
             </div>
+          </div>
+        </div>
 
-            <FiChevronRight className="text-gray-400 text-xl" />
-          </button>
-        ))}
+        {/* LISTA DE CONVERSACIONES */}
+        <div className="grid gap-5">
+          {chatSessions.map((s, index) => (
+            <button
+              key={s.id}
+              onClick={() => {
+                setSessionId(s.id);
+                setSection("chat-session");
+              }}
+              className="group relative bg-white rounded-2xl shadow-sm hover:shadow-2xl transition-all duration-300 overflow-hidden border-2 border-gray-100 hover:border-[#EE7203]/30"
+              style={{
+                animation: 'fadeInUp 0.5s ease-out forwards',
+                animationDelay: `${index * 0.1}s`,
+                opacity: 0
+              }}
+            >
+              {/* Gradient hover effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-[#EE7203]/5 to-[#FF3816]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              
+              {/* Decorative line */}
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#EE7203] to-[#FF3816] transform scale-y-0 group-hover:scale-y-100 transition-transform duration-300 origin-top"></div>
+
+              <div className="relative p-6 flex justify-between items-center">
+                
+                {/* Left content */}
+                <div className="flex items-center gap-5 flex-1">
+                  {/* Icon */}
+                  <div className="flex-shrink-0 w-14 h-14 bg-gradient-to-br from-[#0C212D] to-[#112C3E] rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    <FiMessageSquare className="text-white" size={24} />
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex flex-col gap-2 text-left flex-1 min-w-0">
+                    <p className="font-black text-[#0C212D] text-xl group-hover:text-[#EE7203] transition-colors duration-300">
+                      {tr.conversation} #{s.id}
+                    </p>
+
+                    <div className="flex flex-wrap gap-2">
+                      <span className="px-3 py-1.5 bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white text-xs font-bold rounded-lg uppercase tracking-wide shadow-sm">
+                        {s.language?.toUpperCase() ?? "LANG"}
+                      </span>
+                      <span className="px-3 py-1.5 bg-gradient-to-r from-[#0C212D] to-[#112C3E] text-white text-xs font-bold rounded-lg shadow-sm">
+                        {tr.level} {s.level}
+                      </span>
+                    </div>
+
+                    <p className="text-sm text-[#112C3E]/60 flex items-center gap-2 mt-1 font-medium">
+                      <FiClock className="flex-shrink-0" size={16} />
+                      <span className="truncate">{s.endedAt?.toDate?.().toLocaleString() ?? tr.unknownDate}</span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* Arrow */}
+                <div className="flex-shrink-0 ml-4">
+                  <div className="w-10 h-10 rounded-xl bg-gray-100 group-hover:bg-gradient-to-br group-hover:from-[#EE7203] group-hover:to-[#FF3816] flex items-center justify-center transition-all duration-300">
+                    <FiChevronRight className="text-gray-400 group-hover:text-white transform group-hover:translate-x-1 transition-all duration-300" size={20} />
+                  </div>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
+
+      <style jsx>{`
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 }

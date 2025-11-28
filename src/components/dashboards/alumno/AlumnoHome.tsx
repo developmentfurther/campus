@@ -364,18 +364,33 @@ function RecentActivity({ recentActivity, timeAgo, t }) {
         <ul className="space-y-4 max-h-96 overflow-y-auto pr-2">
           {recentActivity.map((a, i) => (
             <li
-              key={i}
-              className="border-l-2 border-blue-200 pl-4 pb-4 hover:border-blue-500 transition-colors"
-            >
-              <p
-                className="text-sm text-gray-700 mb-1"
-                dangerouslySetInnerHTML={{ __html: a.message }}
-              />
-              <span className="text-xs text-gray-400">{timeAgo(a.date)}</span>
-            </li>
+  key={i}
+  className="border-l-2 border-blue-200 pl-4 pb-4 hover:border-blue-500 transition-colors"
+>
+  <p className="text-sm text-gray-700 mb-1" 
+     dangerouslySetInnerHTML={{
+       __html: renderActivityMessage(a, t)
+     }}
+  />
+  <span className="text-xs text-gray-400">{timeAgo(a.date)}</span>
+</li>
+
           ))}
         </ul>
       )}
     </div>
   );
+}
+
+function renderActivityMessage(activity, t) {
+  switch (activity.type) {
+    case "gaming":
+      return `
+        <span class="font-semibold text-blue-600">🎮 Gaming:</span>
+        ${t("dashboard.activityGamingPlayed")} 
+        ${activity.games.join(", ")}
+      `;
+    default:
+      return activity.message || "";
+  }
 }

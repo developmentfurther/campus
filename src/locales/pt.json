@@ -18,9 +18,11 @@
   "chatHistory": "Histórico",
   "user": "Estudante"
   },
-  "profile": {
+"profile": {
   "title": "Meu Perfil",
-  "save": "Salvar alterações",
+  "subtitle": "Gerencie suas informações pessoais e configurações de aprendizado",
+  "emailLabel": "E-mail",
+  "saveButton": "Salvar alterações",
 
   "personalHeader": "Dados pessoais",
   "firstName": "Nome",
@@ -78,7 +80,9 @@
     "hours": "Há {{count}} horas",
     "minutes": "Há {{count}} minutos",
     "justNow": "Agora mesmo"
-  }
+
+  },
+  "activityGamingPlayed": "Você jogou"
   },
   "quick": {
     "material": "Material Acadêmico",
@@ -111,7 +115,10 @@
     "lessonsCompleted": "{{done}} de {{total}} lições concluídas",
     "continue": "Continuar",
     "review": "Revisar curso",
-    "viewDetails": "Ver detalhes"
+    "viewDetails": "Ver detalhes",
+    "resource": "Biblioteca de Recursos",
+    "level": "Nível do material",
+    "available": "Material disponível"
   },
   "certificates": {
   "title": "Certificados",
@@ -249,5 +256,26 @@
     }
   }
 },
-  "auth": {}
+  "auth": {},
+  "chat": {
+  "headerTitle": "Mr Further",
+  "headerSubtitle": "{{LANG}} · Nível {{LEVEL}}",
+
+  "inputPlaceholder": "Escreva sua mensagem...",
+  "sendButton": "Enviar",
+  "endConversation": "Finalizar conversa",
+
+  "loadingProfile": "Carregando a configuração do chat...",
+  "incompleteProfile": "Por favor, complete seu perfil para iniciar o chat conversacional.",
+
+  "analyzing": "Analisando sua mensagem...",
+
+  "errors": {
+    "connection": "O tutor teve um pequeno problema de conexão, mas você pode continuar normalmente.",
+    "shortConversationTitle": "⚠️ Conversa muito curta",
+    "shortConversationBody": "Você precisa conversar um pouco mais antes de solicitar um resumo. Tente enviar mais algumas mensagens!",
+    "summaryError": "Ocorreu um erro ao gerar seu resumo. Tente novamente."
+  }
+}
+
 }

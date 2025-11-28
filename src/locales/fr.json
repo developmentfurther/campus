@@ -20,7 +20,10 @@
   },
   "profile": {
   "title": "Mon Profil",
-  "save": "Enregistrer les modifications",
+  "subtitle": "Gérez vos informations personnelles et vos paramètres d’apprentissage",
+  "emailLabel": "E-mail",
+  "saveButton": "Enregistrer les modifications",
+
 
   "personalHeader": "Informations personnelles",
   "firstName": "Prénom",
@@ -72,7 +75,10 @@
     "noActivity": "Aucune activité récente.",
     "quickTitle": "Accès rapide",
     "activeCoursesLabel": "Matériel actif",
-    "certificatesLabel": "Certificats"
+    "certificatesLabel": "Certificats",
+    "activityGamingPlayed": "Tu as joué à"
+    
+
   },
   "quick": {
     "material": "Matériel Académique",
@@ -111,7 +117,10 @@
     "lessonsCompleted": "{{done}} sur {{total}} leçons complétées",
     "continue": "Continuer",
     "review": "Revoir le cours",
-    "viewDetails": "Voir les détails"
+    "viewDetails": "Voir les détails",
+    "resource": "Bibliothèque de Ressources",
+    "level": "Niveau du matériel",
+    "available": "Matériel disponible"
   },
   "certificates": {
   "title": "Certificats",
@@ -248,5 +257,26 @@
     }
   }
   },
-  "auth": {}
+  "auth": {},
+  "chat": {
+  "headerTitle": "Mr Further",
+  "headerSubtitle": "{{LANG}} · Niveau {{LEVEL}}",
+
+  "inputPlaceholder": "Écris ton message...",
+  "sendButton": "Envoyer",
+  "endConversation": "Terminer la conversation",
+
+  "loadingProfile": "Chargement de la configuration du chat...",
+  "incompleteProfile": "Veuillez compléter votre profil pour commencer le chat conversationnel.",
+
+  "analyzing": "Analyse de ton message...",
+
+  "errors": {
+    "connection": "Le tuteur a rencontré un petit problème de connexion, mais tu peux continuer normalement.",
+    "shortConversationTitle": "⚠️ Conversation trop courte",
+    "shortConversationBody": "Tu dois écrire un peu plus avant de demander un résumé. Essaie d'envoyer quelques messages supplémentaires !",
+    "summaryError": "Une erreur s'est produite lors de la génération de ton résumé. Veuillez réessayer."
+  }
+}
+
 }

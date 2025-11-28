@@ -284,13 +284,11 @@ const loadAlumnos = async () => {
           );
 
           final.push({
-            type: "gaming",
-            message: `
-              <span class="font-semibold text-blue-600">🎮 Gaming:</span>
-              Jugaste a ${formattedNames.join(", ")}
-            `,
-            date: mostRecentDate,
-          });
+  type: "gaming",
+  games: formattedNames, // ← solo datos
+  date: mostRecentDate,
+});
+
         }
       }
     }
