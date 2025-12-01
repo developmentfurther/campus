@@ -41,21 +41,24 @@ export default function WordScramble() {
 
   // === verificar intentos ===
   useEffect(() => {
-    const check = async () => {
-      if (!user) return;
+    // const check = async () => {
+    //   if (!user) return;
 
-      if (role === "admin" || role === "profesor") {
-        setCheckingAttempt(false);
-        return;
-      }
+    //   if (role === "admin" || role === "profesor") {
+    //     setCheckingAttempt(false);
+    //     return;
+    //   }
 
-      const played = await userPlayedToday(user.uid, GAME_ID);
-      if (played) setBlocked(true);
+    //   const played = await userPlayedToday(user.uid, GAME_ID);
+    //   if (played) setBlocked(true);
 
-      setCheckingAttempt(false);
-    };
+    //   setCheckingAttempt(false);
+    // };
 
-    void check();
+    // void check();
+
+     setBlocked(false);
+  setCheckingAttempt(false);
   }, [user, role]);
 
   // === cargar palabra ===
@@ -103,16 +106,16 @@ export default function WordScramble() {
 
   // === guardar intento ===
   useEffect(() => {
-    const save = async () => {
-      if (!user) return;
-      if (role !== "alumno") return;
-      if (status !== "won") return;
+    // const save = async () => {
+    //   if (!user) return;
+    //   if (role !== "alumno") return;
+    //   if (status !== "won") return;
 
-      await updateUserGameAttempt(user.uid, GAME_ID);
-      setBlocked(true);
-    };
+    //   await updateUserGameAttempt(user.uid, GAME_ID);
+    //   setBlocked(true);
+    // };
 
-    void save();
+    // void save();
   }, [status, user, role]);
 
   // === hints/IU ===
@@ -151,33 +154,33 @@ export default function WordScramble() {
 
   // === UI ===
 
-  if (checkingAttempt) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="relative w-24 h-24 mx-auto mb-6">
-            <div className="absolute inset-0 rounded-full border-8 border-purple-200" />
-            <div className="absolute inset-0 rounded-full border-8 border-t-purple-600 animate-spin" />
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // if (checkingAttempt) {
+  //   return (
+  //     <div className="min-h-screen flex items-center justify-center">
+  //       <div className="text-center">
+  //         <div className="relative w-24 h-24 mx-auto mb-6">
+  //           <div className="absolute inset-0 rounded-full border-8 border-purple-200" />
+  //           <div className="absolute inset-0 rounded-full border-8 border-t-purple-600 animate-spin" />
+  //         </div>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
  
   // Bloqueado (ya jugó hoy)
-  if (blocked && role === "alumno") {
-    return (
-      <GameBlockedModal
-      emoji="⏳"
-      title={t("gaming.games.idioms.blockedTitle")}
-      message={t("gaming.games.idioms.blockedMessage")}
-      nextAvailableLabel={t("gaming.games.shared.nextAvailable")}
-      hoursLabel={t("gaming.games.shared.hours")}
-      minutesLabel={t("gaming.games.shared.minutes")}
-    />
-    );
-  }
+  // if (blocked && role === "alumno") {
+  //   return (
+  //     <GameBlockedModal
+  //     emoji="⏳"
+  //     title={t("gaming.games.idioms.blockedTitle")}
+  //     message={t("gaming.games.idioms.blockedMessage")}
+  //     nextAvailableLabel={t("gaming.games.shared.nextAvailable")}
+  //     hoursLabel={t("gaming.games.shared.hours")}
+  //     minutesLabel={t("gaming.games.shared.minutes")}
+  //   />
+  //   );
+  // }
 
   // Cargando palabra
   if (loadingWord) {

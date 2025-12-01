@@ -152,30 +152,39 @@ export default function Hangman() {
      🔍 Verificar intento diario
   ============================================================ */
   useEffect(() => {
-    const check = async () => {
-      if (!user) {
-        setCheckingAttempt(false);
-        return;
-      }
-      if (role === "admin" || role === "profesor") {
-        setBlocked(false);
-        setCheckingAttempt(false);
-        return;
-      }
+     // 🔥 TEMPORARY DISABLED GAME LIMITS
+  // (Uncomment this block in the future to reactivate daily attempt limits)
 
-      try {
-        const played = await userPlayedToday(user.uid, GAME_ID);
-        setBlocked(played);
-      } catch (err) {
-        console.error("❌ Error checking attempt:", err);
-      } finally {
-        setCheckingAttempt(false);
-      }
-    };
-
-    if (authReady && !loading && userProfile) {
-      void check();
+  /*
+  const check = async () => {
+    if (!user) {
+      setCheckingAttempt(false);
+      return;
     }
+    if (role === "admin" || role === "profesor") {
+      setBlocked(false);
+      setCheckingAttempt(false);
+      return;
+    }
+
+    try {
+      const played = await userPlayedToday(user.uid, GAME_ID);
+      setBlocked(played);
+    } catch (err) {
+      console.error("❌ Error checking attempt:", err);
+    } finally {
+      setCheckingAttempt(false);
+    }
+  };
+
+  if (authReady && !loading && userProfile) {
+    void check();
+  }
+  */
+
+  // 🚀 Always allow playing (temporary)
+  setBlocked(false);
+  setCheckingAttempt(false);
   }, [user, role, authReady, loading, userProfile]);
 
   /* ============================================================
@@ -235,32 +244,32 @@ export default function Hangman() {
   ============================================================ */
   useEffect(() => {
     // Solo guardar si es alumno y el juego terminó
-    if (!user || role !== "alumno") return;
-    if (status === "playing") return;
-    if (blocked) return; // Ya fue guardado
+    // if (!user || role !== "alumno") return;
+    // if (status === "playing") return;
+    // if (blocked) return; // Ya fue guardado
 
-    console.log("🎮 Juego terminado, guardando intento...", {
-      uid: user.uid,
-      game: GAME_ID,
-      status,
-    });
+    // console.log("🎮 Juego terminado, guardando intento...", {
+    //   uid: user.uid,
+    //   game: GAME_ID,
+    //   status,
+    // });
 
-    // Guardar inmediatamente cuando termina el juego
-    const saveAttempt = async () => {
-      try {
-        await updateUserGameAttempt(user.uid, GAME_ID);
-        console.log("✅ Intento guardado exitosamente");
+    // // Guardar inmediatamente cuando termina el juego
+    // const saveAttempt = async () => {
+    //   try {
+    //     await updateUserGameAttempt(user.uid, GAME_ID);
+    //     console.log("✅ Intento guardado exitosamente");
         
-        // Esperar 2 segundos antes de bloquear para mostrar el resultado
-        setTimeout(() => {
-          setBlocked(true);
-        }, 1000);
-      } catch (err) {
-        console.error("❌ Error guardando intento:", err);
-      }
-    };
+    //     // Esperar 2 segundos antes de bloquear para mostrar el resultado
+    //     setTimeout(() => {
+    //       setBlocked(true);
+    //     }, 1000);
+    //   } catch (err) {
+    //     console.error("❌ Error guardando intento:", err);
+    //   }
+    // };
 
-    void saveAttempt();
+    // void saveAttempt();
   }, [status, user, role, blocked]);
 
   /* ============================================================
@@ -315,32 +324,32 @@ export default function Hangman() {
   }
 
   // Verificando intento
-  if (checkingAttempt) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="relative w-24 h-24 mx-auto mb-6">
-            <div className="absolute inset-0 rounded-full border-8 border-purple-200" />
-            <div className="absolute inset-0 rounded-full border-8 border-t-purple-600 animate-spin" />
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // if (checkingAttempt) {
+  //   return (
+  //     <div className="min-h-screen flex items-center justify-center">
+  //       <div className="text-center">
+  //         <div className="relative w-24 h-24 mx-auto mb-6">
+  //           <div className="absolute inset-0 rounded-full border-8 border-purple-200" />
+  //           <div className="absolute inset-0 rounded-full border-8 border-t-purple-600 animate-spin" />
+  //         </div>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   // Bloqueado (ya jugó hoy)
-  if (blocked && role === "alumno") {
-    return (
-      <GameBlockedModal
-      emoji="⏳"
-      title={t("gaming.games.idioms.blockedTitle")}
-      message={t("gaming.games.idioms.blockedMessage")}
-      nextAvailableLabel={t("gaming.games.shared.nextAvailable")}
-      hoursLabel={t("gaming.games.shared.hours")}
-      minutesLabel={t("gaming.games.shared.minutes")}
-    />
-    );
-  }
+  // if (blocked && role === "alumno") {
+  //   return (
+  //     <GameBlockedModal
+  //     emoji="⏳"
+  //     title={t("gaming.games.idioms.blockedTitle")}
+  //     message={t("gaming.games.idioms.blockedMessage")}
+  //     nextAvailableLabel={t("gaming.games.shared.nextAvailable")}
+  //     hoursLabel={t("gaming.games.shared.hours")}
+  //     minutesLabel={t("gaming.games.shared.minutes")}
+  //   />
+  //   );
+  // }
 
   // Cargando palabra
   if (loadingWord) {

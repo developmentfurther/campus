@@ -53,6 +53,11 @@ Guidelines for writing:
 
 Adapt tone and difficulty to CEFR level {{LEVEL}} and target language {{LANGUAGE}}.
 
+IMPORTANT:
+• If the target language is "Spanish", ALWAYS use Rioplatense/Argentinian Spanish.
+• If the target language is "Portuguese", ALWAYS use Brazilian Portuguese (PT-BR).
+
+
 If you are missing information, still return a valid JSON with empty arrays/short text.
 `;
 

@@ -61,25 +61,27 @@ export default function ErrorFinder() {
   // CHECK INTENTOS
   // ======================================================
   useEffect(() => {
-    const check = async () => {
-      if (!user) {
-        setCheckingAttempt(false);
-        return;
-      }
+    // const check = async () => {
+    //   if (!user) {
+    //     setCheckingAttempt(false);
+    //     return;
+    //   }
 
-      if (role === "admin" || role === "profesor") {
-        setBlocked(false);
-        setCheckingAttempt(false);
-        return;
-      }
+    //   if (role === "admin" || role === "profesor") {
+    //     setBlocked(false);
+    //     setCheckingAttempt(false);
+    //     return;
+    //   }
 
-      const played = await userPlayedToday(user.uid, GAME_ID);
-      if (played) setBlocked(true);
+    //   const played = await userPlayedToday(user.uid, GAME_ID);
+    //   if (played) setBlocked(true);
 
-      setCheckingAttempt(false);
-    };
+    //   setCheckingAttempt(false);
+    // };
 
-    void check();
+    // void check();
+     setBlocked(false);
+  setCheckingAttempt(false);
   }, [user, role]);
 
   // ======================================================
@@ -123,16 +125,16 @@ export default function ErrorFinder() {
   // GUARDAR INTENTO
   // ======================================================
   useEffect(() => {
-    const mark = async () => {
-      if (!user) return;
-      if (role !== "alumno") return;
-      if (status === "selecting" || status === "correcting") return;
+    // const mark = async () => {
+    //   if (!user) return;
+    //   if (role !== "alumno") return;
+    //   if (status === "selecting" || status === "correcting") return;
 
-      await updateUserGameAttempt(user.uid, GAME_ID);
-      setBlocked(true);
-    };
+    //   await updateUserGameAttempt(user.uid, GAME_ID);
+    //   setBlocked(true);
+    // };
 
-    void mark();
+    // void mark();
   }, [status, user, role]);
 
   // ======================================================
@@ -151,19 +153,19 @@ export default function ErrorFinder() {
       </div>
     );
   }
-  // Bloqueado (ya jugó hoy)
-  if (blocked && role === "alumno") {
-    return (
-      <GameBlockedModal
-      emoji="⏳"
-      title={t("gaming.games.idioms.blockedTitle")}
-      message={t("gaming.games.idioms.blockedMessage")}
-      nextAvailableLabel={t("gaming.games.shared.nextAvailable")}
-      hoursLabel={t("gaming.games.shared.hours")}
-      minutesLabel={t("gaming.games.shared.minutes")}
-    />
-    );
-  }
+  // // Bloqueado (ya jugó hoy)
+  // if (blocked && role === "alumno") {
+  //   return (
+  //     <GameBlockedModal
+  //     emoji="⏳"
+  //     title={t("gaming.games.idioms.blockedTitle")}
+  //     message={t("gaming.games.idioms.blockedMessage")}
+  //     nextAvailableLabel={t("gaming.games.shared.nextAvailable")}
+  //     hoursLabel={t("gaming.games.shared.hours")}
+  //     minutesLabel={t("gaming.games.shared.minutes")}
+  //   />
+  //   );
+  // }
 
   if (loading || !data) {
     return (

@@ -35,21 +35,24 @@ export default function EmojiIdioms() {
 
   // Verificación de intento diario
   useEffect(() => {
-    const check = async () => {
-      if (!user) return setCheckingAttempt(false);
+    // const check = async () => {
+    //   if (!user) return setCheckingAttempt(false);
 
-      if (role === "admin" || role === "profesor") {
-        setCheckingAttempt(false);
-        return;
-      }
+    //   if (role === "admin" || role === "profesor") {
+    //     setCheckingAttempt(false);
+    //     return;
+    //   }
 
-      const played = await userPlayedToday(user.uid, GAME_ID);
-      if (played) setBlocked(true);
+    //   const played = await userPlayedToday(user.uid, GAME_ID);
+    //   if (played) setBlocked(true);
 
-      setCheckingAttempt(false);
-    };
+    //   setCheckingAttempt(false);
+    // };
 
-    check();
+    // check();
+     setBlocked(false);
+  setCheckingAttempt(false);
+
   }, [user, role]);
 
   // Cargar idiom al cambiar idioma o estado
@@ -72,19 +75,19 @@ export default function EmojiIdioms() {
 
   // Guardar intento si acierta
   useEffect(() => {
-    const save = async () => {
-      if (!revealed || !item) return;
-      if (!user) return;
-      if (role !== "alumno") return;
+    // const save = async () => {
+    //   if (!revealed || !item) return;
+    //   if (!user) return;
+    //   if (role !== "alumno") return;
 
-      const ok = item.answers.some((a) => norm(a) === norm(input));
-      if (!ok) return;
+    //   const ok = item.answers.some((a) => norm(a) === norm(input));
+    //   if (!ok) return;
 
-      await updateUserGameAttempt(user.uid, GAME_ID);
-      setBlocked(true);
-    };
+    //   await updateUserGameAttempt(user.uid, GAME_ID);
+    //   setBlocked(true);
+    // };
 
-    save();
+    // save();
   }, [revealed, item, user, role, input]); // ⭐ Agregado 'input' a dependencias
 
   const correct =
@@ -159,19 +162,19 @@ export default function EmojiIdioms() {
     );
   }
 
-  // UI - Bloqueado
-  if (blocked && role === "alumno") {
-    return (
-      <GameBlockedModal
-      emoji="⏳"
-      title={t("gaming.games.idioms.blockedTitle")}
-      message={t("gaming.games.idioms.blockedMessage")}
-      nextAvailableLabel={t("gaming.games.shared.nextAvailable")}
-      hoursLabel={t("gaming.games.shared.hours")}
-      minutesLabel={t("gaming.games.shared.minutes")}
-    />
-    );
-  }
+  // // UI - Bloqueado
+  // if (blocked && role === "alumno") {
+  //   return (
+  //     <GameBlockedModal
+  //     emoji="⏳"
+  //     title={t("gaming.games.idioms.blockedTitle")}
+  //     message={t("gaming.games.idioms.blockedMessage")}
+  //     nextAvailableLabel={t("gaming.games.shared.nextAvailable")}
+  //     hoursLabel={t("gaming.games.shared.hours")}
+  //     minutesLabel={t("gaming.games.shared.minutes")}
+  //   />
+  //   );
+  // }
 
   // UI - Cargando
   if (!item) {

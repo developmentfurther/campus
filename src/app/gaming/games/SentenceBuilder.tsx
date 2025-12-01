@@ -63,26 +63,28 @@ export default function SentenceBuilder() {
   // CONTROL DE INTENTOS — Firestore
   // ======================================================
   useEffect(() => {
-    const check = async () => {
-      if (!user) {
-        setCheckingAttempt(false);
-        return;
-      }
+    // const check = async () => {
+    //   if (!user) {
+    //     setCheckingAttempt(false);
+    //     return;
+    //   }
 
-      // Admin & Profesor → sin límites
-      if (role === "admin" || role === "profesor") {
-        setBlocked(false);
-        setCheckingAttempt(false);
-        return;
-      }
+    //   // Admin & Profesor → sin límites
+    //   if (role === "admin" || role === "profesor") {
+    //     setBlocked(false);
+    //     setCheckingAttempt(false);
+    //     return;
+    //   }
 
-      const played = await userPlayedToday(user.uid, GAME_ID);
-      if (played) setBlocked(true);
+    //   const played = await userPlayedToday(user.uid, GAME_ID);
+    //   if (played) setBlocked(true);
 
-      setCheckingAttempt(false);
-    };
+    //   setCheckingAttempt(false);
+    // };
 
-    void check();
+    // void check();
+     setBlocked(false);
+  setCheckingAttempt(false);
   }, [user, role]);
 
   // ======================================================
@@ -157,16 +159,16 @@ export default function SentenceBuilder() {
   // SAVE ATTEMPT
   // ======================================================
   useEffect(() => {
-    const update = async () => {
-      if (!user) return;
-      if (role !== "alumno") return;
-      if (status === "playing") return;
+    // const update = async () => {
+    //   if (!user) return;
+    //   if (role !== "alumno") return;
+    //   if (status === "playing") return;
 
-      await updateUserGameAttempt(user.uid, GAME_ID);
-      setBlocked(true);
-    };
+    //   await updateUserGameAttempt(user.uid, GAME_ID);
+    //   setBlocked(true);
+    // };
 
-    void update();
+    // void update();
   }, [status, user, role]);
 
   // ======================================================
@@ -186,18 +188,18 @@ export default function SentenceBuilder() {
   }
 
   // Bloqueado (ya jugó hoy)
-  if (blocked && role === "alumno") {
-    return (
-      <GameBlockedModal
-      emoji="⏳"
-      title={t("gaming.games.idioms.blockedTitle")}
-      message={t("gaming.games.idioms.blockedMessage")}
-      nextAvailableLabel={t("gaming.games.shared.nextAvailable")}
-      hoursLabel={t("gaming.games.shared.hours")}
-      minutesLabel={t("gaming.games.shared.minutes")}
-    />
-    );
-  }
+  // if (blocked && role === "alumno") {
+  //   return (
+  //     <GameBlockedModal
+  //     emoji="⏳"
+  //     title={t("gaming.games.idioms.blockedTitle")}
+  //     message={t("gaming.games.idioms.blockedMessage")}
+  //     nextAvailableLabel={t("gaming.games.shared.nextAvailable")}
+  //     hoursLabel={t("gaming.games.shared.hours")}
+  //     minutesLabel={t("gaming.games.shared.minutes")}
+  //   />
+  //   );
+  // }
 
   // Cargando palabra
   if (loading) {

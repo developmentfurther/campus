@@ -10,6 +10,7 @@ import SidebarAlumno from "@/components/layout/SidebarAlumno";
 
 import MobileNavbarAlumno from "@/components/layout/MobileNavbarAlumno";
 import MobileNavbarAdmin from "@/components/layout/MobileNavbarAdmin";
+import MobileNavbarProfesor from "@/components/layout/MobileNavbarProfesor";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, role, authReady, loading } = useAuth();
@@ -45,6 +46,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* MOBILE NAV ONLY FOR ALUMNO */}
       {role === "alumno" && <MobileNavbarAlumno />}
       {role === "admin" && <MobileNavbarAdmin />}
+      {role === "profesor" && <MobileNavbarProfesor />}
     
     </div>
   );
