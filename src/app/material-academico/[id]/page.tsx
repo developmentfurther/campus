@@ -1505,11 +1505,11 @@ const renderSpeaking = (ex: any) => {
         whileHover={!submitted ? { scale: 1.03 } : {}}
         whileTap={!submitted ? { scale: 0.97 } : {}}
         className={`w-full py-3 rounded-xl font-semibold transition shadow-sm ${
-          submitted
-            ? "bg-slate-300 text-slate-500 cursor-not-allowed"
-            : "bg-blue-600 text-white hover:bg-blue-700"
-        }`}
-      >
+    submitted
+      ? "bg-slate-300 text-slate-500 cursor-not-allowed"
+      : "bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white hover:shadow-2xl hover:shadow-[#EE7203]/40 "
+  }`}
+>
         {submitted ? "Intento registrado" : "Comprobar respuestas"}
       </motion.button>
 
@@ -1636,25 +1636,28 @@ const currentUnit = units[activeU];
      🔹 UI inicial (básica)
      ========================================================= */
  return (
- <div className="flex h-screen overflow-hidden bg-white text-slate-900">
+ <div className="flex h-screen overflow-hidden bg-gradient-to-br from-gray-50 to-white text-slate-900">
     {/* ======================= SIDEBAR IZQUIERDA ======================= */}
-    <aside className="w-72 shrink-0 border-r border-slate-200 bg-white sticky top-0 h-screen overflow-y-auto">
-      <div className="p-4 border-b border-slate-200">
+    <aside className="w-72 shrink-0 border-r-2 border-gray-100 bg-white sticky top-0 h-screen overflow-y-auto">
+      
+      {/* Header del sidebar */}
+      <div className="p-4 border-b-2 border-gray-100 bg-gradient-to-br from-[#0C212D] to-[#112C3E]">
         <button
           onClick={() => router.push("/dashboard")}
-          className="flex items-center gap-2 text-sm text-slate-600 hover:text-blue-600"
+          className="flex items-center gap-2 text-sm text-white/80 hover:text-white font-medium transition-colors group"
         >
-          <FiChevronLeft className="text-blue-600" />
+          <FiChevronLeft className="text-[#EE7203] group-hover:text-[#FF3816] transform group-hover:-translate-x-1 transition-all" />
           Volver al inicio
         </button>
       </div>
 
-      <div className="p-4 border-b border-slate-200">
-        <h1 className="text-lg font-bold text-slate-900 line-clamp-1">{curso.titulo}</h1>
-        <p className="text-xs text-slate-500 line-clamp-2">{curso.descripcion}</p>
-        
+      {/* Info del curso */}
+      <div className="p-5 border-b-2 border-gray-100 bg-gradient-to-br from-[#EE7203]/5 to-[#FF3816]/5">
+        <h1 className="text-lg font-black text-[#0C212D] line-clamp-2 mb-2">{curso.titulo}</h1>
+        <p className="text-xs text-[#112C3E]/70 line-clamp-2 leading-relaxed">{curso.descripcion}</p>
       </div>
 
+      {/* Navigation */}
       <nav className="p-3 space-y-2 pb-32">
         {units.map((u, uIdx) => {
           // Cierre del curso
@@ -1664,24 +1667,27 @@ const currentUnit = units[activeU];
             const active = activeU === uIdx && activeL === 0;
 
             return (
-              <div key={u.id} className="mt-4 pt-3 border-t border-slate-200">
-                <div className="px-3 py-2 font-semibold text-slate-700">🎓 Cierre del curso</div>
+              <div key={u.id} className="mt-4 pt-3 border-t-2 border-gray-200">
+                <div className="px-3 py-2 font-bold text-[#0C212D] flex items-center gap-2">
+                  <span className="text-lg">🎓</span>
+                  <span>Cierre del curso</span>
+                </div>
                 <button
                   onClick={() => {
                     setActiveU(uIdx);
                     setActiveL(0);
                   }}
-                  className={`block w-full text-left px-5 py-1.5 rounded-md text-sm transition ${
+                  className={`block w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                     active
-                      ? "bg-blue-50 text-blue-600 border border-blue-200"
+                      ? "bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white shadow-lg"
                       : done
-                      ? "text-emerald-600 hover:bg-slate-100"
-                      : "text-slate-600 hover:bg-slate-100"
+                      ? "text-[#10b981] hover:bg-emerald-50 border-2 border-emerald-200"
+                      : "text-[#112C3E] hover:bg-gray-100 border-2 border-transparent"
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="truncate">{l?.title || "Cierre del Curso"}</span>
-                    {done && <FiCheckCircle size={12} className="text-emerald-500" />}
+                    {done && <FiCheckCircle size={14} className="text-emerald-500 flex-shrink-0" />}
                   </div>
                 </button>
               </div>
@@ -1697,24 +1703,25 @@ const currentUnit = units[activeU];
                 onClick={() =>
                   setExpandedUnits((prev) => ({ ...prev, [uIdx]: !prev[uIdx] }))
                 }
-                className={`w-full text-left px-3 py-2 font-semibold flex justify-between items-center rounded-md transition ${
+                className={`w-full text-left px-4 py-3 font-bold flex justify-between items-center rounded-xl transition-all border-2 ${
                   expandedUnits[uIdx]
-                    ? "bg-blue-50 text-blue-700"
-                    : "hover:bg-slate-100 text-slate-700"
+                    ? "bg-gradient-to-r from-[#0C212D] to-[#112C3E] text-white border-[#0C212D]"
+                    : "hover:bg-gray-50 text-[#0C212D] border-transparent"
                 }`}
               >
-                <span>
+                <span className="text-sm">
                   Unit {unitNumber}: {u.title}
                 </span>
                 <FiChevronRight
-                  className={`transition-transform ${
-                    expandedUnits[uIdx] ? "rotate-90" : ""
+                  className={`transition-transform flex-shrink-0 ${
+                    expandedUnits[uIdx] ? "rotate-90 text-[#EE7203]" : ""
                   }`}
+                  size={18}
                 />
               </button>
 
               {expandedUnits[uIdx] && (
-                <div className="mt-1 space-y-1">
+                <div className="mt-2 space-y-1 ml-2">
                   {u.lessons.map((l, lIdx) => {
                     const done =
                       progress[l.key]?.videoEnded || progress[l.key]?.exSubmitted;
@@ -1726,24 +1733,22 @@ const currentUnit = units[activeU];
                           setActiveU(uIdx);
                           setActiveL(lIdx);
                         }}
-                        className={`block w-full text-left px-5 py-1.5 rounded-md text-sm transition ${
+                        className={`block w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium transition-all border-2 ${
                           active
-                            ? "bg-blue-50 text-blue-700 border border-blue-200"
+                            ? "bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white shadow-lg border-[#EE7203]"
                             : done
-                            ? "text-emerald-600 hover:bg-slate-100"
-                            : "text-slate-600 hover:bg-slate-100"
+                            ? "text-[#10b981] hover:bg-emerald-50 border-emerald-200"
+                            : "text-[#112C3E] hover:bg-gray-50 border-transparent"
                         }`}
                       >
                         <div className="flex items-center justify-between">
                           <span className="truncate">
-  {l.id === "closing"
-    ? "Cierre de la unidad"
-    : `${uIdx + 1}.${lIdx + 1}  ${l.title}`}
-</span>
-
-
+                            {l.id === "closing"
+                              ? "Cierre de la unidad"
+                              : `${uIdx + 1}.${lIdx + 1}  ${l.title}`}
+                          </span>
                           {done && (
-                            <FiCheckCircle size={12} className="text-emerald-500" />
+                            <FiCheckCircle size={14} className="text-emerald-500 flex-shrink-0" />
                           )}
                         </div>
                       </button>
@@ -1755,175 +1760,155 @@ const currentUnit = units[activeU];
           );
         })}
       </nav>
-    
-    {/* Logo fijo al fondo */}
-
- {/* Logo fijo al fondo
-     <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white via-white to-transparent">
-        <div className="w-full h-px bg-slate-200 mb-4" />
-        <div className="flex justify-center">
-          <Image
-            src="/images/logo.png"
-            alt="Further Corporate"
-            width={200}
-            height={80}
-            className="opacity-90"
-          />
-        </div>
-      </div> */}
-
     </aside>
 
     {/* ======================= CONTENIDO PRINCIPAL ======================= */}
-    <main className="flex-1 p-8 overflow-y-auto bg-white">
+    <main className="flex-1 p-8 overflow-y-auto">
       <div className="max-w-5xl mx-auto space-y-6">
        
+        {/* Título de la lección */}
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-1.5 h-10 bg-gradient-to-b from-[#EE7203] to-[#FF3816] rounded-full"></div>
+          <h1 className="text-3xl font-black text-[#0C212D]">
+            {activeLesson?.title || "Lección actual"}
+          </h1>
+        </div>
 
-        <h1 className="text-2xl font-bold text-slate-900">
-          {activeLesson?.title || "Lección actual"}
-        </h1>
-
-          <>
-
+        <>
           {activeLesson?.description && (
-              <p className="text-slate-600 mb-2">{activeLesson.description}</p>
-            )}
-            {/* VIDEO */}
-            {resolvedVideoUrl && (
-              <div className="aspect-video rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
-                <iframe
-  id="vimeo-player"
-  src={resolvedVideoUrl}
-  className="w-full h-full"
-  allow="autoplay; fullscreen; picture-in-picture; encrypted-media; web-share"
-  allowFullScreen
-/>
+            <p className="text-[#112C3E]/80 mb-4 text-lg leading-relaxed">{activeLesson.description}</p>
+          )}
 
-              </div>
-            )}
-
-            {/* PDF */}
-            {activeLesson?.pdfUrl && (
-              <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                <h3 className="text-blue-600 font-semibold mb-3 flex items-center gap-2">
-                  <FiFileText /> Resumen de la unidad
-                </h3>
-                <iframe
-                  src={toEmbedPdfUrl(activeLesson.pdfUrl)}
-                  className="w-full h-[500px] rounded-lg border border-slate-200"
-                  title="Resumen PDF"
-                />
-              </div>
-            )}
-
-            
-
-            {/* TEORÍA */}
-            {activeLesson?.theory && (
-              <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                <article className="prose max-w-none">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {activeLesson.theory}
-                  </ReactMarkdown>
-                </article>
-              </div>
-            )}
-
-
-{/* VOCABULARY */}
-{activeLesson?.vocabulary && (
-  <RenderVocabularyBlock vocab={activeLesson.vocabulary} />
-)}
-            {/* EJERCICIOS */}
-            {Array.isArray(activeLesson?.ejercicios) &&
-              activeLesson.ejercicios.length > 0 && (
-                <>
-                    <section className="bg-white p-6 rounded-2xl border border-slate-200 space-y-6 shadow-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-slate-600">
-                          {currentExercise + 1} / {activeLesson.ejercicios.length}
-                        </span>
-                      </div>
-
-  
-<ExerciseRunner
-  ejercicios={[activeLesson.ejercicios[currentExercise]]}
-  lessonKey={activeLesson.key}
-  exerciseIndex={currentExercise}
-  batchId={userProfile?.batchId}
-  userKey={userProfile?.userKey}
-  courseId={courseId}
-  onSubmit={() => {
-    // Esta función ahora solo debe avanzar o mostrar mensajes simples.
-    // NO DEBE GUARDAR EN FIRESTORE.
-    
-    // Si querés mantener toasts:
-    // toast.success("Ejercicio registrado");
-  }}
-/>
-
-
-
-                      <div className="flex justify-between items-center pt-2 border-t border-slate-200">
-                        <button
-                          onClick={prevExercise}
-                          disabled={currentExercise === 0}
-                          className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:opacity-50 text-sm font-medium transition-all"
-                        >
-                          ← Anterior
-                        </button>
-                        <button
-                          onClick={nextExercise}
-                          disabled={
-                            currentExercise >= activeLesson.ejercicios.length - 1
-                          }
-                          className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition-all"
-                        >
-                          Siguiente →
-                        </button>
-                      </div>
-                    </section>
-               
-                </>
-              )}
-
-            {activeLesson?.finalMessage && (
-              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-6 text-emerald-700">
-                {activeLesson.finalMessage}
-              </div>
-            )}
-
-            <div className="mt-6 flex justify-end">
-              <button
-                onClick={goNextLesson}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold shadow bg-blue-600 text-white hover:bg-blue-700"
-              >
-                Siguiente lección
-                <FiChevronRight />
-              </button>
+          {/* VIDEO */}
+          {resolvedVideoUrl && (
+            <div className="aspect-video rounded-2xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50 border-2 border-gray-200 shadow-xl">
+              <iframe
+                id="vimeo-player"
+                src={resolvedVideoUrl}
+                className="w-full h-full"
+                allow="autoplay; fullscreen; picture-in-picture; encrypted-media; web-share"
+                allowFullScreen
+              />
             </div>
-          </>
+          )}
+
+          {/* PDF */}
+          {activeLesson?.pdfUrl && (
+            <div className="bg-white p-6 rounded-2xl border-2 border-gray-200 shadow-lg">
+              <h3 className="text-[#EE7203] font-black mb-4 flex items-center gap-3 text-lg">
+                <div className="p-2 bg-gradient-to-br from-[#EE7203] to-[#FF3816] rounded-lg">
+                  <FiFileText className="text-white" size={20} />
+                </div>
+                Resumen de la unidad
+              </h3>
+              <iframe
+                src={toEmbedPdfUrl(activeLesson.pdfUrl)}
+                className="w-full h-[500px] rounded-xl border-2 border-gray-200"
+                title="Resumen PDF"
+              />
+            </div>
+          )}
+
+          {/* TEORÍA */}
+          {activeLesson?.theory && (
+            <div className="bg-white p-8 rounded-2xl border-2 border-gray-200 shadow-lg">
+              <article className="prose prose-slate max-w-none prose-headings:text-[#0C212D] prose-a:text-[#EE7203] prose-strong:text-[#0C212D]">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {activeLesson.theory}
+                </ReactMarkdown>
+              </article>
+            </div>
+          )}
+
+          {/* VOCABULARY */}
+          {activeLesson?.vocabulary && (
+            <RenderVocabularyBlock vocab={activeLesson.vocabulary} />
+          )}
+
+          {/* EJERCICIOS */}
+          {Array.isArray(activeLesson?.ejercicios) &&
+            activeLesson.ejercicios.length > 0 && (
+              <>
+                <section className="bg-white p-8 rounded-2xl border-2 border-gray-200 space-y-6 shadow-lg">
+                  <div className="flex items-center justify-between pb-4 border-b-2 border-gray-100">
+                    <h3 className="text-xl font-black text-[#0C212D]">Ejercicios</h3>
+                    <span className="px-4 py-2 bg-gradient-to-r from-[#0C212D] to-[#112C3E] text-white text-sm font-bold rounded-xl">
+                      {currentExercise + 1} / {activeLesson.ejercicios.length}
+                    </span>
+                  </div>
+
+                  <ExerciseRunner
+                    ejercicios={[activeLesson.ejercicios[currentExercise]]}
+                    lessonKey={activeLesson.key}
+                    exerciseIndex={currentExercise}
+                    batchId={userProfile?.batchId}
+                    userKey={userProfile?.userKey}
+                    courseId={courseId}
+                    onSubmit={() => {}}
+                  />
+
+                  <div className="flex justify-between items-center pt-4 border-t-2 border-gray-100">
+                    <button
+                      onClick={prevExercise}
+                      disabled={currentExercise === 0}
+                      className="px-6 py-3 rounded-xl bg-white border-2 border-gray-200 hover:border-[#0C212D] text-[#0C212D] disabled:opacity-30 disabled:cursor-not-allowed text-sm font-bold transition-all hover:shadow-lg"
+                    >
+                      ← Anterior
+                    </button>
+                    <button
+                      onClick={nextExercise}
+                      disabled={
+                        currentExercise >= activeLesson.ejercicios.length - 1
+                      }
+                      className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#EE7203] to-[#FF3816] hover:shadow-2xl hover:shadow-[#EE7203]/30 text-white font-bold text-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:scale-105"
+                    >
+                      Siguiente →
+                    </button>
+                  </div>
+                </section>
+              </>
+            )}
+
+          {activeLesson?.finalMessage && (
+            <div className="bg-gradient-to-br from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-2xl p-6 text-emerald-800 font-medium shadow-lg">
+              {activeLesson.finalMessage}
+            </div>
+          )}
+
+          <div className="mt-8 flex justify-end">
+            <button
+              onClick={goNextLesson}
+              className="inline-flex items-center gap-3 px-8 py-4 rounded-2xl font-black shadow-xl bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white hover:shadow-2xl hover:shadow-[#EE7203]/40 transition-all hover:scale-105"
+            >
+              Siguiente lección
+              <FiChevronRight size={20} />
+            </button>
+          </div>
+        </>
       </div>
     </main>
 
     {/* ======================= SIDEBAR DERECHA ======================= */}
-    <aside className="hidden xl:block xl:w-80 xl:shrink-0 bg-white border-l border-slate-200 p-6 sticky top-0 h-screen overflow-y-auto">
-      <h3 className="text-lg font-semibold text-slate-900 mb-2">
-        Resumen del material
-      </h3>
-      <p className="text-sm text-slate-600 mb-4">
-        {curso?.descripcion || "Sin descripción disponible"}
-      </p>
+    <aside className="hidden xl:block xl:w-80 xl:shrink-0 bg-white border-l-2 border-gray-100 p-6 sticky top-0 h-screen overflow-y-auto">
+      <div className="mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="w-1 h-6 bg-gradient-to-b from-[#EE7203] to-[#FF3816] rounded-full"></div>
+          <h3 className="text-lg font-black text-[#0C212D]">
+            Resumen del material
+          </h3>
+        </div>
+        <p className="text-sm text-[#112C3E]/70 leading-relaxed">
+          {curso?.descripcion || "Sin descripción disponible"}
+        </p>
+      </div>
 
-      
-
-      <div className="border-t border-slate-200 pt-4 space-y-1 text-sm">
-        <p className="text-slate-600">Lección actual</p>
-        <p className="font-semibold text-blue-600">
+      <div className="bg-gradient-to-br from-[#EE7203]/10 to-[#FF3816]/5 border-2 border-[#EE7203]/20 rounded-2xl p-5 space-y-3">
+        <p className="text-xs text-[#112C3E]/60 uppercase tracking-wider font-bold">Lección actual</p>
+        <p className="font-black text-[#EE7203] text-lg">
           {activeLesson?.title || "—"}
         </p>
-        <p className="text-xs text-slate-500">
-          Unidad: {units[activeU]?.title || "—"}
+        <p className="text-sm text-[#0C212D] font-medium">
+          📚 {units[activeU]?.title || "—"}
         </p>
       </div>
     </aside>
