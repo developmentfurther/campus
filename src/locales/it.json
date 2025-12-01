@@ -135,7 +135,9 @@
   "gaming": {
   "headerTitle": "Further Gaming 🎮",
   "headerSubtitle": "Esercita il tuo inglese con giochi interattivi.",
-
+  "learningThroughPlay": "Imparare giocando",
+  "game": "Zona",
+  "zone": "Giochi",
   "play": "Gioca",
   "backToHub": "Torna al hub",
 

@@ -13,30 +13,19 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { deleteDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { FiBookOpen, FiPlus } from "react-icons/fi";
+import { FiBookOpen, FiPlus, FiEye, FiEdit3, FiTrash2, FiUsers, FiLayers } from "react-icons/fi";
 import EditCourseForm from "@/components/cursos/edit/EditCourseForm";
 import CreateCourse from "@/components/cursos/crear/CreateCourse";
-
-/* =====================================================================================
-   📘 MATERIAL ACADEMICO (ADMIN)
-   - Usa allCursos del AuthContext (datos completos)
-   - Modal sin lag
-   - Sin X duplicada (Radix)
-   ===================================================================================== */
 
 export default function MaterialAcademico() {
   const { allCursos, loadingAllCursos, reloadData } = useAuth();
 
-  // Estados UI
   const [selectedCourse, setSelectedCourse] = useState<any | null>(null);
   const [fullCourseData, setFullCourseData] = useState<any | null>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  /* ============================================================================
-     📌 Mapeamos cursos para la UI (rápido, sin fetch)
-     ============================================================================ */
   const localCourses = useMemo(() => {
     if (!Array.isArray(allCursos)) return [];
 
@@ -45,7 +34,7 @@ export default function MaterialAcademico() {
       title: c.titulo || "Untitled",
       description: c.descripcion || "",
       level: c.nivel || "N/A",
-      category: c.categoria || "General",
+      category: c.idioma.toUpperCase() || "General",
       students: Array.isArray(c.cursantes) ? c.cursantes.length : 0,
       unidades: Array.isArray(c.unidades) ? c.unidades.length : 0,
       created:
@@ -58,19 +47,12 @@ export default function MaterialAcademico() {
     }));
   }, [allCursos]);
 
-  /* ============================================================================
-     🟦 Crear curso
-     ============================================================================ */
-   const handleCourseCreated = async () => {
+  const handleCourseCreated = async () => {
     setIsCreateModalOpen(false);
     toast.success("Course created successfully.");
     await reloadData();
   };
 
-
-  /* ============================================================================
-     ✏ Editar curso — instantáneo, sin fetch
-     ============================================================================ */
   const handleEdit = (course: any) => {
     const full = allCursos.find((c) => c.id === course.id);
 
@@ -84,9 +66,6 @@ export default function MaterialAcademico() {
     setIsModalOpen(true);
   };
 
-  /* ============================================================================
-     ❌ Eliminar curso
-     ============================================================================ */
   const handleDelete = async (id: string) => {
     try {
       if (!confirm("Are you sure you want to delete this course?")) return;
@@ -101,170 +80,265 @@ export default function MaterialAcademico() {
     }
   };
 
-  /* ============================================================================
-     🔒 Cerrar modal y limpiar estados
-     ============================================================================ */
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setFullCourseData(null);
     setSelectedCourse(null);
   };
 
-  /* =====================================================================================
-       JSX
-     ===================================================================================== */
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-800 p-8 space-y-10">
-      
-      {/* HEADER */}
-      <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-            <FiBookOpen className="text-blue-600" />
-            Academic Material
-          </h1>
-
-          <p className="text-gray-500 mt-1">
-            Manage the courses available in the campus. Create, edit, or delete academic material.
-          </p>
-        </div>
-
-        <Button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2"
-        >
-          <FiPlus size={18} /> New Material
-        </Button>
-      </header>
-
-      {/* LIST */}
-      {loadingAllCursos ? (
-        <div className="text-center text-gray-500 py-10 bg-white rounded-xl border border-gray-200 shadow-sm">
-          Loading materials...
-        </div>
-      ) : localCourses.length === 0 ? (
-        <div className="text-center text-gray-500 py-10 bg-white rounded-xl border border-gray-200 shadow-sm">
-          No material available at the moment.
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {localCourses.map((course) => (
-            <div
-              key={course.id}
-              className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden"
-            >
-              {/* HEADER */}
-              <div className="p-5 border-b border-gray-100 flex justify-between items-start">
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-800">{course.title}</h2>
-                  <p className="text-sm text-gray-500 line-clamp-2">
-                    {course.description || "No description"}
-                  </p>
-                </div>
-
-                <span
-                  className={`text-xs px-3 py-1 rounded-full font-medium ${
-                    course.visible
-                      ? "bg-emerald-50 text-emerald-700"
-                      : "bg-gray-100 text-gray-500"
-                  }`}
-                >
-                  {course.visible ? "Public" : "Hidden"}
-                </span>
-              </div>
-
-              {/* STATS */}
-              <div className="px-5 py-3 text-sm grid grid-cols-2 md:grid-cols-3 gap-2 border-b border-gray-100">
-                <div className="text-gray-500">
-                  <span className="font-medium text-gray-800">{course.unidades}</span> units
-                </div>
-                <div className="text-gray-500">
-                  <span className="font-medium text-gray-800">{course.students}</span> students
-                </div>
-                <div className="text-gray-500 hidden md:block">
-                  Created: <span className="font-medium text-gray-800">{course.created}</span>
-                </div>
-              </div>
-
-              {/* ACTIONS */}
-              <div className="flex flex-wrap justify-end gap-3 p-5 border-t border-gray-100 bg-gray-50">
-                <Button
-                  variant="outline"
-                  onClick={() => window.open(`/material-academico/${course.id}`, "_blank")}
-                  className="border-blue-200 text-blue-600 hover:bg-blue-50 rounded-lg text-sm"
-                >
-                  View
-                </Button>
-
-                <Button
-                  variant="outline"
-                  onClick={() => handleEdit(course)}
-                  className="border-gray-300 text-gray-700 hover:bg-gray-100 rounded-lg text-sm"
-                >
-                  Edit
-                </Button>
-
-                <Button
-                  variant="outline"
-                  onClick={() => handleDelete(course.id)}
-                  className="border-red-200 text-red-600 hover:bg-red-50 rounded-lg text-sm"
-                >
-                  Delete
-                </Button>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white p-6 md:p-10">
+      <div className="max-w-7xl mx-auto space-y-8">
+        
+        {/* HEADER */}
+        <header className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-1.5 h-12 bg-gradient-to-b from-[#EE7203] to-[#FF3816] rounded-full"></div>
+              <div className="flex-1">
+                <h1 className="text-4xl font-black text-[#0C212D] flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-br from-[#EE7203] to-[#FF3816] rounded-xl">
+                    <FiBookOpen className="text-white" size={28} />
+                  </div>
+                  Academic Material
+                </h1>
+                <p className="text-[#112C3E]/70 mt-2 text-base font-medium">
+                  Manage the courses available in the campus. Create, edit, or delete academic material.
+                </p>
               </div>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
 
-      {/* =====================================================================================
-         MODAL: CREATE COURSE
-         ===================================================================================== */}
-      <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        <DialogOverlay className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40" />
+          <Button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="group bg-gradient-to-r from-[#EE7203] to-[#FF3816] hover:shadow-2xl hover:shadow-[#EE7203]/40 text-white rounded-xl px-8 py-6 text-base font-bold transition-all duration-300 hover:scale-105 flex items-center gap-3"
+          >
+            <FiPlus size={22} className="group-hover:rotate-90 transition-transform duration-300" />
+            New Material
+          </Button>
+        </header>
 
-        <DialogContent
-          className="!max-w-none !w-[95vw] !h-[90vh] !p-0 overflow-hidden 
-                     bg-transparent shadow-none border-none
-                     [&>button.absolute.right-4.top-4]:hidden"
-        >
-          <VisuallyHidden>
-            <DialogTitle>Create Material</DialogTitle>
-          </VisuallyHidden>
+        {/* LIST */}
+        {loadingAllCursos ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="text-center">
+              <div className="w-16 h-16 border-4 border-[#EE7203] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-[#112C3E] font-semibold">Loading materials...</p>
+            </div>
+          </div>
+        ) : localCourses.length === 0 ? (
+          <div className="text-center py-20">
+            <div className="bg-gradient-to-br from-[#0C212D] to-[#112C3E] w-24 h-24 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl">
+              <FiBookOpen className="text-white" size={40} />
+            </div>
+            <h3 className="text-2xl font-black text-[#0C212D] mb-3">No materials yet</h3>
+            <p className="text-[#112C3E]/60">Create your first course to get started.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {localCourses.map((course, index) => (
+              <CourseCard
+                key={course.id}
+                course={course}
+                index={index}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
+            ))}
+          </div>
+        )}
 
-          {isCreateModalOpen && (
-            <CreateCourse
-              onClose={() => setIsCreateModalOpen(false)}
-              onCreated={handleCourseCreated}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+        {/* MODAL: CREATE COURSE */}
+        <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+          <DialogOverlay className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40" />
 
-      {/* =====================================================================================
-         MODAL: EDIT COURSE
-         ===================================================================================== */}
-      <Dialog open={isModalOpen} onOpenChange={handleCloseModal}>
-        <DialogOverlay className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40" />
+          <DialogContent
+            className="!max-w-none !w-[95vw] !h-[90vh] !p-0 overflow-hidden 
+                       bg-transparent shadow-none border-none
+                       [&>button.absolute.right-4.top-4]:hidden"
+          >
+            <VisuallyHidden>
+              <DialogTitle>Create Material</DialogTitle>
+            </VisuallyHidden>
 
-        <DialogContent
-          className="!max-w-none !w-[95vw] !h-[90vh] !p-0 overflow-hidden 
-                     bg-transparent shadow-none border-none
-                     [&>button.absolute.right-4.top-4]:hidden"
-        >
-          <VisuallyHidden>
-            <DialogTitle>Edit Course</DialogTitle>
-          </VisuallyHidden>
+            {isCreateModalOpen && (
+              <CreateCourse
+                onClose={() => setIsCreateModalOpen(false)}
+                onCreated={handleCourseCreated}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
 
-          {isModalOpen && fullCourseData && (
-            <EditCourseForm
-              courseId={selectedCourse?.id}
-              initialData={fullCourseData}
-              onClose={handleCloseModal}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+        {/* MODAL: EDIT COURSE */}
+        <Dialog open={isModalOpen} onOpenChange={handleCloseModal}>
+          <DialogOverlay className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40" />
+
+          <DialogContent
+            className="!max-w-none !w-[95vw] !h-[90vh] !p-0 overflow-hidden 
+                       bg-transparent shadow-none border-none
+                       [&>button.absolute.right-4.top-4]:hidden"
+          >
+            <VisuallyHidden>
+              <DialogTitle>Edit Course</DialogTitle>
+            </VisuallyHidden>
+
+            {isModalOpen && fullCourseData && (
+              <EditCourseForm
+                courseId={selectedCourse?.id}
+                initialData={fullCourseData}
+                onClose={handleCloseModal}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   );
+}
+
+function CourseCard({ course, index, onEdit, onDelete }) {
+  return (
+    <div
+      className="group relative bg-white rounded-2xl shadow-sm hover:shadow-2xl transition-all duration-500 border-2 border-gray-100 hover:border-[#EE7203]/30 overflow-hidden"
+      style={{
+        animation: 'fadeInUp 0.5s ease-out forwards',
+        animationDelay: `${index * 0.1}s`,
+        opacity: 0
+      }}
+    >
+      {/* Decorative gradient bar */}
+      <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#EE7203] via-[#FF3816] to-[#EE7203] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
+
+      {/* Hover gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#EE7203]/5 to-[#FF3816]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+
+      {/* Content */}
+      <div className="relative z-10">
+        {/* HEADER */}
+        <div className="p-6 border-b-2 border-gray-100 group-hover:border-[#EE7203]/20 transition-colors">
+          <div className="flex justify-between items-start gap-4 mb-3">
+            <div className="flex-1 min-w-0">
+              <h2 className="text-2xl font-black text-[#0C212D] group-hover:text-[#EE7203] transition-colors duration-300 line-clamp-1">
+                {course.title}
+              </h2>
+              <p className="text-sm text-[#112C3E]/70 line-clamp-2 mt-2 leading-relaxed">
+                {course.description || "No description"}
+              </p>
+            </div>
+
+            <span
+              className={`flex-shrink-0 text-xs px-3 py-1.5 rounded-lg font-bold uppercase tracking-wide shadow-sm ${
+                course.visible
+                  ? "bg-gradient-to-r from-emerald-500 to-green-500 text-white"
+                  : "bg-gray-200 text-gray-600"
+              }`}
+            >
+              {course.visible ? "Public" : "Hidden"}
+            </span>
+          </div>
+
+          {/* Category & Level */}
+          <div className="flex flex-wrap gap-2 mt-3">
+            <span className="px-3 py-1 bg-gradient-to-r from-[#0C212D] to-[#112C3E] text-white text-xs font-bold rounded-lg">
+              {course.category}
+            </span>
+            <span className="px-3 py-1 bg-white border-2 border-[#EE7203] text-[#EE7203] text-xs font-bold rounded-lg">
+              Level {course.level}
+            </span>
+          </div>
+        </div>
+
+        {/* STATS */}
+        <div className="px-6 py-5 grid grid-cols-3 gap-4 border-b-2 border-gray-100">
+          <StatBubble
+            icon={<FiLayers size={18} />}
+            value={course.unidades}
+            label="Units"
+          />
+          <StatBubble
+            icon={<FiUsers size={18} />}
+            value={course.students}
+            label="Students"
+          />
+          <StatBubble
+            icon={<FiBookOpen size={18} />}
+            value={course.created}
+            label="Created"
+            small
+          />
+        </div>
+
+        {/* ACTIONS */}
+        <div className="flex flex-wrap justify-end gap-3 p-6 bg-gradient-to-br from-gray-50 to-white">
+          <Button
+            variant="outline"
+            onClick={() => window.open(`/material-academico/${course.id}`, "_blank")}
+            className="group/btn border-2 border-[#0C212D] text-[#0C212D] hover:bg-[#0C212D] hover:text-white rounded-xl text-sm font-bold px-5 py-2 transition-all duration-300 flex items-center gap-2"
+          >
+            <FiEye size={16} className="group-hover/btn:scale-110 transition-transform" />
+            View
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={() => onEdit(course)}
+            className="group/btn border-2 border-[#EE7203] text-[#EE7203] hover:bg-[#EE7203] hover:text-white rounded-xl text-sm font-bold px-5 py-2 transition-all duration-300 flex items-center gap-2"
+          >
+            <FiEdit3 size={16} className="group-hover/btn:scale-110 transition-transform" />
+            Edit
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={() => onDelete(course.id)}
+            className="group/btn border-2 border-[#FF3816] text-[#FF3816] hover:bg-[#FF3816] hover:text-white rounded-xl text-sm font-bold px-5 py-2 transition-all duration-300 flex items-center gap-2"
+          >
+            <FiTrash2 size={16} className="group-hover/btn:scale-110 transition-transform" />
+            Delete
+          </Button>
+        </div>
+      </div>
+
+      {/* Corner decoration */}
+      <div className="absolute bottom-0 right-0 w-32 h-32 bg-gradient-to-tl from-[#EE7203]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-tl-full transform translate-x-16 translate-y-16 group-hover:translate-x-8 group-hover:translate-y-8"></div>
+    </div>
+  );
+}
+
+function StatBubble({ icon, value, label, small = false }) {
+  return (
+    <div className="text-center">
+      <div className="flex items-center justify-center gap-2 mb-2">
+        <div className="text-[#EE7203]">{icon}</div>
+        <p className={`font-black text-[#0C212D] ${small ? 'text-xs' : 'text-xl'}`}>
+          {value}
+        </p>
+      </div>
+      <p className="text-xs text-[#112C3E]/60 font-semibold uppercase tracking-wide">
+        {label}
+      </p>
+    </div>
+  );
+}
+
+// Animation CSS
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  `;
+  if (!document.head.querySelector('style[data-admin-courses]')) {
+    style.setAttribute('data-admin-courses', 'true');
+    document.head.appendChild(style);
+  }
 }

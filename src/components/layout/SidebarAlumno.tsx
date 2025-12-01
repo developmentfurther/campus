@@ -54,7 +54,8 @@ export default function SidebarAlumno() {
   ];
 
   return (
-    <aside className="w-72 bg-white border-r border-gray-100 flex flex-col h-screen relative overflow-hidden">
+    <aside className="hidden lg:flex w-72 bg-white border-r border-gray-100 flex-col h-screen relative overflow-hidden">
+
       {/* Decorative background elements */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-[#EE7203] opacity-5 rounded-full blur-3xl -translate-y-16 translate-x-16"></div>
       <div className="absolute bottom-32 left-0 w-40 h-40 bg-[#FF3816] opacity-5 rounded-full blur-3xl -translate-x-20"></div>

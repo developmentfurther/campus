@@ -1,3 +1,4 @@
+
 "use client";
 
 /**
@@ -694,315 +695,430 @@ const idiomasCurso = [
      RENDER
      ========================= */
   return (
-  <div className="items-center justify-center flex ">
-    
-    <div className="relative flex w-full max-w-6xl max-h-[95vh] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl border border-gray-200">
-      
+   <div className="flex items-center justify-center min-h-screen  bg-opacity-40 backdrop-blur-sm p-4">
+
+    <div className="
+      relative flex w-full max-w-6xl max-h-[95vh] flex-col overflow-hidden 
+      rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.25)]
+      border border-[#112C3E]/30 bg-gradient-to-br 
+      from-white to-[#F9FAFB]
+    ">
+     
       {/* HEADER */}
-      <header className="relative border-b border-gray-200 bg-white px-6 py-5">
-        {/* Botón cerrar */}
+<header
+  className="
+    relative px-8 py-6 border-b 
+    bg-gradient-to-r from-[#0C212D] via-[#112C3E] to-[#0C212D]
+    text-white shadow-xl
+  "
+>
+
+  {/* Close Button */}
+  <button
+    type="button"
+    onClick={onClose}
+    aria-label="Close"
+    className="
+      absolute right-6 top-6 
+      flex h-10 w-10 items-center justify-center 
+      rounded-xl bg-white/10 text-white 
+      hover:bg-white/20 transition-all backdrop-blur-md
+      shadow-lg hover:scale-105 active:scale-95
+    "
+  >
+    <FiX size={20} />
+  </button>
+
+  {/* Title + Subtitle */}
+  <div className="flex flex-col gap-1">
+    <div className="flex items-center gap-2">
+      <div
+        className="
+          w-11 h-11 flex items-center justify-center rounded-xl 
+          bg-gradient-to-br from-[#EE7203] to-[#FF3816] text-white shadow-lg
+        "
+      >
+        <FiBookOpen size={22} />
+      </div>
+
+      <h2 className="text-2xl font-black tracking-tight text-white">
+        Create Material Academy
+      </h2>
+    </div>
+
+    <p className="text-sm text-gray-300 font-medium">
+      Define the structure, content, and configuration of your material.
+    </p>
+  </div>
+
+  {/* NAV TABS */}
+  <nav className="mt-6 flex flex-wrap gap-2">
+    {MAIN_TABS.map((t) => {
+      const active = activeMainTab === t.id;
+
+      return (
         <button
+          key={t.id}
           type="button"
-          onClick={onClose}
-          aria-label="Close"
-          className="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 transition"
+          onClick={() => setActiveMainTab(t.id)}
+          className={`
+            flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold
+            transition-all duration-200 
+            shadow-sm border backdrop-blur-md
+            ${
+              active
+                ? "bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white border-transparent shadow-lg scale-[1.03]"
+                : "bg-white/10 text-white/80 border-white/20 hover:bg-white/20 hover:text-white"
+            }
+          `}
         >
-          <FiX size={18} />
+          {t.icon}
+          {t.label}
         </button>
+      );
+    })}
+  </nav>
+</header>
 
-        {/* Título + subtítulo */}
-        <div>
-          <h2 className="text-2xl font-semibold text-gray-900 flex items-center gap-2">
-            <FiBookOpen className="text-blue-600" />
-            Create Material Academy
-          </h2>
-          <p className="text-sm text-gray-500 mt-1">
-            Define the structure, content, and configuration of your material.
-          </p>
-        </div>
-
-        {/* NAV TABS */}
-        <nav className="mt-5 flex flex-wrap gap-2">
-          {MAIN_TABS.map((t) => {
-            const active = activeMainTab === t.id;
-            return (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setActiveMainTab(t.id)}
-                className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all duration-150
-                  ${
-                    active
-                      ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                      : "bg-white text-gray-600 border-gray-300 hover:bg-blue-50"
-                  }`}
-              >
-                <span className="flex items-center gap-1">
-                  {t.icon}
-                  {t.label}
-                </span>
-              </button>
-            );
-          })}
-        </nav>
-      </header>
 
       {/* BODY */}
       <div className="flex-1 overflow-y-auto bg-gray-50 p-6">
         <div className="text-center text-gray-400 text-sm py-16">
           <form onSubmit={handleSubmit} className="space-y-10">
 
-          {/* TAB GENERAL */}
           {activeMainTab === "general" && (
-    <div className="space-y-10">
+  <div className="space-y-10">
 
-      {/* 📘 Course Information */}
-      <section className="rounded-xl bg-white border border-gray-200 shadow-sm p-6">
-        <header className="flex items-center gap-3 mb-6">
-          <div className="flex items-center justify-center w-10 h-10 bg-blue-50 text-blue-600 rounded-lg">
-            <FiBookOpen className="w-5 h-5" />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900">
-            Material information
-          </h3>
-        </header>
+    {/* 📘 Material Information Section */}
+    <section
+      className="
+        rounded-2xl border border-[#112C3E]/20 shadow-lg p-7 
+        bg-white relative overflow-hidden
+      "
+    >
+      {/* Spheres */}
+      <div className="absolute -top-20 -right-16 w-44 h-44 bg-[#EE7203] opacity-[0.08] blur-2xl rounded-full" />
+      <div className="absolute -bottom-20 -left-16 w-40 h-40 bg-[#FF3816] opacity-[0.08] blur-2xl rounded-full" />
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* --- Lado izquierdo: datos principales --- */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Título */}
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700">
-                Material title
-              </label>
-              <input
-                type="text"
-                name="titulo"
-                value={curso.titulo}
-                onChange={handleChange}
-                placeholder="Ex: Introduction to React"
-                className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                required
-              />
-            </div>
-
-            {/* Descripción */}
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700">
-                Description
-              </label>
-              <textarea
-                name="descripcion"
-                value={curso.descripcion}
-                onChange={handleChange}
-                placeholder="Briefly describe what students will learn..."
-                rows={4}
-                className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
-                required
-              />
-            </div>
-
-            {/* Nivel + Categoría */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Nivel */}
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700">
-                  Level
-                </label>
-                <div className="relative">
-                  <select
-                    name="nivel"
-                    value={curso.nivel}
-                    onChange={handleChange}
-                    required
-                    className="w-full appearance-none rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  >
-                    <option value="" disabled>
-                      Select a level
-                    </option>
-                    {niveles.map((n) => (
-                      <option key={n.value} value={n.value}>
-                        {n.label}
-                      </option>
-                    ))}
-                  </select>
-                  <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                </div>
-              </div>
-
-              {/* Language */}
-<div className="space-y-1">
-  <label className="text-sm font-medium text-gray-700">
-    Language
-  </label>
-  <div className="relative">
-    <FiGlobe className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-    <select
-  name="idioma"
-  value={curso.idioma}
-  onChange={handleChange}
-  required
->
-  <option value="" disabled hidden>Select a language</option>
-  {idiomasCurso.map((lang) => (
-    <option key={lang.value} value={lang.value}>
-      {lang.label}
-    </option>
-  ))}
-</select>
-
-
-  </div>
-</div>
-
-            </div>
-
-    
-
-
-
-            {/* Público */}
-            <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
-              <input
-                type="checkbox"
-                name="publico"
-                checked={!!curso.publico}
-                onChange={handleChange}
-                className="h-5 w-5 accent-blue-600"
-              />
-              <div className="flex flex-col">
-                <span className="text-sm font-medium text-gray-700">
-                  Public Material
-                </span>
-                <span className="text-xs text-gray-500">
-                  Users will be able to view and access the Material.
-                </span>
-              </div>
-            </div>
-          </div>
-
-          
+      {/* Header */}
+      <header className="flex items-center gap-4 mb-8 relative z-10">
+        <div
+          className="w-12 h-12 rounded-xl flex items-center justify-center 
+          bg-gradient-to-br from-[#EE7203] to-[#FF3816] shadow-lg text-white"
+        >
+          <FiBookOpen size={22} />
         </div>
-      </section>
+        <h3 className="text-xl font-black text-[#0C212D] tracking-tight">
+          Material Information
+        </h3>
+      </header>
 
-      
-    </div>
-          )}
+      {/* Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 relative z-10">
+        
+        {/* LEFT SIDE (Inputs) */}
+        <div className="lg:col-span-2 space-y-6">
+
+          {/* Title */}
+          <div className="space-y-1">
+            <label className="text-sm font-semibold text-[#0C212D]">Material Title</label>
+            <input
+              type="text"
+              name="titulo"
+              value={curso.titulo}
+              onChange={handleChange}
+              placeholder="Ex: Introduction to React"
+              required
+              className="
+                w-full rounded-xl border border-[#112C3E]/20 bg-white p-3.5
+                text-[#0C212D] placeholder-gray-400 
+                focus:ring-2 focus:ring-[#EE7203] focus:border-transparent 
+                transition-all outline-none
+              "
+            />
+          </div>
+
+          {/* Description */}
+          <div className="space-y-1">
+            <label className="text-sm font-semibold text-[#0C212D]">Description</label>
+            <textarea
+              name="descripcion"
+              value={curso.descripcion}
+              onChange={handleChange}
+              placeholder="Briefly describe what students will learn..."
+              rows={4}
+              required
+              className="
+                w-full rounded-xl border border-[#112C3E]/20 bg-white p-3.5 
+                text-[#0C212D] placeholder-gray-400 
+                focus:ring-2 focus:ring-[#EE7203] focus:border-transparent 
+                resize-none outline-none transition
+              "
+            />
+          </div>
+
+          {/* Nivel + Idioma */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+
+            {/* Level */}
+            <div className="space-y-1">
+              <label className="text-sm font-semibold text-[#0C212D]">Level</label>
+              <div className="relative">
+                <select
+                  name="nivel"
+                  value={curso.nivel}
+                  onChange={handleChange}
+                  required
+                  className="
+                    w-full p-3.5 rounded-xl border border-[#112C3E]/20 bg-white 
+                    appearance-none text-[#0C212D] 
+                    focus:ring-2 focus:ring-[#EE7203] focus:border-transparent
+                    outline-none transition
+                  "
+                >
+                  <option value="" disabled>Select a level</option>
+                  {niveles.map((n) => (
+                    <option key={n.value} value={n.value}>
+                      {n.label}
+                    </option>
+                  ))}
+                </select>
+                <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              </div>
+            </div>
+
+            {/* Language */}
+            <div className="space-y-1">
+              <label className="text-sm font-semibold text-[#0C212D]">Language</label>
+              <div className="relative">
+                <FiGlobe className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <select
+                  name="idioma"
+                  value={curso.idioma}
+                  onChange={handleChange}
+                  required
+                  className="
+                    w-full p-3.5 pl-10 rounded-xl border border-[#112C3E]/20 bg-white 
+                    appearance-none text-[#0C212D] 
+                    focus:ring-2 focus:ring-[#EE7203] focus:border-transparent
+                    outline-none transition
+                  "
+                >
+                  <option value="" disabled hidden>Select a language</option>
+                  {idiomasCurso.map((lang) => (
+                    <option key={lang.value} value={lang.value}>
+                      {lang.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Public Material */}
+          <div
+            className="
+              flex items-center gap-3 rounded-xl border border-[#112C3E]/20 
+              bg-[#F8FAFB] p-4 shadow-sm
+            "
+          >
+            <input
+              type="checkbox"
+              name="publico"
+              checked={!!curso.publico}
+              onChange={handleChange}
+              className="h-5 w-5 accent-[#EE7203]"
+            />
+
+            <div className="flex flex-col">
+              <span className="text-sm font-semibold text-[#0C212D]">Public Material</span>
+              <span className="text-xs text-gray-500">
+                Users will be able to view and access the Material.
+              </span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+  </div>
+)}
+
 
  {/* TAB: Unidades */}
 {activeMainTab === "unidades" && (
   <div className="space-y-8">
-    <section className="bg-gradient-to-br from-indigo-50 to-indigo-100/50 rounded-2xl p-6 border border-indigo-200">
+
+    <section
+      className="
+        rounded-2xl border border-[#112C3E]/20 bg-white p-6
+      "
+    >
+      {/* Header */}
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-          <FiLayers className="w-5 h-5 text-indigo-600" />
+        <div
+          className="
+            w-10 h-10 rounded-lg flex items-center justify-center
+            bg-gradient-to-br from-[#EE7203] to-[#FF3816] text-white
+          "
+        >
+          <FiLayers className="w-5 h-5" />
         </div>
-        <h3 className="text-xl font-semibold text-slate-900">
+        <h3 className="text-xl font-black text-[#0C212D] tracking-tight">
           Material Content: Units & Lessons
         </h3>
       </div>
 
+      {/* SIN animaciones, SIN blur, SIN sombras grandes */}
+
       {unidades.length === 0 ? (
-        <div className="p-8 text-center bg-indigo-50 rounded-xl border border-dashed border-indigo-200 text-indigo-600">
-          <p className="mb-4 text-lg font-medium">No units added yet</p>
+        <div
+          className="
+            p-8 text-center rounded-xl border border-dashed
+            border-[#112C3E]/30 bg-[#F8FAFC]
+          "
+        >
+          <p className="mb-4 text-lg font-semibold text-[#0C212D]">
+            No units added yet
+          </p>
+
           <button
             type="button"
             onClick={agregarUnidad}
-            className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors gap-2"
+            className="
+              inline-flex items-center gap-2 px-4 py-2
+              bg-[#EE7203] text-white rounded-xl
+              hover:bg-[#FF3816] transition-colors
+            "
           >
             <FiPlus size={18} /> Add First Unit
           </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {/* Unit List */}
+
+          {/* LEFT SIDEBAR: Unit List */}
           <div className="md:col-span-1 space-y-3">
-            {unidades.map((u, idx) => (
-              <div
-                key={u.id}
-                className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${
-                  activeUnidad === idx
-                    ? "bg-indigo-100 border-indigo-400 border text-indigo-800 shadow-md"
-                    : "bg-white border border-slate-200 hover:bg-slate-50"
-                }`}
-                onClick={() => setActiveUnidad(idx)}
-              >
-                <span className="font-medium text-sm">
-                  Unit {idx + 1}: {u.titulo || "Untitled Unit"}
-                </span>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    borrarUnidad(idx);
-                  }}
-                  className="text-slate-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50 transition-colors"
-                  aria-label="Delete unit"
+
+            {unidades.map((u, idx) => {
+              const active = activeUnidad === idx;
+
+              return (
+                <div
+                  key={u.id}
+                  onClick={() => setActiveUnidad(idx)}
+                  className={`
+                    flex items-center justify-between p-3 rounded-xl cursor-pointer
+                    border transition-colors
+                    ${
+                      active
+                        ? "border-[#EE7203] bg-[#EE7203]/10"
+                        : "border-[#112C3E]/15 bg-white hover:bg-[#F3F4F6]"
+                    }
+                  `}
                 >
-                  <FiTrash2 size={16} />
-                </button>
-              </div>
-            ))}
+                  <span className="font-medium text-sm text-[#0C212D]">
+                    Unit {idx + 1}: {u.titulo || "Untitled Unit"}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      borrarUnidad(idx);
+                    }}
+                    className="text-gray-400 hover:text-red-500 p-1 rounded-full"
+                  >
+                    <FiTrash2 size={16} />
+                  </button>
+                </div>
+              );
+            })}
+
             <button
               type="button"
               onClick={agregarUnidad}
-              className="w-full flex items-center justify-center gap-2 p-3 bg-indigo-50 text-indigo-600 rounded-xl border border-dashed border-indigo-200 hover:bg-indigo-100 transition-colors"
+              className="
+                w-full flex items-center justify-center gap-2 p-3
+                border border-dashed border-[#112C3E]/25 
+                bg-[#F8FAFC] rounded-xl text-[#0C212D]
+                hover:bg-[#EEF1F5] transition-colors
+              "
             >
               <FiPlus size={16} /> Add New Unit
             </button>
           </div>
 
-          {/* Unit Details */}
-          <div className="md:col-span-3 bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+          {/* RIGHT: Unit Details */}
+          <div
+            className="
+              md:col-span-3 p-5 rounded-2xl border border-[#112C3E]/15 bg-white
+            "
+          >
             {unidades[activeUnidad] && (
               <>
-                {/* Header tabs */}
-                <div className="flex justify-between items-center mb-4 pb-4 border-b border-slate-200">
-                  <h4 className="text-lg font-semibold text-slate-800">
+                {/* TAB SELECTOR (Datos / Lecciones / Cierre) */}
+                <div className="flex justify-between items-center mb-4 pb-3 border-b border-[#112C3E]/15">
+                  <h4 className="text-lg font-semibold text-[#0C212D]">
                     Editing Unit {activeUnidad + 1}
                   </h4>
+
                   <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={() => setActiveUnitTab("datos")}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                        activeUnitTab === "datos"
-                          ? "bg-indigo-600 text-white"
-                          : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                      }`}
+                      className={`
+                        px-3 py-1.5 rounded-lg text-sm font-medium
+                        ${
+                          activeUnitTab === "datos"
+                            ? "bg-[#EE7203] text-white"
+                            : "bg-[#F3F4F6] text-[#0C212D]"
+                        }
+                      `}
                     >
                       Details
                     </button>
+
                     <button
                       type="button"
                       onClick={() => setActiveUnitTab("lecciones")}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                        activeUnitTab === "lecciones"
-                          ? "bg-indigo-600 text-white"
-                          : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                      }`}
+                      className={`
+                        px-3 py-1.5 rounded-lg text-sm font-medium
+                        ${
+                          activeUnitTab === "lecciones"
+                            ? "bg-[#EE7203] text-white"
+                            : "bg-[#F3F4F6] text-[#0C212D]"
+                        }
+                      `}
                     >
                       Lessons ({unidades[activeUnidad]?.lecciones?.length || 0})
                     </button>
+
                     <button
                       type="button"
                       onClick={() => setActiveUnitTab("cierre")}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                        activeUnitTab === "cierre"
-                          ? "bg-indigo-600 text-white"
-                          : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                      }`}
+                      className={`
+                        px-3 py-1.5 rounded-lg text-sm font-medium
+                        ${
+                          activeUnitTab === "cierre"
+                            ? "bg-[#EE7203] text-white"
+                            : "bg-[#F3F4F6] text-[#0C212D]"
+                        }
+                      `}
                     >
                       Closing
                     </button>
                   </div>
                 </div>
 
-                {/* === TAB: Datos === */}
+                {/* === TAB: DATOS === */}
                 {activeUnitTab === "datos" && (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700">
+                  <div className="space-y-5">
+                    {/* Unit Title */}
+                    <div className="space-y-1">
+                      <label className="text-sm font-semibold text-[#0C212D]">
                         Unit title
                       </label>
                       <input
@@ -1014,12 +1130,17 @@ const idiomasCurso = [
                             titulo: e.target.value,
                           })
                         }
-                        className="w-full p-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        className="
+                          w-full p-3 border border-[#112C3E]/20 rounded-xl
+                          focus:ring-2 focus:ring-[#EE7203] outline-none
+                        "
                         required
                       />
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700">
+
+                    {/* Description */}
+                    <div className="space-y-1">
+                      <label className="text-sm font-semibold text-[#0C212D]">
                         Description (optional)
                       </label>
                       <textarea
@@ -1030,12 +1151,18 @@ const idiomasCurso = [
                             descripcion: e.target.value,
                           })
                         }
-                        className="w-full p-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
                         rows={3}
+                        className="
+                          w-full p-3 border border-[#112C3E]/20 rounded-xl
+                          focus:ring-2 focus:ring-[#EE7203] outline-none
+                          resize-none
+                        "
                       />
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+
+                    {/* Estimated Duration */}
+                    <div className="space-y-1">
+                      <label className="text-sm font-semibold text-[#0C212D] flex items-center gap-2">
                         <FiClock className="w-4 h-4" /> Estimated duration (minutes)
                       </label>
                       <input
@@ -1049,15 +1176,20 @@ const idiomasCurso = [
                               parseInt(e.target.value, 10) || undefined,
                           })
                         }
-                        className="w-full p-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        className="
+                          w-full p-3 border border-[#112C3E]/20 rounded-xl
+                          focus:ring-2 focus:ring-[#EE7203] outline-none
+                        "
                       />
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+
+                    {/* Thumbnail */}
+                    <div className="space-y-1">
+                      <label className="text-sm font-semibold text-[#0C212D] flex items-center gap-2">
                         <FiImage className="w-4 h-4" /> Unit thumbnail (optional URL)
                       </label>
                       <div className="relative">
-                        <FiLink2 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <FiLink2 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input
                           type="url"
                           placeholder="https://example.com/unit-image.jpg"
@@ -1067,250 +1199,288 @@ const idiomasCurso = [
                               urlImagen: e.target.value,
                             })
                           }
-                          className="w-full p-3 pl-10 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          className="
+                            w-full p-3 pl-10 border border-[#112C3E]/20 rounded-xl
+                            focus:ring-2 focus:ring-[#EE7203] outline-none
+                          "
                         />
                       </div>
                       {unidades[activeUnidad]?.urlImagen &&
-                        isValidUrl(
-                          unidades[activeUnidad]?.urlImagen || ""
-                        ) && (
+                        isValidUrl(unidades[activeUnidad]?.urlImagen || "") && (
                           <img
                             src={unidades[activeUnidad]?.urlImagen}
-                            alt="Unit thumbnail"
-                            className="w-full rounded-xl border object-cover max-h-36"
+                            className="w-full rounded-xl border max-h-36 object-cover"
                           />
                         )}
                     </div>
-                    <div className="space-y-2">
-  <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
-    <FiVideo className="w-4 h-4" /> Intro Video (optional)
-  </label>
 
-  <div className="relative">
-    <FiLink2 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-    <input
-      type="url"
-      placeholder="https://vimeo.com/12345"
-      value={unidades[activeUnidad]?.introVideo || ""}
-      onChange={(e) =>
-        updateUnidad(activeUnidad, {
-          introVideo: e.target.value,
-        })
-      }
-      className="w-full p-3 pl-10 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-    />
-  </div>
+                    {/* Intro Video */}
+                    <div className="space-y-1">
+                      <label className="text-sm font-semibold text-[#0C212D] flex items-center gap-2">
+                        <FiVideo className="w-4 h-4" /> Intro Video (optional)
+                      </label>
 
-  {/* Preview */}
-  {unidades[activeUnidad]?.introVideo &&
-    isValidUrl(unidades[activeUnidad]?.introVideo || "") && (
-      <div className="aspect-video mt-2 rounded-xl overflow-hidden border border-slate-200 bg-slate-100">
-        <iframe
-          src={unidades[activeUnidad]?.introVideo}
-          className="w-full h-full"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-        />
-      </div>
-    )}
-</div>
+                      <div className="relative">
+                        <FiLink2 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                          type="url"
+                          placeholder="https://vimeo.com/12345"
+                          value={unidades[activeUnidad]?.introVideo || ""}
+                          onChange={(e) =>
+                            updateUnidad(activeUnidad, {
+                              introVideo: e.target.value,
+                            })
+                          }
+                          className="
+                            w-full p-3 pl-10 border border-[#112C3E]/20 rounded-xl
+                            focus:ring-2 focus:ring-[#EE7203] outline-none
+                          "
+                        />
+                      </div>
 
+                      {unidades[activeUnidad]?.introVideo &&
+                        isValidUrl(unidades[activeUnidad]?.introVideo || "") && (
+                          <div className="aspect-video mt-2 rounded-xl overflow-hidden border border-[#112C3E]/20 bg-[#F2F4F7]">
+                            <iframe
+                              src={unidades[activeUnidad]?.introVideo}
+                              className="w-full h-full"
+                              allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+                              allowFullScreen
+                            />
+                          </div>
+                        )}
+                    </div>
                   </div>
                 )}
 
-                {/* === TAB: Lecciones === */}
-       {/* === TAB: Lecciones === */}
-{activeUnitTab === "lecciones" && (
-  <div className="space-y-6">
-    {/* Lista de lecciones de la unidad */}
-    {unidades[activeUnidad]?.lecciones?.length > 0 ? (
-      unidades[activeUnidad].lecciones.map((l, lIdx) => (
-        <div
-          key={l.id}
-          className={`p-4 rounded-xl border transition-all ${
-            activeLeccion === lIdx
-              ? "border-blue-500 bg-blue-50"
-              : "border-slate-200 bg-white hover:bg-slate-50"
-          }`}
-        >
-          {/* Header con el título de la lección */}
-          <div className="flex items-center justify-between">
-            <h4 className="font-medium text-slate-800">
-              Lesson {lIdx + 1}: {l.titulo || "Untitled"}
-            </h4>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setActiveLeccion(lIdx)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
-                  activeLeccion === lIdx
-                    ? "bg-blue-600 text-white"
-                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                }`}
-              >
-                Edit
-              </button>
-              <button
-                type="button"
-                onClick={() => borrarLeccion(activeUnidad, lIdx)}
-                className="p-2 rounded-lg text-red-500 hover:bg-red-50"
-              >
-                <FiTrash2 size={16} />
-              </button>
-            </div>
-          </div>
+                {/* === TAB: LECCIONES === */}
+                {activeUnitTab === "lecciones" && (
+                  <div className="space-y-6">
 
-          {/* Si está activa, mostramos el formulario de edición */}
-          {activeLeccion === lIdx && (
-            <div className="mt-3 space-y-4 border-t border-gray-200 pt-3">
-              {/* Título */}
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700">
-                  Lesson Title
-                </label>
-                <input
-                  type="text"
-                  value={l.titulo}
-                  onChange={(e) =>
-                    updateLeccion(activeUnidad, lIdx, {
-                      titulo: e.target.value,
-                    })
-                  }
-                  className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+                    {unidades[activeUnidad]?.lecciones?.length > 0 ? (
+                      unidades[activeUnidad].lecciones.map((l, lIdx) => (
+                        <div
+                          key={l.id}
+                          className={`
+                            p-4 rounded-xl border transition-colors
+                            ${
+                              activeLeccion === lIdx
+                                ? "border-[#EE7203] bg-[#EE7203]/10"
+                                : "border-[#112C3E]/15 bg-white hover:bg-[#F8F9FB]"
+                            }
+                          `}
+                        >
+                          {/* Header */}
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-semibold text-[#0C212D]">
+                              Lesson {lIdx + 1}: {l.titulo || "Untitled"}
+                            </h4>
 
-              {/* Descripción breve */}
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700">
-                  Description (short)
-                </label>
-                <textarea
-                  placeholder="Short description of this lesson..."
-                  value={l.descripcion || ""}
-                  onChange={(e) =>
-                    updateLeccion(activeUnidad, lIdx, {
-                      descripcion: e.target.value,
-                    })
-                  }
-                  rows={2}
-                  className="w-full rounded-lg border border-gray-300 bg-white p-2 text-gray-800 focus:ring-2 focus:ring-blue-500 resize-none"
-                />
-              </div>
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setActiveLeccion(lIdx)}
+                                className={`
+                                  px-3 py-1.5 rounded-lg text-sm font-medium
+                                  ${
+                                    activeLeccion === lIdx
+                                      ? "bg-[#EE7203] text-white"
+                                      : "bg-[#F3F4F6] text-[#0C212D]"
+                                  }
+                                `}
+                              >
+                                Edit
+                              </button>
 
-                  {/* Video URL (Vimeo recomendado) */}
-<div className="space-y-1">
-  <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-    <FiVideo className="text-blue-500" /> Lesson Video (Vimeo)
-  </label>
-  <input
-    type="url"
-    placeholder="https://vimeo.com/123456789"
-    value={l.urlVideo || ""}
-    onChange={(e) =>
-      updateLeccion(activeUnidad, lIdx, { urlVideo: e.target.value })
-    }
-    className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800
-            focus:ring-2 focus:ring-blue-500"
-  />
-</div>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  borrarLeccion(activeUnidad, lIdx)
+                                }
+                                className="
+                                  p-2 rounded-lg text-red-500 hover:bg-red-50
+                                "
+                              >
+                                <FiTrash2 size={16} />
+                              </button>
+                            </div>
+                          </div>
 
-{/* Preview */}
-{l.urlVideo && isValidUrl(l.urlVideo) && (
-  <div className="aspect-video rounded-lg overflow-hidden border border-gray-200">
-    <iframe
-      src={l.urlVideo.replace("vimeo.com", "player.vimeo.com/video")}
-      className="w-full h-full"
-      allow="autoplay; fullscreen; picture-in-picture"
-      allowFullScreen
-    />
-  </div>
-)}
+                          {/* FORMULARIO LECCIÓN ACTIVA */}
+                          {activeLeccion === lIdx && (
+                            <div className="mt-3 space-y-4 border-t border-[#112C3E]/15 pt-3">
+                              
+                              {/* Título */}
+                              <div className="space-y-1">
+                                <label className="text-sm font-semibold text-[#0C212D]">
+                                  Lesson Title
+                                </label>
+                                <input
+                                  type="text"
+                                  value={l.titulo || ""}
+                                  onChange={(e) =>
+                                    updateLeccion(activeUnidad, lIdx, {
+                                      titulo: e.target.value,
+                                    })
+                                  }
+                                  className="
+                                    w-full rounded-xl border border-[#112C3E]/20 p-3
+                                    focus:ring-2 focus:ring-[#EE7203] outline-none
+                                  "
+                                />
+                              </div>
 
-              {/* Contenido teórico (Markdown) */}
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700">
-                  Theory (Markdown)
-                </label>
-                <textarea
-                  placeholder="Use Markdown: **bold**, _italic_, - lists, [link](https://...)"
-                  value={l.teoria || ""}
-                  onChange={(e) =>
-                    updateLeccion(activeUnidad, lIdx, {
-                      teoria: e.target.value,
-                    })
-                  }
-                  rows={5}
-                  className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-blue-500 resize-none"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Supports <code>**bold**</code>, <code>_italic_</code>, lists (-) and links.
-                </p>
-              </div>
-              {/* VOCABULARY */}
-<div className="space-y-1">
-  <label className="text-sm font-medium text-gray-700">
-    Vocabulary
-  </label>
+                              {/* Description */}
+                              <div className="space-y-1">
+                                <label className="text-sm font-semibold text-[#0C212D]">
+                                  Description (short)
+                                </label>
+                                <textarea
+                                  rows={2}
+                                  value={l.descripcion || ""}
+                                  onChange={(e) =>
+                                    updateLeccion(activeUnidad, lIdx, {
+                                      descripcion: e.target.value,
+                                    })
+                                  }
+                                  className="
+                                    w-full rounded-xl border border-[#112C3E]/20 p-3
+                                    focus:ring-2 focus:ring-[#EE7203] outline-none
+                                    resize-none
+                                  "
+                                />
+                              </div>
 
-  <VocabularyEditor
-    value={l.vocabulary}
-    onChange={(val) =>
-      updateLeccion(activeUnidad, lIdx, { vocabulary: val })
-    }
-  />
-</div>
+                              {/* Video */}
+                              <div className="space-y-1">
+                                <label className="text-sm font-semibold text-[#0C212D] flex items-center gap-2">
+                                  <FiVideo className="text-[#EE7203]" />
+                                  Lesson Video (Vimeo)
+                                </label>
 
+                                <input
+                                  type="url"
+                                  placeholder="https://vimeo.com/123456789"
+                                  value={l.urlVideo || ""}
+                                  onChange={(e) =>
+                                    updateLeccion(activeUnidad, lIdx, {
+                                      urlVideo: e.target.value,
+                                    })
+                                  }
+                                  className="
+                                    w-full rounded-xl border border-[#112C3E]/20 p-3
+                                    focus:ring-2 focus:ring-[#EE7203] outline-none
+                                  "
+                                />
 
-              {/* Ejercicios */}
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700">
-                  Exercises
-                </label>
-                <Exercises
-                  initial={l.ejercicios}
-                  onChange={(newExercises: Exercise[]) =>
-                    updateLeccion(activeUnidad, lIdx, {
-                      ejercicios: [...newExercises],
-                    })
-                  }
-                />
-              </div>
-            </div>
-          )}
-        </div>
-      ))
-    ) : (
-      <div className="text-center text-slate-500 py-10">
-        No lessons yet.
-      </div>
-    )}
+                                {l.urlVideo &&
+                                  isValidUrl(l.urlVideo) && (
+                                    <div className="aspect-video rounded-xl overflow-hidden border border-[#112C3E]/20 bg-[#F2F4F7]">
+                                      <iframe
+                                        src={l.urlVideo.replace(
+                                          'vimeo.com',
+                                          'player.vimeo.com/video'
+                                        )}
+                                        className="w-full h-full"
+                                        allow="autoplay; fullscreen; picture-in-picture"
+                                        allowFullScreen
+                                      />
+                                    </div>
+                                  )}
+                              </div>
 
-    {/* Botón para agregar lección */}
-    <button
-      type="button"
-      onClick={() => agregarLeccion(activeUnidad)}
-      className="w-full flex items-center justify-center gap-2 p-3 bg-blue-50 text-blue-600 rounded-xl border border-dashed border-blue-200 hover:bg-blue-100 transition-colors"
-    >
-      <FiPlus size={16} /> Add New Lesson
-    </button>
-  </div>
-)}
+                              {/* Theory */}
+                              <div className="space-y-1">
+                                <label className="text-sm font-semibold text-[#0C212D]">
+                                  Theory (Markdown)
+                                </label>
+                                <textarea
+                                  rows={5}
+                                  placeholder="Use Markdown: **bold**, _italic_, - lists..."
+                                  value={l.teoria || ""}
+                                  onChange={(e) =>
+                                    updateLeccion(activeUnidad, lIdx, {
+                                      teoria: e.target.value,
+                                    })
+                                  }
+                                  className="
+                                    w-full p-3 border border-[#112C3E]/20 rounded-xl
+                                    focus:ring-2 focus:ring-[#EE7203] outline-none resize-none
+                                  "
+                                />
+                              </div>
 
+                              {/* Vocabulary */}
+                              <div className="space-y-1">
+                                <label className="text-sm font-semibold text-[#0C212D]">
+                                  Vocabulary
+                                </label>
+                                <VocabularyEditor
+                                  value={l.vocabulary}
+                                  onChange={(val) =>
+                                    updateLeccion(activeUnidad, lIdx, {
+                                      vocabulary: val,
+                                    })
+                                  }
+                                />
+                              </div>
 
+                              {/* Exercises */}
+                              <div className="space-y-1">
+                                <label className="text-sm font-semibold text-[#0C212D]">
+                                  Exercises
+                                </label>
+                                <Exercises
+                                  initial={l.ejercicios}
+                                  onChange={(newExercises) =>
+                                    updateLeccion(activeUnidad, lIdx, {
+                                      ejercicios: [...newExercises],
+                                    })
+                                  }
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center text-gray-500 py-10">
+                        No lessons yet.
+                      </div>
+                    )}
 
-                {/* === TAB: Cierre === */}
+                    {/* Add Lesson */}
+                    <button
+                      type="button"
+                      onClick={() => agregarLeccion(activeUnidad)}
+                      className="
+                        w-full flex items-center justify-center gap-2 p-3
+                        bg-[#F8FAFC] border border-dashed border-[#112C3E]/25 
+                        rounded-xl text-[#0C212D] hover:bg-[#EEF1F5]
+                      "
+                    >
+                      <FiPlus size={16} /> Add New Lesson
+                    </button>
+                  </div>
+                )}
+
+                {/* === TAB: CIERRE === */}
                 {activeUnitTab === "cierre" && (
                   <div className="space-y-6">
-                    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-                      <h3 className="text-gray-800 font-semibold mb-3 text-sm">
+                    
+                    <div className="rounded-xl border border-[#112C3E]/20 bg-white p-4">
+
+                      <h3 className="text-[#0C212D] font-semibold mb-3 text-sm">
                         Final unit exam
                       </h3>
+
+                      {/* Intro exam text */}
                       <div className="space-y-1 mb-4">
-                        <label className="text-sm font-medium text-gray-700">
+                        <label className="text-sm font-semibold text-[#0C212D]">
                           Introductory text
                         </label>
                         <textarea
+                          rows={3}
                           placeholder="Intro or instructions"
                           value={unidades[activeUnidad]?.closing?.examIntro || ""}
                           onChange={(e) =>
@@ -1322,79 +1492,81 @@ const idiomasCurso = [
                               },
                             }))
                           }
-                          rows={3}
-                          className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-blue-500"
+                          className="
+                            w-full rounded-xl border border-[#112C3E]/20 p-3
+                            focus:ring-2 focus:ring-[#EE7203] outline-none resize-none
+                          "
                         />
                       </div>
-{/* VIDEO DEL CIERRE DE LA UNIDAD */}
-<div className="space-y-1">
-  <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
-    <FiVideo className="w-4 h-4" /> Closing Video (optional)
-  </label>
 
-  <div className="relative">
-    <FiLink2 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-    <input
-      type="url"
-      placeholder="https://vimeo.com/123...  |  https://youtube.com/..."
-      value={unidades[activeUnidad]?.closing?.videoUrl || ""}
-      onChange={(e) =>
-        updateUnidad(activeUnidad, (prev) => ({
-          ...prev,
-          closing: {
-            ...(prev.closing || {}),
-            videoUrl: e.target.value,
-          },
-        }))
-      }
-      className="w-full p-3 pl-10 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-    />
-  </div>
-
-  {/* PREVIEW */}
-  {unidades[activeUnidad]?.closing?.videoUrl &&
-    isValidUrl(unidades[activeUnidad]?.closing?.videoUrl || "") && (
-      <div className="aspect-video mt-2 rounded-xl overflow-hidden border border-slate-200 bg-slate-100">
-        <iframe
-          src={unidades[activeUnidad]?.closing?.videoUrl}
-          className="w-full h-full"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-        />
-      </div>
-    )}
-</div>
-
-
+                      {/* Closing video */}
                       <div className="space-y-1">
-                        <label className="text-sm font-medium text-gray-700">
+                        <label className="text-sm font-semibold text-[#0C212D] flex items-center gap-2">
+                          <FiVideo className="w-4 h-4" /> Closing Video (optional)
+                        </label>
+
+                        <div className="relative">
+                          <FiLink2 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                          <input
+                            type="url"
+                            placeholder="https://vimeo.com/123..."
+                            value={unidades[activeUnidad]?.closing?.videoUrl || ""}
+                            onChange={(e) =>
+                              updateUnidad(activeUnidad, (prev) => ({
+                                ...prev,
+                                closing: {
+                                  ...(prev.closing || {}),
+                                  videoUrl: e.target.value,
+                                },
+                              }))
+                            }
+                            className="
+                              w-full p-3 pl-10 rounded-xl border border-[#112C3E]/20
+                              focus:ring-2 focus:ring-[#EE7203] outline-none
+                            "
+                          />
+                        </div>
+
+                        {unidades[activeUnidad]?.closing?.videoUrl &&
+                          isValidUrl(unidades[activeUnidad]?.closing?.videoUrl || "") && (
+                            <div className="aspect-video mt-2 rounded-xl overflow-hidden border border-[#112C3E]/20 bg-[#F2F4F7]">
+                              <iframe
+                                src={unidades[activeUnidad]?.closing?.videoUrl}
+                                className="w-full h-full"
+                                allow="accelerometer; autoplay; encrypted-media; picture-in-picture"
+                                allowFullScreen
+                              />
+                            </div>
+                          )}
+                      </div>
+
+                      {/* Exam exercises */}
+                      <div className="space-y-1">
+                        <label className="text-sm font-semibold text-[#0C212D]">
                           Exam exercises
                         </label>
                         <Exercises
-  initial={unidades[activeUnidad]?.closing?.examExercises || []}
-  onChange={(updatedExercises) => {
-    console.log("🧩 [DEBUG] setExercises CIERRE ejecutado", {
-      unidad: activeUnidad,
-      updatedExercises,
-    });
-    updateUnidad(activeUnidad, (prevUnidad) => ({
-      ...prevUnidad,
-      closing: {
-        ...(prevUnidad.closing || {}),
-        examExercises: [...updatedExercises],
-      },
-    }));
-  }}
-/>
-
+                          initial={unidades[activeUnidad]?.closing?.examExercises || []}
+                          onChange={(updatedExercises) =>
+                            updateUnidad(activeUnidad, (prev) => ({
+                              ...prev,
+                              closing: {
+                                ...(prev.closing || {}),
+                                examExercises: [...updatedExercises],
+                              },
+                            }))
+                          }
+                        />
                       </div>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium text-gray-700">
+
+                    {/* Closing text */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-[#0C212D]">
                         Closing text
                       </label>
                       <textarea
-                        placeholder="Displayed after finishing the unit"
+                        rows={4}
                         value={unidades[activeUnidad]?.closing?.closingText || ""}
                         onChange={(e) =>
                           updateUnidad(activeUnidad, (prev) => ({
@@ -1405,14 +1577,19 @@ const idiomasCurso = [
                             },
                           }))
                         }
-                        rows={4}
-                        className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-blue-500"
+                        className="
+                          w-full p-3 rounded-xl border border-[#112C3E]/20
+                          focus:ring-2 focus:ring-[#EE7203] outline-none resize-none
+                        "
                       />
                     </div>
+
+                    {/* PDF URL */}
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                      <label className="text-sm font-semibold text-[#0C212D] flex items-center gap-2">
                         <FiLink2 className="w-4 h-4" /> PDF summary URL (optional)
                       </label>
+
                       <input
                         type="url"
                         placeholder="https://drive.google.com/yourfile.pdf"
@@ -1426,16 +1603,21 @@ const idiomasCurso = [
                             },
                           }))
                         }
-                        className="w-full p-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="
+                          w-full p-3 rounded-xl border border-[#112C3E]/20
+                          focus:ring-2 focus:ring-[#EE7203] outline-none
+                        "
                       />
+
                       {unidades[activeUnidad]?.closing?.pdfUrl && (
                         <a
-                          href={unidades[activeUnidad]?.closing?.pdfUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+                          href={unidades[activeUnidad]?.closing?.pdfUrl}
+                          className="text-[#EE7203] text-sm hover:underline flex items-center gap-2"
                         >
-                          <FiFileText size={14} /> Preview PDF
+                          <FiFileText size={14} />
+                          Preview PDF
                         </a>
                       )}
                     </div>
@@ -1452,71 +1634,110 @@ const idiomasCurso = [
 
 
 
-        {/* TAB: Examen */}
+
+     {/* TAB: Examen */}
 {activeMainTab === "examen" && (
-  <section className="rounded-xl bg-white border border-gray-200 shadow-sm p-6 space-y-6">
+  <section
+    className="
+      rounded-2xl bg-white border border-[#112C3E]/20
+      p-6 space-y-6
+    "
+  >
+
     {/* Header */}
     <div className="flex items-center gap-3 mb-4">
-      <div className="w-10 h-10 bg-purple-50 text-purple-600 flex items-center justify-center rounded-lg">
+      <div
+        className="
+          w-10 h-10 rounded-lg flex items-center justify-center
+          bg-gradient-to-br from-[#EE7203] to-[#FF3816] text-white
+        "
+      >
         <FiClipboard className="w-5 h-5" />
       </div>
-      <h3 className="text-lg font-semibold text-gray-900">
-        Final exam of the Material
+
+      <h3 className="text-xl font-black text-[#0C212D] tracking-tight">
+        Final Exam of the Material
       </h3>
     </div>
 
-    {/* Intro examen */}
+    {/* Intro exam text */}
     <div className="space-y-2">
-      <label className="text-sm font-medium text-gray-700">
+      <label className="text-sm font-semibold text-[#0C212D]">
         Introductory text of the exam
       </label>
+
       <textarea
-        placeholder="Instrucciones o introducción para el examen final del curso"
+        placeholder="Instructions or introduction for the final exam"
         value={examenFinal.introTexto}
         onChange={(e) =>
           setExamenFinal((prev) => ({ ...prev, introTexto: e.target.value }))
         }
         rows={4}
-        className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none resize-none"
+        className="
+          w-full rounded-xl p-3 bg-white
+          border border-[#112C3E]/20
+          focus:ring-2 focus:ring-[#EE7203] outline-none
+          resize-none text-[#0C212D]
+        "
       />
     </div>
 
-    {/* Ejercicios */}
+    {/* Exercises */}
     <div className="space-y-2">
-      <label className="text-sm font-medium text-gray-700">
+      <label className="text-sm font-semibold text-[#0C212D]">
         Exam exercises
       </label>
-      <Exercises
-  initial={examenFinal.ejercicios}
-  onChange={(newExercises: Exercise[]) =>
-    setExamenFinal((prev) => ({ ...prev, ejercicios: newExercises }))
-  }
-/>
 
+      <Exercises
+        initial={examenFinal.ejercicios}
+        onChange={(newExercises) =>
+          setExamenFinal((prev) => ({ ...prev, ejercicios: newExercises }))
+        }
+      />
     </div>
+
   </section>
 )}
 
+
 {/* TAB: Capstone */}
 {activeMainTab === "capstone" && (
-  <section className="rounded-xl bg-white border border-gray-200 shadow-sm p-6 space-y-6">
+  <section
+    className="
+      rounded-2xl bg-white border border-[#112C3E]/20
+      p-6 space-y-6
+    "
+  >
+
     {/* Header */}
     <div className="flex items-center gap-3 mb-4">
-      <div className="w-10 h-10 bg-pink-50 text-pink-600 flex items-center justify-center rounded-lg">
+      <div
+        className="
+          w-10 h-10 rounded-lg flex items-center justify-center
+          bg-gradient-to-br from-[#FF3816] to-[#EE7203] text-white
+        "
+      >
         <FiLayers className="w-5 h-5" />
       </div>
-      <h3 className="text-lg font-semibold text-gray-900">
+
+      <h3 className="text-xl font-black text-[#0C212D] tracking-tight">
         Final Project (Capstone)
       </h3>
     </div>
 
-    {/* Video */}
+    {/* Video URL */}
     <div className="space-y-2">
-      <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-        <FiVideo className="text-pink-500" /> Project video URL (optional)
+      <label
+        className="flex items-center gap-2 text-sm font-semibold text-[#0C212D]"
+      >
+        <FiVideo className="text-[#EE7203]" /> Project video URL (optional)
       </label>
+
       <div className="relative">
-        <FiLink2 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <FiLink2
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-[#112C3E]/40"
+        />
+
         <input
           type="url"
           placeholder="https://youtube.com/watch?v=..."
@@ -1524,11 +1745,22 @@ const idiomasCurso = [
           onChange={(e) =>
             setCapstone((p) => ({ ...p, videoUrl: e.target.value }))
           }
-          className="w-full rounded-lg border border-gray-300 bg-white p-3 pl-10 text-gray-800 focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none"
+          className="
+            w-full rounded-xl border border-[#112C3E]/20 bg-white
+            p-3 pl-10 text-[#0C212D]
+            focus:ring-2 focus:ring-[#EE7203] outline-none
+          "
         />
       </div>
+
+      {/* Preview */}
       {capstone.videoUrl && isValidUrl(capstone.videoUrl) && (
-        <div className="aspect-video rounded-lg overflow-hidden border border-gray-200">
+        <div
+          className="
+            aspect-video rounded-xl overflow-hidden border border-[#112C3E]/20
+            bg-[#0C212D]/5
+          "
+        >
           <iframe
             src={capstone.videoUrl}
             title="Video of the final project"
@@ -1540,11 +1772,12 @@ const idiomasCurso = [
       )}
     </div>
 
-    {/* Instrucciones */}
+    {/* Instructions */}
     <div className="space-y-2">
-      <label className="text-sm font-medium text-gray-700">
+      <label className="text-sm font-semibold text-[#0C212D]">
         Project instructions
       </label>
+
       <textarea
         placeholder="Describe the objectives and steps of the final project."
         value={capstone.instrucciones}
@@ -1552,13 +1785,18 @@ const idiomasCurso = [
           setCapstone((p) => ({ ...p, instrucciones: e.target.value }))
         }
         rows={5}
-        className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none resize-none"
+        className="
+          w-full rounded-xl border border-[#112C3E]/20 bg-white
+          p-3 text-[#0C212D]
+          focus:ring-2 focus:ring-[#EE7203] outline-none
+          resize-none
+        "
       />
     </div>
 
     {/* Checklist */}
     <div className="space-y-2">
-      <label className="text-sm font-medium text-gray-700">
+      <label className="text-sm font-semibold text-[#0C212D]">
         Project checklist
       </label>
 
@@ -1574,9 +1812,14 @@ const idiomasCurso = [
                 return { ...p, checklist: newList };
               })
             }
-            className="flex-1 rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none"
+            className="
+              flex-1 rounded-xl border border-[#112C3E]/20 bg-white
+              p-3 text-[#0C212D]
+              focus:ring-2 focus:ring-[#EE7203] outline-none
+            "
             placeholder={`Element ${idx + 1}`}
           />
+
           <button
             type="button"
             onClick={() =>
@@ -1585,7 +1828,10 @@ const idiomasCurso = [
                 checklist: p.checklist.filter((_, i) => i !== idx),
               }))
             }
-            className="text-gray-400 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition"
+            className="
+              text-[#FF3816]/80 hover:text-[#FF3816]
+              p-2 rounded-lg hover:bg-[#FF3816]/10 transition-colors
+            "
             aria-label="Delete item"
           >
             <FiTrash2 size={16} />
@@ -1598,67 +1844,102 @@ const idiomasCurso = [
         onClick={() =>
           setCapstone((p) => ({ ...p, checklist: [...p.checklist, ""] }))
         }
-        className="w-full flex items-center justify-center gap-2 p-3 rounded-lg border border-dashed border-pink-300 bg-pink-50 text-pink-600 hover:bg-pink-100 transition text-sm font-medium"
+        className="
+          w-full flex items-center justify-center gap-2 p-3 rounded-xl
+          bg-[#EE7203]/10 text-[#EE7203] border border-dashed border-[#EE7203]/40
+          hover:bg-[#EE7203]/20 transition-colors text-sm font-semibold
+        "
       >
         <FiPlus /> Add item to checklist
       </button>
     </div>
+
   </section>
 )}
 
 {/* TAB: Cierre del curso */}
 {activeMainTab === "cierrecurso" && (
-  <section className="rounded-xl bg-white border border-gray-200 shadow-sm p-6 space-y-6">
+  <section
+    className="
+      rounded-2xl bg-white border border-[#112C3E]/20
+      p-6 space-y-6
+    "
+  >
     {/* Header */}
     <div className="flex items-center gap-3 mb-4">
-      <div className="w-10 h-10 bg-green-50 text-green-600 flex items-center justify-center rounded-lg">
+      <div
+        className="
+          w-10 h-10 rounded-lg flex items-center justify-center
+          bg-gradient-to-br from-[#0C212D] to-[#112C3E] text-white
+        "
+      >
         <FiFlag className="w-5 h-5" />
       </div>
-      <h3 className="text-lg font-semibold text-gray-900">
+
+      <h3 className="text-xl font-black text-[#0C212D] tracking-tight">
         Closing of the Material
       </h3>
     </div>
 
-    {/* Mensaje final */}
+    {/* Final message */}
     <div className="space-y-2">
-      <label className="text-sm font-medium text-gray-700">
+      <label className="text-sm font-semibold text-[#0C212D]">
         Final message of the Material
       </label>
+
       <textarea
         placeholder="Message displayed upon completion of the material (thank you, conclusion, congratulations, etc.)"
         value={curso.textoFinalCurso}
         onChange={handleChange}
         name="textoFinalCurso"
         rows={5}
-        className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none resize-none"
+        className="
+          w-full rounded-xl border border-[#112C3E]/20 bg-white
+          p-3 text-[#0C212D]
+          focus:ring-2 focus:ring-[#EE7203] outline-none resize-none
+        "
       />
     </div>
 
-    {/* Video final */}
+    {/* Final video */}
     <div className="space-y-2">
-      <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-        <FiVideo className="text-green-500" /> Final video (optional)
+      <label className="flex items-center gap-2 text-sm font-semibold text-[#0C212D]">
+        <FiVideo className="text-[#EE7203]" /> Final video (optional)
       </label>
+
       <div className="relative">
-        <FiLink2 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <FiLink2
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-[#112C3E]/40"
+        />
+
         <input
           type="url"
           placeholder="https://youtube.com/watch?v=..."
           value={curso.textoFinalCursoVideoUrl}
           onChange={handleChange}
           name="textoFinalCursoVideoUrl"
-          className="w-full rounded-lg border border-gray-300 bg-white p-3 pl-10 text-gray-800 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+          className="
+            w-full rounded-xl border border-[#112C3E]/20 bg-white pl-10 p-3
+            text-[#0C212D] focus:ring-2 focus:ring-[#EE7203] outline-none
+          "
         />
       </div>
 
+      {/* Preview */}
       {curso.textoFinalCursoVideoUrl &&
         isValidUrl(curso.textoFinalCursoVideoUrl) && (
-          <div className="aspect-video overflow-hidden rounded-lg border border-gray-200">
+          <div
+            className="
+              aspect-video overflow-hidden rounded-xl
+              border border-[#112C3E]/20 bg-[#0C212D]/5
+            "
+          >
             <iframe
               src={curso.textoFinalCursoVideoUrl}
               title="Material closing video"
               className="w-full h-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media;
+                     gyroscope; picture-in-picture"
               allowFullScreen
             />
           </div>
@@ -1667,33 +1948,52 @@ const idiomasCurso = [
   </section>
 )}
 
+
 {/* TAB: Cursantes */}
 {activeMainTab === "cursantes" && (
-  <section className="rounded-xl bg-white border border-gray-200 shadow-sm p-6 space-y-6">
+  <section
+    className="
+      rounded-2xl bg-white border border-[#112C3E]/20
+      p-6 space-y-6
+    "
+  >
     {/* Header */}
     <div className="flex items-center gap-3 mb-4">
-      <div className="w-10 h-10 bg-blue-50 text-blue-600 flex items-center justify-center rounded-lg">
+      <div
+        className="
+          w-10 h-10 rounded-lg flex items-center justify-center
+          bg-gradient-to-br from-[#0C212D] to-[#112C3E]
+          text-white
+        "
+      >
         <FiUsers className="w-5 h-5" />
       </div>
-      <h3 className="text-lg font-semibold text-gray-900">
+
+      <h3 className="text-xl font-black text-[#0C212D] tracking-tight">
         Material student management
       </h3>
     </div>
 
-    {/* Contenido */}
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    {/* GRID PRINCIPAL */}
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
       {/* === COLUMNA IZQUIERDA: FILTROS + LISTA === */}
-      <div className="space-y-4">
+      <div className="space-y-6">
 
         {/* FILTRO POR IDIOMA */}
         <div className="space-y-1">
-          <label className="text-sm font-medium text-gray-700">Filter by Language</label>
+          <label className="text-sm font-semibold text-[#0C212D]">
+            Filter by Language
+          </label>
+
           <select
             value={filterIdioma}
             onChange={(e) => setFilterIdioma(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 
-                       focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="
+              w-full rounded-xl border border-[#112C3E]/20 bg-white
+              p-3 text-[#0C212D]
+              focus:ring-2 focus:ring-[#EE7203]
+            "
           >
             <option value="">All languages</option>
             <option value="es">Spanish</option>
@@ -1706,12 +2006,18 @@ const idiomasCurso = [
 
         {/* FILTRO POR NIVEL */}
         <div className="space-y-1">
-          <label className="text-sm font-medium text-gray-700">Filter by Level</label>
+          <label className="text-sm font-semibold text-[#0C212D]">
+            Filter by Level
+          </label>
+
           <select
             value={filterNivel}
             onChange={(e) => setFilterNivel(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 
-                       focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="
+              w-full rounded-xl border border-[#112C3E]/20 bg-white
+              p-3 text-[#0C212D]
+              focus:ring-2 focus:ring-[#EE7203]
+            "
           >
             <option value="">All levels</option>
             <option value="A1">A1</option>
@@ -1723,10 +2029,15 @@ const idiomasCurso = [
           </select>
         </div>
 
-        {/* LISTADO DE ALUMNOS FILTRADOS */}
-        <div className="max-h-80 overflow-y-auto border border-gray-200 rounded-lg p-3 bg-gray-50">
+        {/* LISTA DE ALUMNOS FILTRADOS */}
+        <div
+          className="
+            max-h-80 overflow-y-auto rounded-xl border border-[#112C3E]/20
+            bg-[#0C212D]/[0.02] p-3
+          "
+        >
           {filteredAlumnos.length === 0 ? (
-            <p className="text-center text-gray-500 py-6 text-sm">
+            <p className="text-center text-[#0C212D]/50 py-6 text-sm">
               No students match the selected filters.
             </p>
           ) : (
@@ -1734,17 +2045,20 @@ const idiomasCurso = [
               <div
                 key={a.email}
                 onClick={() => toggleCursante(a.email)}
-                className="flex items-center justify-between p-2 rounded-md hover:bg-blue-50 
-                           cursor-pointer transition"
+                className="
+                  flex items-center justify-between p-2 rounded-lg
+                  hover:bg-[#EE7203]/10 cursor-pointer transition
+                "
               >
-                <span className="text-sm font-medium text-gray-700">
+                <span className="text-sm font-medium text-[#0C212D]">
                   {a.displayName || a.nombre || a.email}
                 </span>
+
                 <input
                   type="checkbox"
                   checked={curso.cursantes.includes(a.email)}
                   readOnly
-                  className="h-4 w-4 accent-blue-600"
+                  className="h-4 w-4 accent-[#EE7203]"
                 />
               </div>
             ))
@@ -1754,26 +2068,39 @@ const idiomasCurso = [
         {/* BOTÓN: ADD ALL */}
         <button
           type="button"
-          onClick={() => addAllFiltered(filteredAlumnos.map((a) => a.email))}
-          className="w-full flex items-center justify-center gap-2 rounded-lg border border-dashed 
-                     border-blue-300 bg-blue-50 text-blue-600 hover:bg-blue-100 p-3 
-                     text-sm font-medium transition"
+          onClick={() =>
+            addAllFiltered(filteredAlumnos.map((a) => a.email))
+          }
+          className="
+            w-full flex items-center justify-center gap-2 p-3
+            rounded-xl border border-dashed border-[#EE7203]/40
+            bg-[#EE7203]/10 text-[#EE7203] font-semibold
+            hover:bg-[#EE7203]/20 transition
+          "
         >
           <FiPlus /> Add all filtered students
         </button>
-
       </div>
 
       {/* === COLUMNA DERECHA: ALUMNOS SELECCIONADOS === */}
-      <div className="space-y-4">
-        <h4 className="flex items-center gap-2 text-lg font-semibold text-gray-800">
-          <FiCheck className="text-blue-600" /> Selected students (
-          {curso.cursantes.length})
+      <div className="space-y-6">
+        <h4
+          className="
+            flex items-center gap-2 text-lg font-bold text-[#0C212D]
+          "
+        >
+          <FiCheck className="text-[#EE7203]" />
+          Selected students ({curso.cursantes.length})
         </h4>
 
-        <div className="max-h-80 overflow-y-auto border border-gray-200 rounded-lg p-3 bg-gray-50">
+        <div
+          className="
+            max-h-80 overflow-y-auto rounded-xl border border-[#112C3E]/20
+            bg-[#0C212D]/[0.02] p-3
+          "
+        >
           {curso.cursantes.length === 0 ? (
-            <p className="text-center text-gray-500 py-6 text-sm">
+            <p className="text-center text-[#0C212D]/50 py-6 text-sm">
               There are no selected students.
             </p>
           ) : (
@@ -1781,14 +2108,19 @@ const idiomasCurso = [
               <div
                 key={email}
                 onClick={() => toggleCursante(email)}
-                className="flex items-center justify-between p-2 rounded-md hover:bg-red-50 
-                           cursor-pointer transition"
+                className="
+                  flex items-center justify-between p-2 rounded-lg
+                  hover:bg-red-50 cursor-pointer transition
+                "
               >
-                <span className="text-sm text-gray-700">{email}</span>
+                <span className="text-sm text-[#0C212D]">{email}</span>
+
                 <button
                   type="button"
-                  className="text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50 
-                             transition"
+                  className="
+                    text-[#0C212D]/40 hover:text-red-500
+                    p-1 rounded-full hover:bg-red-50 transition
+                  "
                   aria-label="Delete student"
                 >
                   <FiTrash2 size={15} />
@@ -1802,35 +2134,57 @@ const idiomasCurso = [
         <button
           type="button"
           onClick={removeAllSelected}
-          className="w-full flex items-center justify-center gap-2 rounded-lg border border-dashed 
-                     border-red-300 bg-red-50 text-red-600 hover:bg-red-100 p-3 
-                     text-sm font-medium transition"
+          className="
+            w-full flex items-center justify-center gap-2 p-3
+            rounded-xl border border-dashed border-red-300
+            bg-red-50 text-red-600 font-semibold hover:bg-red-100
+            transition
+          "
         >
           <FiTrash2 /> Delete all selected
         </button>
       </div>
-
     </div>
   </section>
 )}
 
 
-{/* SAVE BUTTON */}
-<div className="sticky bottom-0 z-10 flex justify-end bg-gray-50 border-t border-gray-200 p-4">
+
+<div
+  className="
+    sticky bottom-0 z-20
+    flex justify-end 
+    bg-white/90 backdrop-blur-md
+    border-t border-[#112C3E]/20
+    p-4
+  "
+>
   <button
     type="submit"
     disabled={uploading}
-    className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold shadow-sm transition
+    className={`
+      inline-flex items-center gap-2
+      px-6 py-3 rounded-xl font-bold tracking-wide
+      transition-all duration-300 shadow-md
+
       ${
         uploading
-          ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-          : "bg-blue-600 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-      }`}
+          ? "bg-[#0C212D]/20 text-[#0C212D]/50 cursor-not-allowed"
+          : `
+            bg-gradient-to-r from-[#EE7203] to-[#FF3816]
+            text-white
+            hover:shadow-xl hover:shadow-[#EE7203]/20
+            hover:scale-[1.02]
+            active:scale-95
+          `
+      }
+    `}
   >
     <FiSave size={18} />
     {uploading ? "Saving..." : "Create Material"}
   </button>
 </div>
+
 
 
 </form>

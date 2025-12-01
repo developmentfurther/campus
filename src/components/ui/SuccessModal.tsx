@@ -33,7 +33,7 @@ export default function SuccessModal({
             <FiCheckCircle className="text-green-500 text-5xl mx-auto mb-3" />
             <h2 className="text-xl font-semibold text-gray-800">{message}</h2>
             <p className="text-gray-500 mt-1 text-sm">
-              Tus cambios fueron guardados exitosamente.
+              Your changes were saved successfully.
             </p>
           </motion.div>
         </motion.div>

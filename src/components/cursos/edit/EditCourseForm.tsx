@@ -605,66 +605,89 @@ const idiomasCurso = [
      ========================= */
   return (
    
-  <div >
+  <div className="flex items-center justify-center" >
     {/* Shell */}
-    <div className="bg-white text-slate-900 max-w-7xl w-full mx-auto rounded-3xl shadow-2xl relative max-h-[95vh] overflow-hidden flex flex-col border border-slate-200">
+   <div className="
+  relative flex w-full max-w-6xl max-h-[95vh] flex-col overflow-hidden 
+  rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.25)]
+  border border-[#112C3E]/30 bg-gradient-to-br 
+  from-white to-[#F9FAFB]
+">
+
       
       {/* HEADER (claro, igual a Create) */}
-      <div className="relative border-b border-slate-200 px-6 py-4">
+      <div
+  className="
+    relative px-8 py-6 border-b 
+    bg-gradient-to-r from-[#0C212D] via-[#112C3E] to-[#0C212D]
+    text-white shadow-xl
+  "
+>
+  <button
+    onClick={onClose}
+    className="
+      absolute top-6 right-6 text-white rounded-xl p-2 
+      bg-white/10 hover:bg-white/20 backdrop-blur-md transition shadow-lg
+    "
+    aria-label="Close"
+    type="button"
+  >
+    <FiX size={18} />
+  </button>
+
+  <h2 className="text-2xl font-black tracking-tight">Edit Material Academy</h2>
+  <p className="text-sm text-gray-300">
+    Define the structure, content, and configuration of your course.
+  </p>
+
+  {/* NAV TABS */}
+  <div className="mt-6 flex flex-wrap gap-2">
+    {MAIN_TABS.map((t) => {
+      const active = activeMainTab === t.id;
+      return (
         <button
-          onClick={onClose}
-          className="absolute top-3 right-3 text-slate-500 hover:text-slate-700 rounded-full p-2 hover:bg-slate-100 transition"
-          aria-label="Close"
+          key={t.id}
           type="button"
+          onClick={() => setActiveMainTab(t.id)}
+          className={
+            `
+            flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold
+            transition-all duration-200 shadow-sm border backdrop-blur-md
+            ` +
+            (active
+              ? `bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white border-transparent shadow-lg scale-[1.03]`
+              : `bg-white/10 text-white/80 border-white/20 hover:bg-white/20 hover:text-white`)
+          }
         >
-          <FiX size={18} />
+          {t.icon}
+          {t.label}
         </button>
+      );
+    })}
+  </div>
+</div>
 
-        <h2 className="text-[20px] font-semibold tracking-tight">Edit Material Academy</h2>
-        <p className="text-sm text-slate-500">
-          Define the structure, content, and configuration of your course.
-        </p>
-
-        {/* NAV tabs — pills claras con realce azul */}
-        <div className="mt-4 flex flex-wrap gap-2">
-          {MAIN_TABS.map((t) => {
-            const active = activeMainTab === t.id;
-            return (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setActiveMainTab(t.id)}
-                className={[
-                  "inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm border transition-all",
-                  active
-                    ? "bg-white text-blue-600 border-blue-200 shadow-sm"
-                    : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
-                ].join(" ")}
-              >
-                <span className={active ? "text-blue-600" : "text-slate-500"}>
-                  {t.icon}
-                </span>
-                <span className="font-medium">{t.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
 
       {/* BODY (scroll) */}
-      <div className="flex-1 overflow-y-auto">
-        <form onSubmit={handleSubmit} className="p-6 space-y-8">
+      <div className="flex-1 overflow-y-auto bg-[#F4F7FA]">
+
+       <form onSubmit={handleSubmit} className="p-8 space-y-10">
+
           {/* ===== TAB: General ===== */}
           {activeMainTab === "general" && (
             <div className="space-y-8">
               {/* Card: Course info */}
-              <section className="rounded-2xl border border-slate-200 bg-white p-6">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center border border-blue-100">
-                    <FiBookOpen className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <h3 className="text-lg font-semibold">Material information</h3>
-                </div>
+              <section className="rounded-2xl border border-[#112C3E]/15 bg-white p-6 space-y-6">
+
+                <div className="flex items-center gap-3 mb-4">
+  <div className="w-10 h-10 rounded-xl bg-[#0C212D]/5 flex items-center justify-center">
+    <FiBookOpen className="w-5 h-5 text-[#0C212D]" />
+  </div>
+  <h3 className="text-xl font-bold text-[#0C212D] tracking-tight">
+    Material Information
+  </h3>
+</div>
+
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Basics */}
@@ -782,15 +805,17 @@ const idiomasCurso = [
       {/* TAB: Unidades */}
 {activeMainTab === "unidades" && (
   <div className="space-y-8">
-    <section className="bg-gradient-to-br from-indigo-50 to-indigo-100/50 rounded-2xl p-6 border border-indigo-200">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-          <FiLayers className="w-5 h-5 text-indigo-600" />
-        </div>
-        <h3 className="text-xl font-semibold text-slate-900">
-          Material Content: Units & Lessons
-        </h3>
-      </div>
+    <section className="rounded-2xl border border-[#112C3E]/15 bg-white p-6 space-y-6">
+
+      <div className="flex items-center gap-3 mb-4">
+  <div className="w-10 h-10 rounded-xl bg-[#0C212D]/5 flex items-center justify-center">
+    <FiLayers className="w-5 h-5 text-[#0C212D]" />
+  </div>
+  <h3 className="text-xl font-bold text-[#0C212D] tracking-tight">
+    Material Content: Units & Lessons
+  </h3>
+</div>
+
 
       {unidades.length === 0 ? (
         <div className="p-8 text-center bg-indigo-50 rounded-xl border border-dashed border-indigo-200 text-indigo-600">
@@ -1669,8 +1694,23 @@ const idiomasCurso = [
           <div className="p-4 bg-white border-t border-slate-200 sticky bottom-0 z-10 flex justify-end">
             <button
               type="submit"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 shadow-sm"
-              disabled={uploading}
+              className={`
+      inline-flex items-center gap-2
+      px-6 py-3 rounded-xl font-bold tracking-wide
+      transition-all duration-300 shadow-md
+
+      ${
+        uploading
+          ? "bg-[#0C212D]/20 text-[#0C212D]/50 cursor-not-allowed"
+          : `
+            bg-gradient-to-r from-[#EE7203] to-[#FF3816]
+            text-white
+            hover:shadow-xl hover:shadow-[#EE7203]/20
+            hover:scale-[1.02]
+            active:scale-95
+          `
+      }
+    `}
             >
               <FiSave size={18} />
               {uploading ? "Saving..." : "Save Changes"}

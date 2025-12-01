@@ -8,6 +8,9 @@ import SidebarAdmin from "@/components/layout/SidebarAdmin";
 import SidebarProfesor from "@/components/layout/SidebarProfesor";
 import SidebarAlumno from "@/components/layout/SidebarAlumno";
 
+import MobileNavbarAlumno from "@/components/layout/MobileNavbarAlumno";
+import MobileNavbarAdmin from "@/components/layout/MobileNavbarAdmin";
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, role, authReady, loading } = useAuth();
   const router = useRouter();
@@ -38,6 +41,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="flex h-screen bg-gray-50">
       {renderSidebar()}
       <main className="flex-1 overflow-y-auto p-6">{children}</main>
+
+      {/* MOBILE NAV ONLY FOR ALUMNO */}
+      {role === "alumno" && <MobileNavbarAlumno />}
+      {role === "admin" && <MobileNavbarAdmin />}
+    
     </div>
   );
 }
