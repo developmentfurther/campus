@@ -1,11 +1,13 @@
 "use client";
 
 import { FiAward, FiBookOpen } from "react-icons/fi";
-import Link from "next/link";
 import { useI18n } from "@/contexts/I18nContext";
+import { useDashboardUI } from "@/stores/useDashboardUI";
+
 
 export default function AlumnoCertificatesPage() {
   const { t } = useI18n();
+  const { setSection } = useDashboardUI();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white p-6 md:p-10">
@@ -93,13 +95,15 @@ export default function AlumnoCertificatesPage() {
                   </p>
                 </div>
                 
-                <Link
-                  href="#"
-                  className="group inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white font-bold rounded-xl hover:shadow-2xl hover:shadow-[#EE7203]/30 transition-all duration-300 hover:scale-105"
-                >
-                  <span>{t("certificates.ctaLink")}</span>
-                  <span className="transform group-hover:translate-x-1 transition-transform duration-300">→</span>
-                </Link>
+                <button
+  onClick={() => setSection("miscursos")}
+  className="group inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white font-bold rounded-xl hover:shadow-2xl hover:shadow-[#EE7203]/30 transition-all duration-300 hover:scale-105"
+>
+  <span>{t("certificates.ctaLink")}</span>
+  <span className="transform group-hover:translate-x-1 transition-transform duration-300">
+    →
+  </span>
+</button>
               </div>
 
             </div>

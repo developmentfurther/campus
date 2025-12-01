@@ -681,6 +681,23 @@ const idiomasCurso = [
                         required
                       />
                     </div>
+                    {/* Descripción */}
+<div className="space-y-2">
+  <label className="text-sm font-medium text-slate-700">
+    Description
+  </label>
+  <textarea
+    name="descripcion"
+    value={curso.descripcion}
+    onChange={handleChange}
+    placeholder="Briefly describe what students will learn..."
+    rows={4}
+    className="w-full rounded-lg border border-slate-300 bg-white p-3 text-gray-800 
+               focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
+    required
+  />
+</div>
+
 
                     {/* Nivel + Idioma */}
 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

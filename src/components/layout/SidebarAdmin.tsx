@@ -153,7 +153,7 @@ export default function SidebarAdmin() {
           className="flex items-center justify-center gap-2 w-full px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium text-sm transition"
         >
           <FiLogOut size={16} />
-          Cerrar sesión
+          Log Out
         </button>
 
         <p className="text-xs text-gray-400 text-center mt-5">

@@ -1385,12 +1385,24 @@ const renderSpeaking = (ex: any) => {
         {ex.type === "listening" && (
           <div className="space-y-6">
             {ex.audioUrl && (
-              <audio
-                controls
-                src={ex.audioUrl}
-                className="w-full max-w-md"
-              />
-            )}
+  <>
+    {/* Si es un .mp3/.wav → usar audio normal */}
+    {/\.(mp3|wav|ogg)$/i.test(ex.audioUrl) ? (
+      <audio controls src={ex.audioUrl} className="mt-2 w-full max-w-md" />
+    ) : null}
+
+    {/* Si contiene Vimeo → usar iframe */}
+    {ex.audioUrl.includes("vimeo.com") ? (
+      <iframe
+        src={ex.audioUrl.replace("vimeo.com/", "player.vimeo.com/video/")}
+        className="w-full h-48 rounded mt-3"
+        allow="autoplay; fullscreen; encrypted-media"
+        allowFullScreen
+      />
+    ) : null}
+  </>
+)}
+
             {renderReading(ex)}
           </div>
         )}

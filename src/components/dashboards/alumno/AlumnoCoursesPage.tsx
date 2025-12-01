@@ -99,12 +99,14 @@ export default function AlumnoCoursesPage() {
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
             {misCursos.map((c, index) => (
+              
               <CourseCard 
                 key={c.id} 
                 course={c} 
                 index={index}
                 router={router}
                 t={t}
+                
               />
             ))}
           </div>
@@ -115,6 +117,11 @@ export default function AlumnoCoursesPage() {
 }
 
 function CourseCard({ course, index, router, t }) {
+    // 🔥 LOGS PARA DEBUG
+  console.log("DEBUG COURSE:", course);
+  console.log("DEBUG learningRef:", course.learningRef);
+  console.log("DEBUG categoria:", course.categoria);
+  console.log("DEBUG nivel:", course.nivel);
   const totalDuration = course.unidades?.reduce(
     (acc: number, u: any) => acc + (u.duracion || 0),
     0
@@ -172,7 +179,7 @@ function CourseCard({ course, index, router, t }) {
                 color: '#FFFFFF'
               }}
             >
-              {course.categoria || t("courses.generalCategory")}
+              {course.idioma?.toUpperCase() || t("courses.generalCategory")}
             </div>
             
             <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/10 backdrop-blur-sm">
