@@ -9,6 +9,8 @@ import {
 } from "@/lib/games/attempts";
 import { motion } from "framer-motion";
 import GameBlockedModal from "@/components/ui/GameBlockedModal";
+import LoaderGame from "@/components/ui/LoaderGame";
+import GameBackground from "@/components/ui/GameBackground";
 
 type GameStatus = "playing" | "won" | "lost";
 
@@ -37,6 +39,8 @@ export default function SentenceBuilder() {
   const [checkingAttempt, setCheckingAttempt] = useState(true);
 
   const [dragItem, setDragItem] = useState<DragItem | null>(null);
+
+  const [showLoader, setShowLoader] = useState(true);
 
   // ======================================================
   // FETCH SENTENCE (IA + idioma)
@@ -86,6 +90,16 @@ export default function SentenceBuilder() {
      setBlocked(false);
   setCheckingAttempt(false);
   }, [user, role]);
+
+
+   useEffect(() => {
+  // Tiempo mínimo de animación del loader
+  const timer = setTimeout(() => {
+    setShowLoader(false);
+  }, 1800); // 1.8 segundos
+
+  return () => clearTimeout(timer);
+}, []);
 
   // ======================================================
   // Cargar ejercicio si NO está bloqueado
@@ -174,53 +188,64 @@ export default function SentenceBuilder() {
   // ======================================================
   // UI STATES
   // ======================================================
-  if (checkingAttempt) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="relative w-24 h-24 mx-auto mb-6">
-            <div className="absolute inset-0 rounded-full border-8 border-purple-200" />
-            <div className="absolute inset-0 rounded-full border-8 border-t-purple-600 animate-spin" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Bloqueado (ya jugó hoy)
-  // if (blocked && role === "alumno") {
+  // if (checkingAttempt) {
   //   return (
-  //     <GameBlockedModal
-  //     emoji="⏳"
-  //     title={t("gaming.games.idioms.blockedTitle")}
-  //     message={t("gaming.games.idioms.blockedMessage")}
-  //     nextAvailableLabel={t("gaming.games.shared.nextAvailable")}
-  //     hoursLabel={t("gaming.games.shared.hours")}
-  //     minutesLabel={t("gaming.games.shared.minutes")}
-  //   />
+  //     <div className="min-h-screen flex items-center justify-center">
+  //       <div className="text-center">
+  //         <div className="relative w-24 h-24 mx-auto mb-6">
+  //           <div className="absolute inset-0 rounded-full border-8 border-purple-200" />
+  //           <div className="absolute inset-0 rounded-full border-8 border-t-purple-600 animate-spin" />
+  //         </div>
+  //       </div>
+  //     </div>
   //   );
   // }
 
-  // Cargando palabra
-  if (loading) {
-    return (
-       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="relative w-24 h-24 mx-auto mb-6">
-            <div className="absolute inset-0 rounded-full border-8 border-purple-200" />
-            <div className="absolute inset-0 rounded-full border-8 border-t-purple-600 animate-spin" />
-          </div>
-        </div>
-      </div>
-    );
-  } 
+  // // Bloqueado (ya jugó hoy)
+  // // if (blocked && role === "alumno") {
+  // //   return (
+  // //     <GameBlockedModal
+  // //     emoji="⏳"
+  // //     title={t("gaming.games.idioms.blockedTitle")}
+  // //     message={t("gaming.games.idioms.blockedMessage")}
+  // //     nextAvailableLabel={t("gaming.games.shared.nextAvailable")}
+  // //     hoursLabel={t("gaming.games.shared.hours")}
+  // //     minutesLabel={t("gaming.games.shared.minutes")}
+  // //   />
+  // //   );
+  // // }
+
+  // // Cargando palabra
+  // if (loading) {
+  //   return (
+  //      <div className="min-h-screen flex items-center justify-center">
+  //       <div className="text-center">
+  //         <div className="relative w-24 h-24 mx-auto mb-6">
+  //           <div className="absolute inset-0 rounded-full border-8 border-purple-200" />
+  //           <div className="absolute inset-0 rounded-full border-8 border-t-purple-600 animate-spin" />
+  //         </div>
+  //       </div>
+  //     </div>
+  //   );
+  // } 
  
+ if (checkingAttempt || loading || showLoader) {
+  return <LoaderGame />;
+}
 
   // ======================================================
   // UI PRINCIPAL
   // ======================================================
   return (
     <div className="max-w-xl mx-auto py-10 text-center space-y-8">
+      <GameBackground />
+      
+      <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, ease: "easeOut" }}
+      className="relative z-10 max-w-2xl mx-auto"
+    >
       <h1 className="text-3xl font-bold text-slate-800">
         {t("gaming.games.sentenceBuilder.title")}
       </h1>
@@ -298,6 +323,8 @@ export default function SentenceBuilder() {
           {t("gaming.games.sentenceBuilder.newSentence")}
         </button>
       )}
+
+       </motion.div>
     </div>
   );
 }

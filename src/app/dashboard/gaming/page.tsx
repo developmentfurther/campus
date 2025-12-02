@@ -25,81 +25,87 @@ export default function GamingHub() {
 
 
   const META: Record<
-    string,
-    {
-      title: string;
-      description: string;
-      icon: React.ReactElement;
-      howToPlay: string[];
-    }
-  > = {
-    hangman: {
-      title: t("gaming.games.hangman.title"),
-      description: t("gaming.games.hangman.description"),
-      icon: <FiTarget className="text-white text-4xl" />,
-      howToPlay: [
-        "Guess letters one at a time",
-        "Each wrong guess adds a body part",
-        "Complete the word before the hangman is drawn",
-        "Win by revealing all letters!",
-      ],
-    },
-    wordScramble: {
-      title: t("gaming.games.wordScramble.title"),
-      description: t("gaming.games.wordScramble.description"),
-      icon: <FiZap className="text-white text-4xl" />,
-      howToPlay: [
-        "Unscramble the jumbled letters",
-        "Type your answer in the input field",
-        "Beat the clock for bonus points",
-        "Advance through difficulty levels",
-      ],
-    },
-    wordle: {
-      title: t("gaming.games.wordle.title"),
-      description: t("gaming.games.wordle.description"),
-      icon: <FiAperture className="text-white text-4xl" />,
-      howToPlay: [
-        "Guess the 5-letter word in 6 tries",
-        "Green = correct letter & position",
-        "Yellow = correct letter, wrong spot",
-        "Gray = letter not in word",
-      ],
-    },
-    emojiIdioms: {
-      title: t("gaming.games.emojiIdioms.title"),
-      description: t("gaming.games.emojiIdioms.description"),
-      icon: <FiBookOpen className="text-white text-4xl" />,
-      howToPlay: [
-        "Decode the idiom from emojis",
-        "Think about cultural expressions",
-        "Type your answer to submit",
-        "Learn new idioms as you play",
-      ],
-    },
-    sentenceBuilder: {
-      title: t("gaming.games.sentenceBuilder.title"),
-      description: t("gaming.games.sentenceBuilder.description"),
-      icon: <FiEdit className="text-white text-4xl" />,
-      howToPlay: [
-        "Arrange words in correct order",
-        "Drag and drop to build sentences",
-        "Follow grammar rules carefully",
-        "Create perfect sentences to win",
-      ],
-    },
-    errorFinder: {
-      title: t("gaming.games.errorFinder.title"),
-      description: t("gaming.games.errorFinder.description"),
-      icon: <FiAlertTriangle className="text-white text-4xl" />,
-      howToPlay: [
-        "Read the sentence carefully",
-        "Spot the grammatical errors",
-        "Click on the incorrect word",
-        "Learn from corrections",
-      ],
-    },
-  };
+  string,
+  {
+    title: string;
+    description: string;
+    icon: React.ReactElement;
+    howToPlay: string[];
+  }
+> = {
+  hangman: {
+    title: t("gaming.games.hangman.title"),
+    description: t("gaming.games.hangman.description"),
+    icon: <FiTarget className="text-white text-4xl" />,
+    howToPlay: [
+        t("howToPlay.guessLetters"),
+        t("howToPlay.wrongAddsPart"),
+        t("howToPlay.completeBeforeDraw"),
+        t("howToPlay.winRevealAll"),
+    ],
+  },
+
+  wordScramble: {
+    title: t("gaming.games.wordScramble.title"),
+    description: t("gaming.games.wordScramble.description"),
+    icon: <FiZap className="text-white text-4xl" />,
+    howToPlay: [
+      t("howToPlay.unscramble"),
+      t("howToPlay.typeAnswer"),
+      t("howToPlay.beatClock"),
+      t("howToPlay.advanceLevels"),
+    ],
+  },
+
+  wordle: {
+    title: t("gaming.games.wordle.title"),
+    description: t("gaming.games.wordle.description"),
+    icon: <FiAperture className="text-white text-4xl" />,
+    howToPlay: [
+      t("howToPlay.guessFiveLetters"),
+      t("howToPlay.greenCorrect"),
+      t("howToPlay.yellowWrongSpot"),
+      t("howToPlay.grayNotInWord"),
+    ],
+  },
+
+  emojiIdioms: {
+    title: t("gaming.games.emojiIdioms.title"),
+    description: t("gaming.games.emojiIdioms.description"),
+    icon: <FiBookOpen className="text-white text-4xl" />,
+    howToPlay: [
+      t("howToPlay.decodeEmojis"),
+      t("howToPlay.thinkCultural"),
+      t("howToPlay.typeAnswer"),
+      t("howToPlay.learnIdioms"),
+    ],
+  },
+
+  sentenceBuilder: {
+    title: t("gaming.games.sentenceBuilder.title"),
+    description: t("gaming.games.sentenceBuilder.description"),
+    icon: <FiEdit className="text-white text-4xl" />,
+    howToPlay: [
+      t("howToPlay.arrangeOrder"),
+      t("howToPlay.dragDrop"),
+      t("howToPlay.followGrammar"),
+      t("howToPlay.perfectSentences"),
+    ],
+  },
+
+  errorFinder: {
+    title: t("gaming.games.errorFinder.title"),
+    description: t("gaming.games.errorFinder.description"),
+    icon: <FiAlertTriangle className="text-white text-4xl" />,
+    howToPlay: [
+      t("howToPlay.readCarefully"),
+      t("howToPlay.spotErrors"),
+      t("howToPlay.clickIncorrect"),
+      t("howToPlay.learnCorrections"),
+    ],
+  },
+};
+
 
   const GAMES = Object.keys(GAMES_MAP).map((slug) => ({
     slug,
@@ -237,7 +243,7 @@ export default function GamingHub() {
                           <div className="flex items-center gap-2">
                             <FiHelpCircle size={16} className="text-white" />
                             <h3 className="text-sm font-bold text-white uppercase tracking-wide">
-                              How to Play
+                              {t("gaming.howToPlayTitle")}
                             </h3>
                           </div>
                         </div>

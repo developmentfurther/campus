@@ -1,5 +1,36 @@
 {
   "common": {},
+  "howToPlay": {
+  "guessLetters": "Devinez les lettres une par une",
+  "wrongAddsPart": "Chaque erreur ajoute une partie du corps",
+  "completeBeforeDraw": "Complétez le mot avant que le pendu soit dessiné",
+  "winRevealAll": "Gagnez en révélant toutes les lettres !",
+
+  "unscramble": "Réorganisez les lettres mélangées",
+  "typeAnswer": "Tapez votre réponse dans le champ",
+  "beatClock": "Battez le temps pour obtenir des bonus",
+  "advanceLevels": "Progressez dans les niveaux de difficulté",
+
+  "guessFiveLetters": "Trouvez le mot de 5 lettres en 6 essais",
+  "greenCorrect": "Vert = lettre et position correctes",
+  "yellowWrongSpot": "Jaune = lettre correcte mais mauvaise position",
+  "grayNotInWord": "Gris = lettre absente du mot",
+
+  "decodeEmojis": "Décodez l’expression à partir des emojis",
+  "thinkCultural": "Réfléchissez aux expressions culturelles",
+  "learnIdioms": "Apprenez de nouveaux idiomes en jouant",
+
+  "arrangeOrder": "Mettez les mots dans le bon ordre",
+  "dragDrop": "Glissez-déposez pour former des phrases",
+  "followGrammar": "Respectez bien les règles grammaticales",
+  "perfectSentences": "Créez des phrases parfaites pour gagner",
+
+  "readCarefully": "Lisez la phrase attentivement",
+  "spotErrors": "Repérez les erreurs grammaticales",
+  "clickIncorrect": "Cliquez sur le mot incorrect",
+  "learnCorrections": "Apprenez grâce aux corrections"
+},
+
   "sidebar": {
     "headerTitle": "Further Campus",
     "headerSubtitle": "Portail étudiant",
@@ -132,6 +163,7 @@
   "ctaLink": "Aller à Mes Cours"
 },
   "gaming": {
+  "howToPlayTitle": "Comment jouer",
   "headerTitle": "Further Gaming 🎮",
   "headerSubtitle": "Pratiquez l'anglais avec des jeux interactifs.",
   "learningThroughPlay": "Apprendre en jouant",
@@ -139,9 +171,18 @@
   "zone": "de Jeux",
   "play": "Jouer",
   "backToHub": "Retour au hub",
+  "loadingInicial": "CHARGEMENT",
+  "loading": "CHARGEMENT_DES_RESSOURCES_DU_JEU...",
+  "standby": "[ VEUILLEZ PATIENTER ]",
 
   "games": {
     "hangman": {
+       "howToPlay": [
+        "guessLetters",
+        "wrongAddsPart",
+        "completeBeforeDraw",
+        "winRevealAll"
+      ],
       "title": "Pendu",
       "description": "Devinez le mot avant qu’il ne soit trop tard.",
       "loadingProfile": "Chargement de la langue de l’étudiant...",
@@ -154,9 +195,22 @@
         "errorsCounter": "{{count}} / 7 erreurs",
         "won": "🎉 Gagné ! Le mot était \"{{word}}\".",
         "lost": "💀 Perdu. Le mot était \"{{word}}\".",
-        "playAgain": "Rejouer (IA)"
+        "playAgain": "Rejouer (IA)",
+        "badge": "Pendu",
+"subtitle": "Devine le mot caché avant qu’il ne soit trop tard",
+"stats": {
+  "attempts": "Essais",
+  "hints": "Indices"
+}
+
     },
     "wordScramble": {
+      "howToPlay": [
+        "unscramble",
+        "typeAnswer",
+        "beatClock",
+        "advanceLevels"
+      ],
       "title": "Mots Mélangés",
       "description": "Réorganisez les lettres et découvrez le mot.",
       "checking": "Vérification des tentatives d'aujourd'hui...",
@@ -174,9 +228,22 @@
           "firstLetter": "🔤 Première lettre : {{letter}}",
           "lastLetter": "🔡 Dernière lettre : {{letter}}",
           "correctPositions": "🧩 Lettres correctes à leur place : {{pattern}}"
-        }
+        },
+        "badge": "Jeu de mots",
+          "subtitle": "Réorganisez les lettres pour découvrir le mot caché",
+          "stats": {
+            "attempts": "Tentatives",
+            "hints": "Indications"
+          }
+
     },
     "wordle": {
+      "howToPlay": [
+        "guessFiveLetters",
+        "greenCorrect",
+        "yellowWrongSpot",
+        "grayNotInWord"
+      ],
       "title": "Wordle",
       "description": "Devinez le mot en 6 essais.",
        "checking": "Vérification des tentatives du jour...",
@@ -190,6 +257,12 @@
         "hint2": "Indice final : c'est un nom commun"
     },
     "emojiIdioms": {
+       "howToPlay": [
+        "decodeEmojis",
+        "thinkCultural",
+        "typeAnswer",
+        "learnIdioms"
+      ],
       "title": "Idiomes Emoji",
       "description": "Interprétez des idioms en utilisant uniquement des emojis.",
        "alreadyPlayedTitle": "Tu as déjà joué aujourd’hui 🎮",
@@ -212,6 +285,12 @@
   "hintReveal": "🧩 À la position : {{reveal}}"
     },
     "sentenceBuilder": {
+      "howToPlay": [
+        "arrangeOrder",
+        "dragDrop",
+        "followGrammar",
+        "perfectSentences"
+      ],
       "title": "Constructeur de Phrases",
       "description": "Faites glisser les mots pour former la phrase correcte.",
       "instructions": "Faites glisser les mots pour former la phrase correcte.",
@@ -224,6 +303,12 @@
   "newSentence": "Nouvelle phrase"
     },
     "errorFinder": {
+       "howToPlay": [
+        "readCarefully",
+        "spotErrors",
+        "clickIncorrect",
+        "learnCorrections"
+      ],
       "title": "Chercheur d’Erreurs",
       "description": "Trouvez et corrigez l’erreur grammaticale.",
       "checking": "Vérification des tentatives d'aujourd'hui...",

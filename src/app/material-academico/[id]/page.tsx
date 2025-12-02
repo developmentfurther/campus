@@ -17,13 +17,11 @@ import {
   FiCheckCircle,
   FiChevronLeft,
   FiChevronRight,
-  FiPlay,
   FiAlertTriangle,
-  FiClock,
-  FiMaximize,
-  FiBookOpen,
   FiFileText,
-  FiLock,
+  FiDownload,
+  FiLoader,
+  FiBook,
 } from "react-icons/fi";
 import { useAuth } from "@/contexts/AuthContext";
 import { db as firestore, storage } from "@/lib/firebase";
@@ -33,6 +31,8 @@ import remarkGfm from "remark-gfm";
 import Player from "@vimeo/player";
 import {motion} from "framer-motion"
 import Image from "next/image";
+import { jsPDF } from "jspdf";
+import { FURTHER_LOGO_BASE64 } from "@/lib/logoBase64";
 
 
 
@@ -136,6 +136,8 @@ export default function CoursePlayerPage() {
   const [activeU, setActiveU] = useState(0);
   const [activeL, setActiveL] = useState(0);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  const [activeTab, setActiveTab] = useState("theory");
 
 
   // 🔸 Progreso del usuario
@@ -1012,39 +1014,53 @@ const renderFillBlank = (ex: any) => {
 
   return (
     <div className="space-y-4 max-w-[750px]">
-      {parts.map((part: string, i: number) => (
-        <div key={i} className="space-y-2">
-          {/* Texto del fragmento anterior */}
-          {part.trim() && (
-            <p className="text-slate-800 text-base leading-relaxed">
-              {part}
-            </p>
-          )}
+      <div className="text-slate-800 text-base leading-relaxed whitespace-pre-wrap">
+        {parts.map((part: string, i: number) => (
+          <span key={i}>
+            {/* Texto del fragmento (preservando saltos de línea) */}
+            {part}
 
-          {/* Input SOLO si corresponde */}
-          {i < ex.answers.length && (
-            <input
-              type="text"
-              disabled={submitted}
-              value={current[i] || ""}
-              className={`w-full px-4 py-2 rounded-lg border text-base ${
-                submitted
-                  ? current[i]?.trim()?.toLowerCase() ===
-                    ex.answers[i].trim().toLowerCase()
-                    ? "bg-emerald-50 border-emerald-300 text-emerald-800"
-                    : "bg-rose-50 border-rose-300 text-rose-800"
-                  : "border-slate-300 focus:ring-2 focus:ring-blue-300"
-              }`}
-              placeholder={`Respuesta ${i + 1}`}
-              onChange={(e) => {
-                const copy = [...current];
-                copy[i] = e.target.value;
-                handleAnswer(key, copy);
-              }}
-            />
+            {/* Input inline solo si corresponde */}
+            {i < ex.answers.length && (
+              <input
+                type="text"
+                disabled={submitted}
+                value={current[i] || ""}
+                className={`inline-block mx-1 px-3 py-1 rounded-lg border text-base align-middle ${
+                  submitted
+                    ? current[i]?.trim()?.toLowerCase() ===
+                      ex.answers[i].trim().toLowerCase()
+                      ? "bg-emerald-50 border-emerald-300 text-emerald-800"
+                      : "bg-rose-50 border-rose-300 text-rose-800"
+                    : "border-slate-300 focus:ring-2 focus:ring-blue-300"
+                }`}
+                style={{ width: '120px' }}
+                placeholder="___"
+                onChange={(e) => {
+                  const copy = [...current];
+                  copy[i] = e.target.value;
+                  handleAnswer(key, copy);
+                }}
+              />
+            )}
+          </span>
+        ))}
+      </div>
+
+      {/* Mostrar respuestas correctas después de enviar */}
+      {submitted && (
+        <div className="mt-3 text-xs text-slate-600">
+          {current.some(
+            (ans: string, idx: number) =>
+              ans?.trim()?.toLowerCase() !== ex.answers[idx]?.trim()?.toLowerCase()
+          ) && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <span className="font-semibold">Respuestas correctas:</span>{" "}
+              {ex.answers.join(", ")}
+            </div>
           )}
         </div>
-      ))}
+      )}
     </div>
   );
 };
@@ -1644,156 +1660,637 @@ function CapstoneForm({
 
 const currentUnit = units[activeU];
 
+function DownloadBibliographyButton({ unit, courseTitle }) {
+  const [loading, setLoading] = useState(false);
+
+  const generatePDF = async () => {
+    setLoading(true);
+    
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 20;
+      let yPosition = 20;
+
+      // ==========================================
+      // 🎨 HEADER CON LOGO Y TÍTULO
+      // ==========================================
+      
+      // Logo "Further" (texto a la izquierda)
+      doc.setFontSize(24);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(238, 114, 3);
+      doc.text("Further", margin, yPosition);
+      
+      // Logo (imagen en esquina derecha)
+      const imgWidth = 40;
+      const imgHeight = 25;
+      
+      doc.addImage(
+        FURTHER_LOGO_BASE64,
+        "PNG",
+        pageWidth - margin - imgWidth,
+        yPosition - 22,
+        imgWidth,
+        imgHeight
+      );
+      
+      // Línea decorativa
+      doc.setDrawColor(238, 114, 3);
+      doc.setLineWidth(2);
+      doc.line(margin, yPosition + 3, pageWidth - margin, yPosition + 3);
+      
+      yPosition += 15;
+
+      // Título del curso
+      doc.setFontSize(16);
+      doc.setTextColor(12, 33, 45);
+      doc.setFont("helvetica", "bold");
+      doc.text(courseTitle || "Curso", margin, yPosition);
+      yPosition += 10;
+
+      // Título de la unidad
+      doc.setFontSize(14);
+      doc.setTextColor(17, 44, 62);
+      doc.text(`Unit: ${unit.title}`, margin, yPosition);
+      yPosition += 15;
+
+      // ==========================================
+      // 📚 CONTENIDO DE CADA LECCIÓN
+      // ==========================================
+      
+      unit.lessons?.forEach((lesson, idx) => {
+        // Ignorar intro y closing
+        if (lesson.id === "intro" || lesson.id === "closing") return;
+
+        // Check si necesitamos nueva página
+        if (yPosition > pageHeight - 40) {
+          doc.addPage();
+          yPosition = 20;
+        }
+
+        // Número y título de lección
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(238, 114, 3);
+        doc.text(`${idx + 1}. ${lesson.title}`, margin, yPosition);
+        yPosition += 8;
+
+        // Descripción
+        if (lesson.description) {
+          doc.setFontSize(10);
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(60, 60, 60);
+          const descLines = doc.splitTextToSize(
+            lesson.description,
+            pageWidth - 2 * margin
+          );
+          doc.text(descLines, margin + 5, yPosition);
+          yPosition += descLines.length * 5 + 5;
+        }
+
+        // Teoría/Contenido
+        if (lesson.theory) {
+          if (yPosition > pageHeight - 60) {
+            doc.addPage();
+            yPosition = 20;
+          }
+
+          doc.setFontSize(10);
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(40, 40, 40);
+          
+          // Limpiar markdown básico
+          const cleanTheory = lesson.theory
+            .replace(/[#*_`]/g, "")
+            .replace(/\n{3,}/g, "\n\n")
+            .substring(0, 1500);
+          
+          const theoryLines = doc.splitTextToSize(
+            cleanTheory + (lesson.theory.length > 1500 ? "..." : ""),
+            pageWidth - 2 * margin
+          );
+          
+          doc.text(theoryLines, margin + 5, yPosition);
+          yPosition += theoryLines.length * 5 + 3;
+        }
+
+        // Vocabulario
+        if (lesson.vocabulary?.entries) {
+          if (yPosition > pageHeight - 40) {
+            doc.addPage();
+            yPosition = 20;
+          }
+
+          doc.setFontSize(10);
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(238, 114, 3);
+          doc.text("Vocabulary:", margin + 5, yPosition);
+          yPosition += 6;
+
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(60, 60, 60);
+          
+          lesson.vocabulary.entries.slice(0, 20).forEach((entry) => {
+            if (yPosition > pageHeight - 20) {
+              doc.addPage();
+              yPosition = 20;
+            }
+            const vocabLine = `• ${entry.term}: ${entry.translation || entry.meaning}`;
+            const lines = doc.splitTextToSize(vocabLine, pageWidth - 2 * margin - 10);
+            doc.text(lines, margin + 10, yPosition);
+            yPosition += lines.length * 5;
+          });
+        }
+
+        // ==========================================
+        // 🧠 EJERCICIOS DE LA LECCIÓN
+        // ==========================================
+        if (lesson.ejercicios && lesson.ejercicios.length > 0) {
+          if (yPosition > pageHeight - 40) {
+            doc.addPage();
+            yPosition = 20;
+          }
+
+          // Título de sección de ejercicios
+          doc.setFontSize(11);
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(238, 114, 3);
+          doc.text("Ejercicios:", margin + 5, yPosition);
+          yPosition += 8;
+
+          lesson.ejercicios.forEach((ex, exIdx) => {
+            if (yPosition > pageHeight - 30) {
+              doc.addPage();
+              yPosition = 20;
+            }
+
+            // Número de ejercicio
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(60, 60, 60);
+            doc.text(`Ejercicio ${exIdx + 1}:`, margin + 10, yPosition);
+            yPosition += 6;
+
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(50, 50, 50);
+
+            // Renderizar según tipo de ejercicio
+            switch (ex.type) {
+              case "multiple_choice":
+                if (ex.question) {
+                  const qLines = doc.splitTextToSize(ex.question, pageWidth - 2 * margin - 15);
+                  doc.text(qLines, margin + 15, yPosition);
+                  yPosition += qLines.length * 5 + 3;
+                }
+                ex.options?.forEach((opt, i) => {
+                  if (yPosition > pageHeight - 15) {
+                    doc.addPage();
+                    yPosition = 20;
+                  }
+                  const optLine = `${String.fromCharCode(65 + i)}) ${opt}`;
+                  const lines = doc.splitTextToSize(optLine, pageWidth - 2 * margin - 20);
+                  doc.text(lines, margin + 20, yPosition);
+                  yPosition += lines.length * 5;
+                });
+                yPosition += 3;
+                break;
+
+              case "true_false":
+                if (ex.statement) {
+                  const stLines = doc.splitTextToSize(ex.statement, pageWidth - 2 * margin - 15);
+                  doc.text(stLines, margin + 15, yPosition);
+                  yPosition += stLines.length * 5 + 3;
+                }
+                doc.text("☐ Verdadero    ☐ Falso", margin + 20, yPosition);
+                yPosition += 7;
+                break;
+
+              case "fill_blank":
+                if (ex.sentence) {
+                  const sentence = ex.sentence.replace(/\*\*\*/g, "_____");
+                  const sentLines = doc.splitTextToSize(sentence, pageWidth - 2 * margin - 15);
+                  doc.text(sentLines, margin + 15, yPosition);
+                  yPosition += sentLines.length * 5 + 5;
+                }
+                break;
+
+              case "reading":
+              case "listening":
+                if (ex.title) {
+                  doc.setFont("helvetica", "bold");
+                  const titleLines = doc.splitTextToSize(ex.title, pageWidth - 2 * margin - 15);
+                  doc.text(titleLines, margin + 15, yPosition);
+                  yPosition += titleLines.length * 5 + 2;
+                }
+                if (ex.text) {
+                  doc.setFont("helvetica", "normal");
+                  const textLines = doc.splitTextToSize(
+                    ex.text.substring(0, 500) + (ex.text.length > 500 ? "..." : ""),
+                    pageWidth - 2 * margin - 15
+                  );
+                  doc.text(textLines, margin + 15, yPosition);
+                  yPosition += textLines.length * 5 + 3;
+                }
+                
+                // Preguntas del reading/listening
+                if (ex.questions && ex.questions.length > 0) {
+                  ex.questions.forEach((q, qIdx) => {
+                    if (yPosition > pageHeight - 25) {
+                      doc.addPage();
+                      yPosition = 20;
+                    }
+                    
+                    doc.setFont("helvetica", "bold");
+                    const promptLines = doc.splitTextToSize(
+                      `${qIdx + 1}. ${q.prompt}`,
+                      pageWidth - 2 * margin - 20
+                    );
+                    doc.text(promptLines, margin + 20, yPosition);
+                    yPosition += promptLines.length * 5 + 2;
+
+                    doc.setFont("helvetica", "normal");
+                    if (q.kind === "mc" && q.options) {
+                      q.options.forEach((opt, i) => {
+                        if (yPosition > pageHeight - 15) {
+                          doc.addPage();
+                          yPosition = 20;
+                        }
+                        const optLine = `${String.fromCharCode(65 + i)}) ${opt}`;
+                        const lines = doc.splitTextToSize(optLine, pageWidth - 2 * margin - 25);
+                        doc.text(lines, margin + 25, yPosition);
+                        yPosition += lines.length * 5;
+                      });
+                    } else if (q.kind === "tf") {
+                      doc.text("☐ True    ☐ False", margin + 25, yPosition);
+                      yPosition += 5;
+                    }
+                    yPosition += 3;
+                  });
+                }
+                break;
+
+              case "text":
+                if (ex.prompt) {
+                  const promptLines = doc.splitTextToSize(ex.prompt, pageWidth - 2 * margin - 15);
+                  doc.text(promptLines, margin + 15, yPosition);
+                  yPosition += promptLines.length * 5 + 3;
+                }
+                doc.text("____________________________________________________", margin + 15, yPosition);
+                yPosition += 5;
+                doc.text("____________________________________________________", margin + 15, yPosition);
+                yPosition += 5;
+                doc.text("____________________________________________________", margin + 15, yPosition);
+                yPosition += 7;
+                break;
+
+              case "matching":
+                doc.text("Emparejar:", margin + 15, yPosition);
+                yPosition += 5;
+                ex.pairs?.forEach((pair, i) => {
+                  if (yPosition > pageHeight - 15) {
+                    doc.addPage();
+                    yPosition = 20;
+                  }
+                  doc.text(`${i + 1}. ${pair.left} → ___________`, margin + 20, yPosition);
+                  yPosition += 5;
+                });
+                yPosition += 3;
+                break;
+
+              case "reflection":
+                if (ex.prompt) {
+                  const promptLines = doc.splitTextToSize(ex.prompt, pageWidth - 2 * margin - 15);
+                  doc.text(promptLines, margin + 15, yPosition);
+                  yPosition += promptLines.length * 5 + 3;
+                }
+                const ideasCount = ex.ideasCount || 3;
+                for (let i = 0; i < ideasCount; i++) {
+                  if (yPosition > pageHeight - 15) {
+                    doc.addPage();
+                    yPosition = 20;
+                  }
+                  doc.text(`Idea ${i + 1}: ________________________________________`, margin + 15, yPosition);
+                  yPosition += 7;
+                }
+                break;
+
+              case "sentence_correction":
+                if (ex.incorrect) {
+                  doc.text("Frase incorrecta:", margin + 15, yPosition);
+                  yPosition += 5;
+                  const incorrectLines = doc.splitTextToSize(`"${ex.incorrect}"`, pageWidth - 2 * margin - 15);
+                  doc.text(incorrectLines, margin + 20, yPosition);
+                  yPosition += incorrectLines.length * 5 + 3;
+                }
+                doc.text("Corrección: _________________________________________", margin + 15, yPosition);
+                yPosition += 7;
+                break;
+
+              case "speaking":
+                if (ex.title) {
+                  const titleLines = doc.splitTextToSize(ex.title, pageWidth - 2 * margin - 15);
+                  doc.text(titleLines, margin + 15, yPosition);
+                  yPosition += titleLines.length * 5 + 3;
+                }
+                ex.bullets?.forEach((bullet) => {
+                  if (yPosition > pageHeight - 15) {
+                    doc.addPage();
+                    yPosition = 20;
+                  }
+                  const bulletLines = doc.splitTextToSize(`• ${bullet}`, pageWidth - 2 * margin - 20);
+                  doc.text(bulletLines, margin + 20, yPosition);
+                  yPosition += bulletLines.length * 5;
+                });
+                yPosition += 5;
+                break;
+
+              default:
+                doc.text("(Ejercicio interactivo)", margin + 15, yPosition);
+                yPosition += 7;
+            }
+
+            yPosition += 5; // Espacio entre ejercicios
+          });
+        }
+
+        yPosition += 8; // Espacio entre lecciones
+      });
+
+      // ==========================================
+      // 🔚 FOOTER EN TODAS LAS PÁGINAS
+      // ==========================================
+      const totalPages = doc.internal.pages.length - 1;
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text(
+          `Página ${i} de ${totalPages}`,
+          pageWidth / 2,
+          pageHeight - 10,
+          { align: "center" }
+        );
+      }
+
+      // ==========================================
+      // 💾 GUARDAR PDF
+      // ==========================================
+      const filename = `${courseTitle}_${unit.title}_Bibliografia.pdf`
+        .replace(/[^a-zA-Z0-9_\s]/g, "")
+        .replace(/\s+/g, "_")
+        .substring(0, 60);
+      
+      doc.save(filename);
+      toast.success("📥 Bibliografía descargada correctamente");
+      
+    } catch (error) {
+      console.error("Error generando PDF:", error);
+      toast.error("Hubo un error al generar el PDF");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={generatePDF}
+      disabled={loading || !unit}
+      className="relative w-full bg-white hover:bg-gray-50 border-2 border-gray-200 rounded-2xl p-5 
+                 transition-all group hover:border-[#EE7203]/30 disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0C212D] to-[#112C3E] 
+                          flex items-center justify-center group-hover:shadow-lg transition-shadow">
+
+            {loading ? (
+              <FiLoader className="animate-spin text-[#EE7203]" size={18} />
+            ) : (
+              <FiDownload className="text-[#EE7203]" size={18} />
+            )}
+
+          </div>
+
+          <div className="text-left">
+            <p className="text-sm font-black text-[#0C212D]">Bibliografía</p>
+            <p className="text-xs text-slate-500">
+              {loading ? "Generando PDF..." : "Descargar PDF"}
+            </p>
+          </div>
+        </div>
+
+        {!loading && (
+          <FiChevronRight className="text-slate-400 group-hover:text-[#EE7203] group-hover:translate-x-1 transition-all" />
+        )}
+      </div>
+    </button>
+  );
+}
+
+
   /* =========================================================
      🔹 UI inicial (básica)
      ========================================================= */
  return (
  <div className="flex h-screen overflow-hidden bg-gradient-to-br from-gray-50 to-white text-slate-900">
+   
     {/* ======================= SIDEBAR IZQUIERDA ======================= */}
-    <aside className="w-72 shrink-0 border-r-2 border-gray-100 bg-white sticky top-0 h-screen overflow-y-auto">
-      
-      {/* Header del sidebar */}
-      <div className="p-4 border-b-2 border-gray-100 bg-gradient-to-br from-[#0C212D] to-[#112C3E]">
-        <button
+      <aside className="w-80 shrink-0 bg-gradient-to-b from-[#0C212D] via-[#112C3E] to-[#0C212D] sticky top-0 h-screen overflow-y-auto shadow-2xl">
+        
+        {/* Header con efecto de luz */}
+        <div className="relative p-6 border-b border-[#EE7203]/20">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#EE7203] to-transparent"></div>
+          <button
           onClick={() => router.push("/dashboard")}
-          className="flex items-center gap-2 text-sm text-white/80 hover:text-white font-medium transition-colors group"
-        >
-          <FiChevronLeft className="text-[#EE7203] group-hover:text-[#FF3816] transform group-hover:-translate-x-1 transition-all" />
-          Volver al inicio
-        </button>
-      </div>
-
-      {/* Info del curso */}
-      <div className="p-5 border-b-2 border-gray-100 bg-gradient-to-br from-[#EE7203]/5 to-[#FF3816]/5">
-        <h1 className="text-lg font-black text-[#0C212D] line-clamp-2 mb-2">{curso.titulo}</h1>
-        <p className="text-xs text-[#112C3E]/70 line-clamp-2 leading-relaxed">{curso.descripcion}</p>
-      </div>
-
-      {/* Navigation */}
-      <nav className="p-3 space-y-2 pb-32">
-        {units.map((u, uIdx) => {
-          // Cierre del curso
-          if (u.id === "closing-course") {
-            const l = u.lessons?.[0];
-            const done = l && (progress[l.key]?.videoEnded || progress[l.key]?.exSubmitted);
-            const active = activeU === uIdx && activeL === 0;
-
-            return (
-              <div key={u.id} className="mt-4 pt-3 border-t-2 border-gray-200">
-                <div className="px-3 py-2 font-bold text-[#0C212D] flex items-center gap-2">
-                  <span className="text-lg">🎓</span>
-                  <span>Cierre del curso</span>
-                </div>
-                <button
-                  onClick={() => {
-                    setActiveU(uIdx);
-                    setActiveL(0);
-                  }}
-                  className={`block w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                    active
-                      ? "bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white shadow-lg"
-                      : done
-                      ? "text-[#10b981] hover:bg-emerald-50 border-2 border-emerald-200"
-                      : "text-[#112C3E] hover:bg-gray-100 border-2 border-transparent"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="truncate">{l?.title || "Cierre del Curso"}</span>
-                    {done && <FiCheckCircle size={14} className="text-emerald-500 flex-shrink-0" />}
-                  </div>
-                </button>
-              </div>
-            );
-          }
-
-          const unitNumber =
-            units.slice(0, uIdx).filter((x) => x.id !== "closing-course").length + 1;
-
-          return (
-            <div key={u.id}>
-              <button
-                onClick={() =>
-                  setExpandedUnits((prev) => ({ ...prev, [uIdx]: !prev[uIdx] }))
-                }
-                className={`w-full text-left px-4 py-3 font-bold flex justify-between items-center rounded-xl transition-all border-2 ${
-                  expandedUnits[uIdx]
-                    ? "bg-gradient-to-r from-[#0C212D] to-[#112C3E] text-white border-[#0C212D]"
-                    : "hover:bg-gray-50 text-[#0C212D] border-transparent"
-                }`}
-              >
-                <span className="text-sm">
-                  Unit {unitNumber}: {u.title}
-                </span>
-                <FiChevronRight
-                  className={`transition-transform flex-shrink-0 ${
-                    expandedUnits[uIdx] ? "rotate-90 text-[#EE7203]" : ""
-                  }`}
-                  size={18}
-                />
-              </button>
-
-              {expandedUnits[uIdx] && (
-                <div className="mt-2 space-y-1 ml-2">
-                  {u.lessons.map((l, lIdx) => {
-                    const done =
-                      progress[l.key]?.videoEnded || progress[l.key]?.exSubmitted;
-                    const active = activeU === uIdx && activeL === lIdx;
-                    return (
-                      <button
-                        key={l.key}
-                        onClick={() => {
-                          setActiveU(uIdx);
-                          setActiveL(lIdx);
-                        }}
-                        className={`block w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium transition-all border-2 ${
-                          active
-                            ? "bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white shadow-lg border-[#EE7203]"
-                            : done
-                            ? "text-[#10b981] hover:bg-emerald-50 border-emerald-200"
-                            : "text-[#112C3E] hover:bg-gray-50 border-transparent"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="truncate">
-                            {l.id === "closing"
-                              ? "Cierre de la unidad"
-                              : `${uIdx + 1}.${lIdx + 1}  ${l.title}`}
-                          </span>
-                          {done && (
-                            <FiCheckCircle size={14} className="text-emerald-500 flex-shrink-0" />
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+           className="flex items-center gap-2 text-sm text-white/70 hover:text-white font-semibold transition-all group">
+            <div className="w-8 h-8 rounded-lg bg-[#EE7203]/20 flex items-center justify-center group-hover:bg-[#EE7203]/30 transition-colors">
+              <FiChevronLeft className="text-[#EE7203] group-hover:text-[#FF3816] transform group-hover:-translate-x-0.5 transition-all" />
             </div>
-          );
-        })}
-      </nav>
-    </aside>
-
-    {/* ======================= CONTENIDO PRINCIPAL ======================= */}
-    <main className="flex-1 p-8 overflow-y-auto">
-      <div className="max-w-5xl mx-auto space-y-6">
-       
-        {/* Título de la lección */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-1.5 h-10 bg-gradient-to-b from-[#EE7203] to-[#FF3816] rounded-full"></div>
-          <h1 className="text-3xl font-black text-[#0C212D]">
-            {activeLesson?.title || "Lección actual"}
-          </h1>
+            <span>Volver al inicio</span>
+          </button>
         </div>
 
-        <>
-          {activeLesson?.description && (
-            <p className="text-[#112C3E]/80 mb-4 text-lg leading-relaxed">{activeLesson.description}</p>
-          )}
+        {/* Info del curso con diseño elevado */}
+        <div className="p-6 border-b border-[#EE7203]/10">
+          <div className="bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-sm rounded-2xl p-5 border border-white/10 shadow-xl">
+            <div className="flex items-start gap-3 mb-3">
+              <div className="w-2 h-2 rounded-full bg-[#EE7203] animate-pulse mt-2"></div>
+              <h1 className="text-xl font-black text-white line-clamp-2 leading-tight">
+                {curso.titulo}
+              </h1>
+            </div>
+            <p className="text-xs text-white/60 line-clamp-3 leading-relaxed ml-5">
+              {curso.descripcion}
+            </p>
+          </div>
+        </div>
 
-          {/* VIDEO */}
-          {resolvedVideoUrl && (
-            <div className="aspect-video rounded-2xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50 border-2 border-gray-200 shadow-xl">
+        {/* Navigation mejorada */}
+        <nav className="p-4 space-y-3 pb-32">
+          {units.map((u, uIdx) => {
+            // Cierre del curso
+            if (u.id === "closing-course") {
+              const l = u.lessons?.[0];
+              const done = l && (progress[l.key]?.videoEnded || progress[l.key]?.exSubmitted);
+              const active = activeU === uIdx && activeL === 0;
+
+              return (
+                <div key={u.id} className="mt-6 pt-4">
+                  <div className="relative">
+                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#EE7203]/30 to-transparent"></div>
+                  </div>
+                  
+                  <div className="px-3 py-3 mt-4 flex items-center gap-2 text-white/80 font-bold text-sm">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#EE7203] to-[#FF3816] flex items-center justify-center shadow-lg">
+                      <span className="text-xl">🎓</span>
+                    </div>
+                    <span>Cierre del curso</span>
+                  </div>
+                  
+                  <button
+                    onClick={() => {
+                      setActiveU(uIdx);
+                      setActiveL(0);
+                    }}
+                    className={`block w-full text-left px-4 py-3 rounded-xl text-sm font-semibold transition-all mt-2 ${
+                      active
+                        ? "bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white shadow-lg shadow-[#EE7203]/20"
+                        : done
+                        ? "bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 border border-emerald-500/30"
+                        : "bg-white/5 text-white/70 hover:bg-white/10 border border-white/10"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="truncate">{l?.title || "Cierre del Curso"}</span>
+                      {done && <FiCheckCircle size={16} className="text-emerald-400 flex-shrink-0" />}
+                    </div>
+                  </button>
+                </div>
+              );
+            }
+
+            const unitNumber = units.slice(0, uIdx).filter((x) => x.id !== "closing-course").length + 1;
+
+            return (
+              <div key={u.id}>
+                <button
+                  onClick={() =>
+                    setExpandedUnits((prev) => ({ ...prev, [uIdx]: !prev[uIdx] }))
+                  }
+                  className={`w-full text-left px-4 py-4 font-bold flex justify-between items-center rounded-xl transition-all border ${
+                    expandedUnits[uIdx]
+                      ? "bg-gradient-to-r from-[#EE7203]/20 to-[#FF3816]/20 text-white border-[#EE7203]/40 shadow-lg"
+                      : "bg-white/5 hover:bg-white/10 text-white/80 border-white/10"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black ${
+                      expandedUnits[uIdx]
+                        ? "bg-gradient-to-br from-[#EE7203] to-[#FF3816] text-white"
+                        : "bg-white/10 text-white/60"
+                    }`}>
+                      {unitNumber}
+                    </div>
+                    <span className="text-sm">{u.title}</span>
+                  </div>
+                  <FiChevronRight
+                    className={`transition-transform flex-shrink-0 ${
+                      expandedUnits[uIdx] ? "rotate-90 text-[#EE7203]" : "text-white/40"
+                    }`}
+                    size={18}
+                  />
+                </button>
+
+                {expandedUnits[uIdx] && (
+                  <div className="mt-2 space-y-1.5 ml-3 pl-4 border-l-2 border-[#EE7203]/20">
+                    {u.lessons.map((l, lIdx) => {
+                      const done = progress[l.key]?.videoEnded || progress[l.key]?.exSubmitted;
+                      const active = activeU === uIdx && activeL === lIdx;
+                      return (
+                        <button
+                          key={l.key}
+                          onClick={() => {
+                            setActiveU(uIdx);
+                            setActiveL(lIdx);
+                          }}
+                          className={`block w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-all ${
+                            active
+                              ? "bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white shadow-md"
+                              : done
+                              ? "bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 border border-emerald-500/20"
+                              : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="truncate text-xs">
+                              {l.id === "closing"
+                                ? "🏁 Cierre de la unidad"
+                                : `${uIdx + 1}.${lIdx + 1}  ${l.title}`}
+                            </span>
+                            {done && (
+                              <FiCheckCircle size={14} className="text-emerald-400 flex-shrink-0" />
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </nav>
+        
+        
+
+      </aside>
+    {/* ======================= CONTENIDO PRINCIPAL ======================= */}
+    <main className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-slate-50">
+      <div className="max-w-6xl mx-auto px-6 py-12 space-y-10">
+       
+        {/* Header Hero con gradiente y animación */}
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="relative overflow-hidden"
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0C212D] via-[#112C3E] to-[#0C212D] rounded-3xl blur-2xl opacity-5"></div>
+          <div className="relative bg-gradient-to-br from-[#0C212D] to-[#112C3E] rounded-3xl p-8 shadow-2xl border border-[#EE7203]/20">
+            <div className="flex items-start justify-between gap-6">
+              <div className="flex-1 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-12 bg-gradient-to-b from-[#EE7203] via-[#FF3816] to-[#EE7203] rounded-full shadow-lg"></div>
+                  <h1 className="text-4xl font-black text-white tracking-tight">
+                    {activeLesson?.title || "Lección actual"}
+                  </h1>
+                </div>
+                {activeLesson?.description && (
+                  <p className="text-slate-300 text-lg leading-relaxed ml-5 font-medium">
+                    {activeLesson.description}
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-2 bg-gradient-to-r from-[#EE7203] to-[#FF3816] px-5 py-2.5 rounded-2xl shadow-lg">
+                <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                <span className="text-white font-bold text-sm">En progreso</span>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* VIDEO - Diseño cinematográfico */}
+        {resolvedVideoUrl && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="relative group"
+          >
+            <div className="absolute -inset-1 bg-gradient-to-r from-[#EE7203] via-[#FF3816] to-[#EE7203] rounded-3xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity"></div>
+            <div className="relative aspect-video rounded-3xl overflow-hidden bg-black shadow-2xl border border-[#0C212D]/10">
               <iframe
                 id="vimeo-player"
                 src={resolvedVideoUrl}
@@ -1802,128 +2299,385 @@ const currentUnit = units[activeU];
                 allowFullScreen
               />
             </div>
-          )}
+          </motion.div>
+        )}
 
-          {/* PDF */}
-          {activeLesson?.pdfUrl && (
-            <div className="bg-white p-6 rounded-2xl border-2 border-gray-200 shadow-lg">
-              <h3 className="text-[#EE7203] font-black mb-4 flex items-center gap-3 text-lg">
-                <div className="p-2 bg-gradient-to-br from-[#EE7203] to-[#FF3816] rounded-lg">
-                  <FiFileText className="text-white" size={20} />
+        {/* PDF - Diseño elegante con preview */}
+        {activeLesson?.pdfUrl && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden"
+          >
+            <div className="bg-gradient-to-r from-[#0C212D] to-[#112C3E] px-8 py-6">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#EE7203] to-[#FF3816] flex items-center justify-center shadow-lg">
+                  <FiFileText className="text-white" size={28} />
                 </div>
-                Resumen de la unidad
-              </h3>
+                <div>
+                  <h3 className="text-2xl font-black text-white">Material de estudio</h3>
+                  <p className="text-slate-300 text-sm font-medium">Resumen descargable de la unidad</p>
+                </div>
+              </div>
+            </div>
+            <div className="p-6">
               <iframe
                 src={toEmbedPdfUrl(activeLesson.pdfUrl)}
-                className="w-full h-[500px] rounded-xl border-2 border-gray-200"
+                className="w-full h-[600px] rounded-2xl border border-slate-200 shadow-inner"
                 title="Resumen PDF"
               />
             </div>
-          )}
+          </motion.div>
+        )}
 
-          {/* TEORÍA */}
-          {activeLesson?.theory && (
-            <div className="bg-white p-8 rounded-2xl border-2 border-gray-200 shadow-lg">
-              <article className="prose prose-slate max-w-none prose-headings:text-[#0C212D] prose-a:text-[#EE7203] prose-strong:text-[#0C212D]">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {activeLesson.theory}
-                </ReactMarkdown>
-              </article>
+        {/* CONTENIDO ACADÉMICO - Cards flotantes con glassmorphism */}
+        {(activeLesson?.theory || activeLesson?.vocabulary || 
+          (Array.isArray(activeLesson?.ejercicios) && activeLesson.ejercicios.length > 0)) && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="space-y-6"
+          >
+            {/* Navigation Pills - Floating style */}
+            <div className=" top-6 z-10 backdrop-blur-xl bg-white/80 rounded-2xl shadow-2xl border border-slate-200/50 p-2">
+              <div className="flex gap-2">
+                {activeLesson?.theory && (
+                  <button
+                    onClick={() => setActiveTab("theory")}
+                    className={`flex-1 px-6 py-4 rounded-xl font-bold text-sm transition-all ${
+                      activeTab === "theory"
+                        ? "bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white shadow-lg shadow-[#EE7203]/30 scale-105"
+                        : "text-[#112C3E]/70 hover:bg-slate-100 hover:text-[#0C212D]"
+                    }`}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="text-xl">📖</span>
+                      <span>Teoría</span>
+                    </div>
+                  </button>
+                )}
+                
+                {activeLesson?.vocabulary && (
+                  <button
+                    onClick={() => setActiveTab("vocabulary")}
+                    className={`flex-1 px-6 py-4 rounded-xl font-bold text-sm transition-all ${
+                      activeTab === "vocabulary"
+                        ? "bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white shadow-lg shadow-[#EE7203]/30 scale-105"
+                        : "text-[#112C3E]/70 hover:bg-slate-100 hover:text-[#0C212D]"
+                    }`}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="text-xl">📝</span>
+                      <span>Vocabulario</span>
+                    </div>
+                  </button>
+                )}
+                
+                {Array.isArray(activeLesson?.ejercicios) && activeLesson.ejercicios.length > 0 && (
+                  <button
+                    onClick={() => setActiveTab("exercises")}
+                    className={`flex-1 px-6 py-4 rounded-xl font-bold text-sm transition-all ${
+                      activeTab === "exercises"
+                        ? "bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white shadow-lg shadow-[#EE7203]/30 scale-105"
+                        : "text-[#112C3E]/70 hover:bg-slate-100 hover:text-[#0C212D]"
+                    }`}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="text-xl">🧠</span>
+                      <span>Ejercicios</span>
+                    </div>
+                  </button>
+                )}
+              </div>
             </div>
-          )}
 
-          {/* VOCABULARY */}
-          {activeLesson?.vocabulary && (
-            <RenderVocabularyBlock vocab={activeLesson.vocabulary} />
-          )}
-
-          {/* EJERCICIOS */}
-          {Array.isArray(activeLesson?.ejercicios) &&
-            activeLesson.ejercicios.length > 0 && (
-              <>
-                <section className="bg-white p-8 rounded-2xl border-2 border-gray-200 space-y-6 shadow-lg">
-                  <div className="flex items-center justify-between pb-4 border-b-2 border-gray-100">
-                    <h3 className="text-xl font-black text-[#0C212D]">Ejercicios</h3>
-                    <span className="px-4 py-2 bg-gradient-to-r from-[#0C212D] to-[#112C3E] text-white text-sm font-bold rounded-xl">
-                      {currentExercise + 1} / {activeLesson.ejercicios.length}
-                    </span>
+            {/* Content Cards con animaciones */}
+            <div className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden min-h-[500px]">
+              
+              {/* TEORÍA */}
+              {activeTab === "theory" && activeLesson?.theory && (
+                <motion.div
+                  key="theory"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ duration: 0.4 }}
+                  className="p-10"
+                >
+                  <div className="max-w-4xl mx-auto">
+                    <div className="mb-8 flex items-center gap-4">
+                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#0C212D] to-[#112C3E] flex items-center justify-center shadow-lg">
+                        <span className="text-3xl">📖</span>
+                      </div>
+                      <div>
+                        <h2 className="text-3xl font-black text-[#0C212D]">Contenido teórico</h2>
+                        <p className="text-slate-600 font-medium">Material de lectura y conceptos clave</p>
+                      </div>
+                    </div>
+                    <article className="prose prose-lg prose-slate max-w-none prose-headings:text-[#0C212D] prose-headings:font-black prose-a:text-[#EE7203] prose-a:font-semibold prose-strong:text-[#0C212D] prose-strong:font-bold prose-p:leading-relaxed prose-p:text-slate-700">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {activeLesson.theory}
+                      </ReactMarkdown>
+                    </article>
                   </div>
+                </motion.div>
+              )}
 
-                  <ExerciseRunner
-                    ejercicios={[activeLesson.ejercicios[currentExercise]]}
-                    lessonKey={activeLesson.key}
-                    exerciseIndex={currentExercise}
-                    batchId={userProfile?.batchId}
-                    userKey={userProfile?.userKey}
-                    courseId={courseId}
-                    onSubmit={() => {}}
-                  />
-
-                  <div className="flex justify-between items-center pt-4 border-t-2 border-gray-100">
-                    <button
-                      onClick={prevExercise}
-                      disabled={currentExercise === 0}
-                      className="px-6 py-3 rounded-xl bg-white border-2 border-gray-200 hover:border-[#0C212D] text-[#0C212D] disabled:opacity-30 disabled:cursor-not-allowed text-sm font-bold transition-all hover:shadow-lg"
-                    >
-                      ← Anterior
-                    </button>
-                    <button
-                      onClick={nextExercise}
-                      disabled={
-                        currentExercise >= activeLesson.ejercicios.length - 1
-                      }
-                      className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#EE7203] to-[#FF3816] hover:shadow-2xl hover:shadow-[#EE7203]/30 text-white font-bold text-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:scale-105"
-                    >
-                      Siguiente →
-                    </button>
+              {/* VOCABULARY */}
+              {activeTab === "vocabulary" && activeLesson?.vocabulary && (
+                <motion.div
+                  key="vocabulary"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ duration: 0.4 }}
+                  className="p-10"
+                >
+                  <div className="max-w-4xl mx-auto">
+                    <div className="mb-8 flex items-center gap-4">
+                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#EE7203] to-[#FF3816] flex items-center justify-center shadow-lg">
+                        <span className="text-3xl">📝</span>
+                      </div>
+                      <div>
+                        <h2 className="text-3xl font-black text-[#0C212D]">Vocabulario</h2>
+                        <p className="text-slate-600 font-medium">Términos y definiciones esenciales</p>
+                      </div>
+                    </div>
+                    <RenderVocabularyBlock vocab={activeLesson.vocabulary} />
                   </div>
-                </section>
-              </>
-            )}
+                </motion.div>
+              )}
 
-          {activeLesson?.finalMessage && (
-            <div className="bg-gradient-to-br from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-2xl p-6 text-emerald-800 font-medium shadow-lg">
-              {activeLesson.finalMessage}
+              {/* EJERCICIOS */}
+              {activeTab === "exercises" && 
+               Array.isArray(activeLesson?.ejercicios) &&
+               activeLesson.ejercicios.length > 0 && (
+                <motion.div
+                  key="exercises"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ duration: 0.4 }}
+                  className="p-10 space-y-8"
+                >
+                  <div className="max-w-4xl mx-auto">
+                    {/* Header con contador */}
+                    <div className="mb-8 flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#112C3E] to-[#0C212D] flex items-center justify-center shadow-lg">
+                          <span className="text-3xl">🧠</span>
+                        </div>
+                        <div>
+                          <h2 className="text-3xl font-black text-[#0C212D]">Ejercicios prácticos</h2>
+                          <p className="text-slate-600 font-medium">Aplica lo aprendido</p>
+                        </div>
+                      </div>
+                      <div className="px-6 py-3 bg-gradient-to-r from-[#0C212D] to-[#112C3E] text-white rounded-2xl shadow-lg">
+                        <span className="text-2xl font-black">{currentExercise + 1}</span>
+                        <span className="text-slate-300 font-medium"> / {activeLesson.ejercicios.length}</span>
+                      </div>
+                    </div>
+
+                    {/* Exercise Runner */}
+                    <ExerciseRunner
+                      ejercicios={[activeLesson.ejercicios[currentExercise]]}
+                      lessonKey={activeLesson.key}
+                      exerciseIndex={currentExercise}
+                      batchId={userProfile?.batchId}
+                      userKey={userProfile?.userKey}
+                      courseId={courseId}
+                      onSubmit={() => {}}
+                    />
+
+                    {/* Navigation buttons */}
+                    <div className="flex justify-between items-center pt-8 mt-8 border-t-2 border-slate-100">
+                      <button
+                        onClick={prevExercise}
+                        disabled={currentExercise === 0}
+                        className="group px-8 py-4 rounded-2xl bg-white border-2 border-slate-200 hover:border-[#0C212D] text-[#0C212D] disabled:opacity-30 disabled:cursor-not-allowed text-sm font-bold transition-all hover:shadow-xl disabled:hover:shadow-none flex items-center gap-3"
+                      >
+                        <FiChevronLeft className="group-hover:-translate-x-1 transition-transform" />
+                        Ejercicio anterior
+                      </button>
+                      <button
+                        onClick={nextExercise}
+                        disabled={currentExercise >= activeLesson.ejercicios.length - 1}
+                        className="group px-8 py-4 rounded-2xl bg-gradient-to-r from-[#EE7203] to-[#FF3816] hover:shadow-2xl hover:shadow-[#EE7203]/40 text-white font-bold text-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:scale-105 disabled:hover:scale-100 flex items-center gap-3"
+                      >
+                        Siguiente ejercicio
+                        <FiChevronRight className="group-hover:translate-x-1 transition-transform" />
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
             </div>
-          )}
+          </motion.div>
+        )}
 
-          <div className="mt-8 flex justify-end">
-            <button
-              onClick={goNextLesson}
-              className="inline-flex items-center gap-3 px-8 py-4 rounded-2xl font-black shadow-xl bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white hover:shadow-2xl hover:shadow-[#EE7203]/40 transition-all hover:scale-105"
-            >
-              Siguiente lección
-              <FiChevronRight size={20} />
-            </button>
-          </div>
-        </>
+        {/* Final Message - Celebration card */}
+        {activeLesson?.finalMessage && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+            className="relative overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-green-400 rounded-3xl blur-2xl opacity-20"></div>
+            <div className="relative bg-gradient-to-br from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-3xl p-8 shadow-xl">
+              <div className="flex items-start gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center shadow-lg flex-shrink-0">
+                  <span className="text-3xl">🎉</span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-2xl font-black text-emerald-900 mb-2">¡Excelente trabajo!</h3>
+                  <p className="text-emerald-800 font-medium leading-relaxed">{activeLesson.finalMessage}</p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Next Lesson CTA - Grande y llamativo */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+          className="flex justify-center pt-8"
+        >
+          <button
+            onClick={goNextLesson}
+            className="group relative px-12 py-6 rounded-3xl font-black text-lg shadow-2xl bg-gradient-to-r from-[#EE7203] via-[#FF3816] to-[#EE7203] bg-size-200 bg-pos-0 hover:bg-pos-100 text-white transition-all duration-500 hover:scale-105 hover:shadow-[#EE7203]/50 flex items-center gap-4"
+            style={{ backgroundSize: '200% 100%' }}
+          >
+            <span>Continuar a la siguiente lección</span>
+            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
+              <FiChevronRight size={24} className="group-hover:translate-x-1 transition-transform" />
+            </div>
+          </button>
+        </motion.div>
       </div>
     </main>
 
     {/* ======================= SIDEBAR DERECHA ======================= */}
-    <aside className="hidden xl:block xl:w-80 xl:shrink-0 bg-white border-l-2 border-gray-100 p-6 sticky top-0 h-screen overflow-y-auto">
-      <div className="mb-6">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-1 h-6 bg-gradient-to-b from-[#EE7203] to-[#FF3816] rounded-full"></div>
-          <h3 className="text-lg font-black text-[#0C212D]">
-            Resumen del material
-          </h3>
+    {/* ======================= SIDEBAR DERECHA ======================= */}
+      <aside className="hidden xl:block xl:w-96 xl:shrink-0 bg-white border-l border-gray-200 sticky top-0 h-screen overflow-y-auto">
+        
+        {/* Header con gradiente sutil */}
+        <div className="relative bg-gradient-to-br from-[#0C212D] to-[#112C3E] p-8 border-b-4 border-[#EE7203]">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[#EE7203]/10 rounded-full blur-3xl"></div>
+          <div className="relative">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-2 h-8 bg-gradient-to-b from-[#EE7203] via-[#FF3816] to-[#EE7203] rounded-full shadow-lg"></div>
+              <h3 className="text-xl font-black text-white">
+                Resumen
+              </h3>
+            </div>
+            <p className="text-sm text-white/70 leading-relaxed">
+              {curso?.descripcion || "Sin descripción disponible"}
+            </p>
+          </div>
         </div>
-        <p className="text-sm text-[#112C3E]/70 leading-relaxed">
-          {curso?.descripcion || "Sin descripción disponible"}
-        </p>
-      </div>
 
-      <div className="bg-gradient-to-br from-[#EE7203]/10 to-[#FF3816]/5 border-2 border-[#EE7203]/20 rounded-2xl p-5 space-y-3">
-        <p className="text-xs text-[#112C3E]/60 uppercase tracking-wider font-bold">Lección actual</p>
-        <p className="font-black text-[#EE7203] text-lg">
-          {activeLesson?.title || "—"}
-        </p>
-        <p className="text-sm text-[#0C212D] font-medium">
-          📚 {units[activeU]?.title || "—"}
-        </p>
-      </div>
-    </aside>
+        {/* Card de lección actual - Diseño premium */}
+        <div className="p-6">
+          <div className="relative overflow-hidden">
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-gradient-to-br from-[#EE7203]/5 to-[#FF3816]/5 rounded-full blur-2xl"></div>
+            
+            <div className="relative bg-gradient-to-br from-slate-50 to-white border-2 border-[#EE7203]/20 rounded-2xl p-6 shadow-lg">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#EE7203] to-[#FF3816] flex items-center justify-center shadow-lg">
+                  <FiBook className="text-white" size={20} />
+                </div>
+                <div>
+                  <p className="text-[10px] text-[#112C3E]/50 uppercase tracking-widest font-bold mb-1">
+                    Lección Actual
+                  </p>
+                  <p className="text-xs text-[#0C212D] font-semibold">
+                    {units[activeU]?.title || "—"}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-xl p-4 border border-slate-200">
+                <p className="font-black text-[#0C212D] text-base leading-tight mb-2">
+                  {activeLesson?.title || "—"}
+                </p>
+                {activeLesson?.description && (
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    {activeLesson.description}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Estadísticas rápidas */}
+        <div className="px-6 pb-6">
+          <div className="bg-gradient-to-br from-[#0C212D] to-[#112C3E] rounded-2xl p-5 shadow-xl">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center">
+                <div className="text-3xl font-black text-[#EE7203] mb-1">
+                  {Object.values(progress).filter(p => p.videoEnded || p.exSubmitted).length}
+                </div>
+                <div className="text-[10px] text-white/60 uppercase tracking-wider font-bold">
+                  Completadas
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-black text-[#FF3816] mb-1">
+                  {units.reduce((acc, u) => acc + (u.lessons?.length || 0), 0)}
+                </div>
+                <div className="text-[10px] text-white/60 uppercase tracking-wider font-bold">
+                  Total
+                </div>
+              </div>
+            </div>
+            
+            {/* Barra de progreso */}
+            <div className="mt-5 pt-4 border-t border-white/10">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-white/70 font-semibold">Progreso del Material Academico</span>
+                <span className="text-xs text-[#EE7203] font-black">
+                  {Math.round((Object.values(progress).filter(p => p.videoEnded || p.exSubmitted).length / units.reduce((acc, u) => acc + (u.lessons?.length || 0), 0)) * 100)}%
+                </span>
+              </div>
+              <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-[#EE7203] to-[#FF3816] rounded-full transition-all duration-500"
+                  style={{ 
+                    width: `${(Object.values(progress).filter(p => p.videoEnded || p.exSubmitted).length / units.reduce((acc, u) => acc + (u.lessons?.length || 0), 0)) * 100}%` 
+                  }}
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Botón de descarga mejorado */}
+        <div className="px-6 pb-6">
+          <div className="relative group">
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-[#EE7203] to-[#FF3816] rounded-2xl blur opacity-20 group-hover:opacity-40 transition-opacity"></div>
+            <DownloadBibliographyButton 
+  unit={currentUnit}
+  courseTitle={curso?.titulo}
+/>
+
+          </div>
+        </div>
+
+        {/* Footer decorativo */}
+        <div className="px-6 pb-8">
+          <div className="bg-gradient-to-r from-[#EE7203]/5 via-[#FF3816]/5 to-[#EE7203]/5 rounded-xl p-4 text-center">
+            <p className="text-xs text-slate-600 font-medium">
+              💪 ¡Sigue así! Estás haciendo un gran progreso
+            </p>
+          </div>
+        </div>
+      </aside>
   </div>
 );
 

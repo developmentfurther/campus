@@ -7,6 +7,9 @@ import { userPlayedToday, updateUserGameAttempt } from "@/lib/games/attempts";
 import { getIdiomsBank, IdiomItem } from "@/lib/games/idioms";
 import { motion } from "framer-motion";
 import GameBlockedModal from "@/components/ui/GameBlockedModal";
+import LoaderGame from "@/components/ui/LoaderGame";
+import GameBackground from "@/components/ui/GameBackground";
+
 
 function norm(s: string) {
   return s
@@ -33,6 +36,9 @@ export default function EmojiIdioms() {
   const [blocked, setBlocked] = useState(false);
   const [checkingAttempt, setCheckingAttempt] = useState(true);
 
+  const [showLoader, setShowLoader] = useState(true);
+
+
   // Verificación de intento diario
   useEffect(() => {
     // const check = async () => {
@@ -54,6 +60,16 @@ export default function EmojiIdioms() {
   setCheckingAttempt(false);
 
   }, [user, role]);
+
+  useEffect(() => {
+  // Tiempo mínimo de animación del loader
+  const timer = setTimeout(() => {
+    setShowLoader(false);
+  }, 1800); // 1.8 segundos
+
+  return () => clearTimeout(timer);
+}, []);
+
 
   // Cargar idiom al cambiar idioma o estado
   useEffect(() => {
@@ -148,51 +164,47 @@ export default function EmojiIdioms() {
     }
   }
 
-  // UI - Verificando intento
-  if (checkingAttempt) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="relative w-24 h-24 mx-auto mb-6">
-            <div className="absolute inset-0 rounded-full border-8 border-purple-200" />
-            <div className="absolute inset-0 rounded-full border-8 border-t-purple-600 animate-spin" />
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (checkingAttempt || !item || showLoader) {
+  return <LoaderGame />;
+}
 
-  // // UI - Bloqueado
-  // if (blocked && role === "alumno") {
-  //   return (
-  //     <GameBlockedModal
-  //     emoji="⏳"
-  //     title={t("gaming.games.idioms.blockedTitle")}
-  //     message={t("gaming.games.idioms.blockedMessage")}
-  //     nextAvailableLabel={t("gaming.games.shared.nextAvailable")}
-  //     hoursLabel={t("gaming.games.shared.hours")}
-  //     minutesLabel={t("gaming.games.shared.minutes")}
-  //   />
-  //   );
+
+
+  // // UI - Verificando intento
+  // if (checkingAttempt) {
+  //   return <LoaderGame />;
   // }
 
-  // UI - Cargando
-  if (!item) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="relative w-24 h-24 mx-auto mb-6">
-            <div className="absolute inset-0 rounded-full border-8 border-purple-200" />
-            <div className="absolute inset-0 rounded-full border-8 border-t-purple-600 animate-spin" />
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // // // UI - Bloqueado
+  // // if (blocked && role === "alumno") {
+  // //   return (
+  // //     <GameBlockedModal
+  // //     emoji="⏳"
+  // //     title={t("gaming.games.idioms.blockedTitle")}
+  // //     message={t("gaming.games.idioms.blockedMessage")}
+  // //     nextAvailableLabel={t("gaming.games.shared.nextAvailable")}
+  // //     hoursLabel={t("gaming.games.shared.hours")}
+  // //     minutesLabel={t("gaming.games.shared.minutes")}
+  // //   />
+  // //   );
+  // // }
+
+  // // UI - Cargando
+  // if (!item) {
+  //   return <LoaderGame />;
+  // }
 
   // UI - Juego principal
   return (
     <div className="max-w-2xl mx-auto px-6 py-8">
+      <GameBackground />
+
+      <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, ease: "easeOut" }}
+      className="relative z-10 max-w-2xl mx-auto"
+    >
       <div className="rounded-2xl border p-8 shadow-sm bg-white">
         <div className="text-5xl text-center mb-4">{item.emojis}</div>
 
@@ -266,6 +278,8 @@ export default function EmojiIdioms() {
           </div>
         )}
       </div>
+
+      </motion.div>
     </div>
   );
 }

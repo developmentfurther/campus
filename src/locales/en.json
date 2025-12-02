@@ -1,5 +1,36 @@
 {
   "common": {},
+  "howToPlay": {
+  "guessLetters": "Guess letters one at a time",
+  "wrongAddsPart": "Each wrong guess adds a body part",
+  "completeBeforeDraw": "Complete the word before the hangman is drawn",
+  "winRevealAll": "Win by revealing all letters!",
+
+  "unscramble": "Unscramble the jumbled letters",
+  "typeAnswer": "Type your answer in the input field",
+  "beatClock": "Beat the clock for bonus points",
+  "advanceLevels": "Advance through difficulty levels",
+
+  "guessFiveLetters": "Guess the 5-letter word in 6 tries",
+  "greenCorrect": "Green = correct letter & position",
+  "yellowWrongSpot": "Yellow = correct letter, wrong spot",
+  "grayNotInWord": "Gray = letter not in word",
+
+  "decodeEmojis": "Decode the idiom from emojis",
+  "thinkCultural": "Think about cultural expressions",
+  "learnIdioms": "Learn new idioms as you play",
+
+  "arrangeOrder": "Arrange words in the correct order",
+  "dragDrop": "Drag and drop to build sentences",
+  "followGrammar": "Follow grammar rules carefully",
+  "perfectSentences": "Create perfect sentences to win",
+
+  "readCarefully": "Read the sentence carefully",
+  "spotErrors": "Spot the grammatical errors",
+  "clickIncorrect": "Click on the incorrect word",
+  "learnCorrections": "Learn from the corrections"
+},
+
   "sidebar": {
     "headerTitle": "Further Campus",
     "headerSubtitle": "Student Portal",
@@ -135,6 +166,7 @@
   "ctaLink": "Go to My Material"
 },
   "gaming": {
+  "howToPlayTitle": "How to Play",
   "headerTitle": "Further Gaming 🎮",
   "headerSubtitle": "Practice English with interactive games.",
   "learningThroughPlay": "Learning Through Play",
@@ -142,9 +174,18 @@
   "zone": "Zone",
   "play": "Play",
   "backToHub": "Back to hub",
+  "loadingInicial": "LOADING",
+  "loading": "LOADING_GAME_ASSETS...",
+  "standby": "[ PLEASE STAND BY ]",
 
   "games": {
     "hangman": {
+      "howToPlay": [
+        "guessLetters",
+        "wrongAddsPart",
+        "completeBeforeDraw",
+        "winRevealAll"
+      ],
       "title": "Hangman",
       "description": "Guess the word before it's too late.",
        "loadingProfile": "Loading student language...",
@@ -157,9 +198,22 @@
     "errorsCounter": "{{count}} / 7 errors",
     "won": "🎉 You won! The word was \"{{word}}\".",
     "lost": "💀 You lost. The word was \"{{word}}\".",
-    "playAgain": "Play again (AI)"
+    "playAgain": "Play again (AI)",
+    "badge": "Hangman",
+"subtitle": "Guess the hidden word before time runs out",
+"stats": {
+  "attempts": "Attempts",
+  "hints": "Hints"
+}
+
     },
     "wordScramble": {
+      "howToPlay": [
+        "unscramble",
+        "typeAnswer",
+        "beatClock",
+        "advanceLevels"
+      ],
       "title": "Word Scramble",
       "description": "Rearrange the letters and discover the word.",
        "checking": "Checking today's attempts...",
@@ -177,9 +231,22 @@
           "firstLetter": "🔤 First letter: {{letter}}",
           "lastLetter": "🔡 Last letter: {{letter}}",
           "correctPositions": "🧩 Correct letters in place: {{pattern}}"
+        },
+        "badge": "Word Puzzle",
+        "subtitle": "Rearrange the letters to discover the hidden word",
+        "stats": {
+          "attempts": "Attempts",
+          "hints": "Hints"
         }
+
     },
     "wordle": {
+      "howToPlay": [
+        "guessFiveLetters",
+        "greenCorrect",
+        "yellowWrongSpot",
+        "grayNotInWord"
+      ],
       "title": "Wordle",
       "description": "Guess the word in 6 attempts.",
        "checking": "Checking today's attempts...",
@@ -193,6 +260,12 @@
         "hint2": "Final hint: it's a common noun"
     },
     "emojiIdioms": {
+      "howToPlay": [
+        "decodeEmojis",
+        "thinkCultural",
+        "typeAnswer",
+        "learnIdioms"
+      ],
       "title": "Emoji Idioms",
       "description": "Interpret idioms using only emojis.",
       "alreadyPlayedTitle": "You already played today 🎮",
@@ -227,6 +300,12 @@
   "newSentence": "New sentence"
     },
     "errorFinder": {
+      "howToPlay": [
+        "readCarefully",
+        "spotErrors",
+        "clickIncorrect",
+        "learnCorrections"
+      ],
       "title": "Error Finder",
       "description": "Find and correct the grammatical error.",
       "checking": "Checking today's attempts...",

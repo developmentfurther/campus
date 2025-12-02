@@ -9,6 +9,8 @@ import {
   updateUserGameAttempt,
 } from "@/lib/games/attempts";
 import GameBlockedModal from "@/components/ui/GameBlockedModal";
+import LoaderGame from "@/components/ui/LoaderGame";
+import GameBackground from "@/components/ui/GameBackground";
 
 type GameStatus = "selecting" | "correcting" | "won" | "lost";
 
@@ -37,6 +39,7 @@ export default function ErrorFinder() {
   const [errorWordSelected, setErrorWordSelected] = useState<string | null>(null);
   const [correctionInput, setCorrectionInput] = useState("");
 
+   const [showLoader, setShowLoader] = useState(true);
   // ======================================================
   // FETCH EJERCICIO
   // ======================================================
@@ -84,6 +87,14 @@ export default function ErrorFinder() {
   setCheckingAttempt(false);
   }, [user, role]);
 
+useEffect(() => {
+  // Tiempo mínimo de animación del loader
+  const timer = setTimeout(() => {
+    setShowLoader(false);
+  }, 1800); // 1.8 segundos
+
+  return () => clearTimeout(timer);
+}, []);
   // ======================================================
   // AUTO-CARGAR EJERCICIO
   // ======================================================
@@ -92,6 +103,7 @@ export default function ErrorFinder() {
       void fetchSentence();
     }
   }, [checkingAttempt, blocked]);
+
 
   // ======================================================
   // SELECCIÓN DE PALABRA
@@ -141,49 +153,61 @@ export default function ErrorFinder() {
   // UI
   // ======================================================
 
-  if (checkingAttempt) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="relative w-24 h-24 mx-auto mb-6">
-            <div className="absolute inset-0 rounded-full border-8 border-purple-200" />
-            <div className="absolute inset-0 rounded-full border-8 border-t-purple-600 animate-spin" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-  // // Bloqueado (ya jugó hoy)
-  // if (blocked && role === "alumno") {
+
+  // IMPORTANTE: DESCOMENTAR CUANDO TERMINE LAS CALLS. LISTA PARA PRODUCCION
+  // if (checkingAttempt) {
   //   return (
-  //     <GameBlockedModal
-  //     emoji="⏳"
-  //     title={t("gaming.games.idioms.blockedTitle")}
-  //     message={t("gaming.games.idioms.blockedMessage")}
-  //     nextAvailableLabel={t("gaming.games.shared.nextAvailable")}
-  //     hoursLabel={t("gaming.games.shared.hours")}
-  //     minutesLabel={t("gaming.games.shared.minutes")}
-  //   />
+  //     <div className="min-h-screen flex items-center justify-center">
+  //       <div className="text-center">
+  //         <div className="relative w-24 h-24 mx-auto mb-6">
+  //           <div className="absolute inset-0 rounded-full border-8 border-purple-200" />
+  //           <div className="absolute inset-0 rounded-full border-8 border-t-purple-600 animate-spin" />
+  //         </div>
+  //       </div>
+  //     </div>
+  //   );
+  // }
+  // // // Bloqueado (ya jugó hoy)
+  // // if (blocked && role === "alumno") {
+  // //   return (
+  // //     <GameBlockedModal
+  // //     emoji="⏳"
+  // //     title={t("gaming.games.idioms.blockedTitle")}
+  // //     message={t("gaming.games.idioms.blockedMessage")}
+  // //     nextAvailableLabel={t("gaming.games.shared.nextAvailable")}
+  // //     hoursLabel={t("gaming.games.shared.hours")}
+  // //     minutesLabel={t("gaming.games.shared.minutes")}
+  // //   />
+  // //   );
+  // // }
+
+  // if (loading || !data) {
+  //   return (
+  //     <div className="min-h-screen flex items-center justify-center">
+  //       <div className="text-center">
+  //         <div className="relative w-24 h-24 mx-auto mb-6">
+  //           <div className="absolute inset-0 rounded-full border-8 border-purple-200" />
+  //           <div className="absolute inset-0 rounded-full border-8 border-t-purple-600 animate-spin" />
+  //         </div>
+  //       </div>
+  //     </div>
   //   );
   // }
 
-  if (loading || !data) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="relative w-24 h-24 mx-auto mb-6">
-            <div className="absolute inset-0 rounded-full border-8 border-purple-200" />
-            <div className="absolute inset-0 rounded-full border-8 border-t-purple-600 animate-spin" />
-          </div>
-        </div>
-      </div>
-    );
+  if (checkingAttempt || !data || showLoader) {
+    return <LoaderGame />;
   }
-
   const words = data.sentence.split(" ");
 
   return (
     <div className="max-w-xl mx-auto py-10 text-center space-y-8">
+      <GameBackground />
+       <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, ease: "easeOut" }}
+      className="relative z-10 max-w-2xl mx-auto"
+    >
       <h1 className="text-3xl font-bold text-slate-800">
         {t("gaming.games.errorFinder.title")}
       </h1>
@@ -323,6 +347,7 @@ export default function ErrorFinder() {
           {t("gaming.games.errorFinder.newExercise")}
         </button>
       )}
+    </motion.div>
     </div>
   );
 }

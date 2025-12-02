@@ -695,14 +695,15 @@ const idiomasCurso = [
      RENDER
      ========================= */
   return (
-   <div className="flex items-center justify-center min-h-screen  bg-opacity-40 backdrop-blur-sm p-4">
+   <div className="flex items-center justify-center" >
+
 
     <div className="
-      relative flex w-full max-w-6xl max-h-[95vh] flex-col overflow-hidden 
-      rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.25)]
-      border border-[#112C3E]/30 bg-gradient-to-br 
-      from-white to-[#F9FAFB]
-    ">
+  relative flex w-full max-w-6xl max-h-[95vh] flex-col overflow-hidden 
+  rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.25)]
+  border border-[#112C3E]/30 bg-gradient-to-br 
+  from-white to-[#F9FAFB]
+">
      
       {/* HEADER */}
 <header
