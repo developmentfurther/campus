@@ -606,10 +606,16 @@ function ExerciseRunner({
    ===================================================================================== */
   useEffect(() => {
     async function load() {
-      if (!user?.uid) return;
+    if (!user?.uid) return;
 
-      const fullProgress = await getCourseProgress(user.uid, courseId);
-      const prev = fullProgress?.byLesson?.[currentExerciseKey];
+    // 🛑 Si el padre ya tiene progreso cargado → NO refetch
+    const parentProgress = progress?.[currentExerciseKey];
+    if (parentProgress) {
+      console.log("⏭ No refetch — progreso ya cargado en padre");
+      return;
+    }
+      console.log("⟳ Fetching progreso desde Firestore...");
+    const prev = await getCourseProgress(user.uid, courseId);
 
       if (!prev?.exSubmitted) {
         setSubmitted(false);

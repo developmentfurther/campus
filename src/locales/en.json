@@ -32,6 +32,7 @@
 },
 
   "sidebar": {
+    "important": "Important Information",
     "headerTitle": "Further Campus",
     "headerSubtitle": "Student Portal",
     "campusSection": "My Campus",

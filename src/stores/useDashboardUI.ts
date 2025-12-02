@@ -7,6 +7,7 @@ type Section =
   | "cursos"
   | "usuarios"
   | "perfil"
+  | "infoimportante"
   | "chatbot"
   | "chat-history"
   | "chat-session"

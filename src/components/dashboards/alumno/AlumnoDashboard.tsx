@@ -11,6 +11,7 @@ import GamingHub from "@/app/dashboard/gaming/page";
 import ChatBox from "@/components/chat/ChatBox";
 import ChatHistoryList from "@/components/chat/history/ChatHistoryList";
 import ChatHistorySession from "@/components/chat/history/ChatHistorySession"; 
+import AlumnoInfo from "./AlumnoInfo";
 
 export default function AlumnoDashboard() {
   const { section } = useDashboardUI();
@@ -39,6 +40,9 @@ export default function AlumnoDashboard() {
       
       case "chat-session":
         return <ChatHistorySession />;
+
+    case "infoimportante":
+      return <AlumnoInfo />;
 
 
     default:

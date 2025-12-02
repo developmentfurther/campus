@@ -16,6 +16,7 @@ import {
   FiZap,
   FiMenu,
   FiX,
+  FiInfo
 } from "react-icons/fi";
 import { useI18n } from "@/contexts/I18nContext";
 
@@ -41,6 +42,7 @@ export default function MobileNavbarAlumno() {
     { id: "home", label: t("sidebar.home"), icon: <FiHome size={20} /> },
     { id: "miscursos", label: t("sidebar.learning"), icon: <FiBookOpen size={20} /> },
     { id: "certificados", label: t("sidebar.certificates"), icon: <FiAward size={20} /> },
+    { id: "infoimportante", label: t("sidebar.importantinfo"), icon: <FiInfo size={20} /> },
     { id: "gaming", label: t("sidebar.gaming"), icon: <FiTarget size={20} /> },
   ];
 
