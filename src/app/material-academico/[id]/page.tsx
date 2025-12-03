@@ -33,6 +33,7 @@ import {motion} from "framer-motion"
 import Image from "next/image";
 import { jsPDF } from "jspdf";
 import { FURTHER_LOGO_BASE64 } from "@/lib/logoBase64";
+import { useI18n } from "@/contexts/I18nContext";
 
 
 
@@ -125,7 +126,7 @@ export default function CoursePlayerPage() {
   const params = useParams();
   const courseId = params?.id?.toString?.() || "";
   const { user, role, authReady, loading: authLoading, userProfile, saveCourseProgress, getCourseProgress } = useAuth();
-
+  const { t } = useI18n();
 
 
   // 🔸 Estados principales
@@ -784,6 +785,31 @@ const evaluate = async () => {
     totalItems = 1;
   };
 
+        // TABLE (universal)
+const evalTable = (ex: any) => {
+  if (!ex.blanks || ex.blanks.length === 0) {
+    // Si no hay blanks definidos, aprobar automáticamente
+    correct = 1;
+    totalItems = 1;
+    return;
+  }
+
+  let ok = 0;
+  const total = ex.blanks.length;
+
+  ex.blanks.forEach((blank: any) => {
+    const key = makeLocalKey(ex.id, `${blank.rowIndex}-${blank.column}`);
+    const userAnswer = (answers[key] || "").trim().toLowerCase();
+    const correctAnswer = (ex.correct?.[`${blank.rowIndex}-${blank.column}`] || "")
+      .trim()
+      .toLowerCase();
+    
+    if (userAnswer === correctAnswer) ok++;
+  });
+
+  correct = ok;
+  totalItems = total;
+};
   // ============================================================
   // 🔥 SWITCH PRINCIPAL
   // ============================================================
@@ -822,6 +848,11 @@ const evaluate = async () => {
     case "speaking":
       evalTextOrSpeaking();
       break;
+    
+      case "verb_table":
+  evalTable(ex);
+  break;
+      
     default:
       correct = 0;
       totalItems = 1;
@@ -1012,6 +1043,136 @@ const renderReading = (ex: any) => {
     </div>
   );
 };
+
+const renderTable = (ex: any) => {
+  // Helper para saber si una celda es blank
+  const isBlankCell = (rowIdx: number, col: string) => {
+    return (ex.blanks || []).some(
+      b => b.rowIndex === rowIdx && b.column === col
+    );
+  };
+
+  return (
+    <div className="max-w-[750px] overflow-x-auto">
+      {ex.title && (
+        <h4 className="font-semibold text-slate-900 mb-4 text-lg">
+          {ex.title}
+        </h4>
+      )}
+
+      <table className="w-full border rounded-xl bg-white text-sm overflow-hidden shadow-sm">
+        <thead className="bg-slate-100">
+          <tr>
+            <th className="border border-slate-300 px-4 py-3 text-left font-semibold text-slate-700">
+              Subject
+            </th>
+            <th className="border border-slate-300 px-4 py-3 text-left font-semibold text-slate-700">
+              Positive
+            </th>
+            <th className="border border-slate-300 px-4 py-3 text-left font-semibold text-slate-700">
+              Negative
+            </th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {ex.rows.map((row: any, r: number) => (
+            <tr key={r} className="hover:bg-slate-50 transition-colors">
+              {/* Subject - siempre visible */}
+              <td className="border border-slate-300 px-4 py-3 font-medium text-slate-900">
+                {row.subject}
+              </td>
+
+              {/* Positive */}
+              <td className="border border-slate-300 p-2">
+                {isBlankCell(r, "positive") ? (
+                  <input
+                    disabled={submitted}
+                    value={answers[makeLocalKey(ex.id, `${r}-positive`)] || ""}
+                    onChange={(e) =>
+                      handleAnswer(makeLocalKey(ex.id, `${r}-positive`), e.target.value)
+                    }
+                    placeholder="..."
+                    className={`w-full px-3 py-2 rounded-lg border text-sm transition-all ${
+                      submitted
+                        ? (answers[makeLocalKey(ex.id, `${r}-positive`)] || "")
+                            .trim()
+                            .toLowerCase() ===
+                          (ex.correct?.[`${r}-positive`] || "").trim().toLowerCase()
+                          ? "bg-emerald-50 border-emerald-300 text-emerald-800 font-medium"
+                          : "bg-rose-50 border-rose-300 text-rose-800"
+                        : "border-slate-300 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+                    }`}
+                  />
+                ) : (
+                  <span className="px-3 py-2 block text-slate-700">
+                    {row.positive}
+                  </span>
+                )}
+              </td>
+
+              {/* Negative */}
+              <td className="border border-slate-300 p-2">
+                {isBlankCell(r, "negative") ? (
+                  <input
+                    disabled={submitted}
+                    value={answers[makeLocalKey(ex.id, `${r}-negative`)] || ""}
+                    onChange={(e) =>
+                      handleAnswer(makeLocalKey(ex.id, `${r}-negative`), e.target.value)
+                    }
+                    placeholder="..."
+                    className={`w-full px-3 py-2 rounded-lg border text-sm transition-all ${
+                      submitted
+                        ? (answers[makeLocalKey(ex.id, `${r}-negative`)] || "")
+                            .trim()
+                            .toLowerCase() ===
+                          (ex.correct?.[`${r}-negative`] || "").trim().toLowerCase()
+                          ? "bg-emerald-50 border-emerald-300 text-emerald-800 font-medium"
+                          : "bg-rose-50 border-rose-300 text-rose-800"
+                        : "border-slate-300 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+                    }`}
+                  />
+                ) : (
+                  <span className="px-3 py-2 block text-slate-700">
+                    {row.negative}
+                  </span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {/* Mostrar respuestas correctas después de enviar */}
+      {submitted && (ex.blanks || []).some(b => {
+        const key = `${b.rowIndex}-${b.column}`;
+        const userAns = (answers[makeLocalKey(ex.id, key)] || "").trim().toLowerCase();
+        const correctAns = (ex.correct?.[key] || "").trim().toLowerCase();
+        return userAns !== correctAns;
+      }) && (
+        <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
+          <p className="font-semibold text-blue-800 mb-2">📝 Respuestas correctas:</p>
+          <ul className="space-y-1 text-blue-700">
+            {(ex.blanks || []).map((b: any, i: number) => {
+              const key = `${b.rowIndex}-${b.column}`;
+              const userAns = (answers[makeLocalKey(ex.id, key)] || "").trim().toLowerCase();
+              const correctAns = (ex.correct?.[key] || "").trim().toLowerCase();
+              
+              if (userAns === correctAns) return null;
+              
+              return (
+                <li key={i}>
+                  • Fila {b.rowIndex + 1} ({b.column}): <strong>{ex.correct?.[key]}</strong>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+};
+
 
 const renderFillBlank = (ex: any) => {
   const key = makeLocalKey(ex.id);
@@ -1404,6 +1565,9 @@ const renderSpeaking = (ex: any) => {
         {/* 🔀 Selección de renderer según tipo */}
         {ex.type === "reading" && renderReading(ex)}
 
+{ex.type === "verb_table" && renderTable(ex)}
+
+
         {ex.type === "listening" && (
           <div className="space-y-6">
             {ex.audioUrl && (
@@ -1590,7 +1754,8 @@ const prevExercise = () => {
   if (!authReady || authLoading || loading) {
     return (
       <div className="min-h-[60vh] grid place-items-center text-slate-300">
-        Cargando material...
+        {t("coursePlayer.loading")}
+
       </div>
     );
   }
@@ -1608,16 +1773,16 @@ const prevExercise = () => {
             <FiAlertTriangle />
           </div>
           <h2 className="mt-3 text-lg font-bold text-white">
-            No tienes acceso
+            {t("coursePlayer.noAccessTitle")}
           </h2>
           <p className="mt-1 text-sm text-slate-300">
-            Iniciá sesión con la cuenta correcta o contactá al administrador.
+            {t("coursePlayer.noAccessDescription")}
           </p>
           <button
             onClick={() => router.push("/dashboard")}
             className="mt-4 inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-yellow-400 text-slate-900 font-semibold hover:bg-yellow-300"
           >
-            Volver
+            {t("coursePlayer.goBack")}
           </button>
         </div>
       </div>

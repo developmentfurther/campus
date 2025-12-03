@@ -1,5 +1,67 @@
 {
   "common": {},
+  "coursePlayer": {
+    "loading": "Cargando material...",
+    "noAccessTitle": "No tienes acceso",
+    "noAccessDescription": "Iniciá sesión con la cuenta correcta o contactá al administrador.",
+    "goBack": "Volver",
+    
+    "sidebar": {
+      "backHome": "Volver al inicio",
+      "introduction": "Introducción",
+      "unitClosing": "Cierre de la unidad",
+      "courseClosing": "Cierre del curso",
+      "lessonCurrent": "Lección actual",
+      "inProgress": "En progreso",
+      "summary": "Resumen",
+      "noDescription": "Sin descripción disponible",
+      "completed": "Completadas",
+      "total": "Total",
+      "progress": "Progreso del Material Académico",
+      "keepGoing": "¡Sigue así! Estás haciendo un gran progreso",
+      "bibliography": "Bibliografía",
+      "downloadPdf": "Descargar PDF",
+      "generatingPdf": "Generando PDF..."
+    },
+
+    "tabs": {
+      "theory": "Teoría",
+      "vocabulary": "Vocabulario",
+      "exercises": "Ejercicios",
+      "theoryTitle": "Contenido teórico",
+      "theorySubtitle": "Material de lectura y conceptos clave",
+      "vocabTitle": "Vocabulario",
+      "vocabSubtitle": "Términos y definiciones esenciales",
+      "exercisesTitle": "Ejercicios prácticos",
+      "exercisesSubtitle": "Aplica lo aprendido"
+    },
+
+    "exercise": {
+      "exercise": "Ejercicio",
+      "correct": "Correcto",
+      "incorrect": "Incorrecto",
+      "correctAnswers": "Respuestas correctas:",
+      "maxCharacters": "Máximo {{max}} caracteres — Usaste {{used}}",
+      "emptyIdea": "* Esta idea no puede estar vacía.",
+      "incorrectSentence": "Frase incorrecta:",
+      "correction": "Corrección:",
+      "writeCorrection": "Escribí la frase corregida",
+      "notAutoEvaluated": "* Este ejercicio no es auto-evaluable.",
+      "attemptRegistered": "Intento registrado",
+      "checkAnswers": "Comprobar respuestas",
+      "result": "Resultado:",
+      "true": "Verdadero",
+      "false": "Falso",
+      "exercisePrev": "Ejercicio anterior",
+      "exerciseNext": "Siguiente ejercicio"
+    },
+
+    "cta": {
+      "continueNext": "Continuar a la siguiente lección",
+      "excellentWork": "¡Excelente trabajo!"
+    }
+  },
+
   "howToPlay": {
   "guessLetters": "Adivina letras una por una",
   "wrongAddsPart": "Cada error agrega una parte del cuerpo",

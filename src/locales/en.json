@@ -1,5 +1,67 @@
 {
   "common": {},
+  "coursePlayer": {
+    "loading": "Loading material...",
+    "noAccessTitle": "No access",
+    "noAccessDescription": "Log in with the correct account or contact the administrator.",
+    "goBack": "Go back",
+
+    "sidebar": {
+      "backHome": "Back to home",
+      "introduction": "Introduction",
+      "unitClosing": "Unit closing",
+      "courseClosing": "Course closing",
+      "lessonCurrent": "Current lesson",
+      "inProgress": "In progress",
+      "summary": "Summary",
+      "noDescription": "No description available",
+      "completed": "Completed",
+      "total": "Total",
+      "progress": "Academic Material Progress",
+      "keepGoing": "Keep going! You're doing great",
+      "bibliography": "Bibliography",
+      "downloadPdf": "Download PDF",
+      "generatingPdf": "Generating PDF..."
+    },
+
+    "tabs": {
+      "theory": "Theory",
+      "vocabulary": "Vocabulary",
+      "exercises": "Exercises",
+      "theoryTitle": "Theoretical content",
+      "theorySubtitle": "Reading material and key concepts",
+      "vocabTitle": "Vocabulary",
+      "vocabSubtitle": "Essential terms and definitions",
+      "exercisesTitle": "Practice exercises",
+      "exercisesSubtitle": "Apply what you’ve learned"
+    },
+
+    "exercise": {
+      "exercise": "Exercise",
+      "correct": "Correct",
+      "incorrect": "Incorrect",
+      "correctAnswers": "Correct answers:",
+      "maxCharacters": "Maximum {{max}} characters — You used {{used}}",
+      "emptyIdea": "* This field cannot be empty.",
+      "incorrectSentence": "Incorrect sentence:",
+      "correction": "Correction:",
+      "writeCorrection": "Write the corrected sentence",
+      "notAutoEvaluated": "* This exercise is not auto-evaluated.",
+      "attemptRegistered": "Attempt registered",
+      "checkAnswers": "Check answers",
+      "result": "Result:",
+      "true": "True",
+      "false": "False",
+      "exercisePrev": "Previous exercise",
+      "exerciseNext": "Next exercise",
+      "correctAnswer": "Correct answer:"
+    },
+
+    "cta": {
+      "continueNext": "Continue to next lesson",
+      "excellentWork": "Excellent work!"
+    }
+  },
   "howToPlay": {
   "guessLetters": "Guess letters one at a time",
   "wrongAddsPart": "Each wrong guess adds a body part",

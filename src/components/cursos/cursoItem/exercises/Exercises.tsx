@@ -28,6 +28,7 @@ interface MultipleChoiceExercise extends ExerciseBase {
 
 export interface TrueFalseExercise extends ExerciseBase {
   type: "true_false";
+  instructions?: string;
   statement: string;
   answer: boolean;
 }
@@ -130,6 +131,25 @@ export interface SentenceCorrectionExercise extends ExerciseBase {
   // case-insensitive, etc.
 }
 
+export interface VerbTableExercise extends ExerciseBase {
+  type: "verb_table";
+  title: string;
+  rows: {
+    subject: string;
+    positive: string;
+    negative: string;
+  }[];
+  // 🔥 NUEVO: Define qué celdas están vacías
+  blanks: {
+    rowIndex: number;
+    column: "positive" | "negative"; // qué columna completar
+  }[];
+  // Las respuestas correctas para cada blank
+  correct: {
+    [key: string]: string; // key = "rowIndex-column", value = respuesta
+  };
+}
+
 /* =========================================
    Unión principal de ejercicios
 ============================================*/
@@ -145,7 +165,8 @@ export type Exercise =
   | ListeningExercise
   | SpeakingExercise
   | ReflectionExercise
-  | SentenceCorrectionExercise;
+  | SentenceCorrectionExercise
+  | VerbTableExercise;
 
 
 // ===== Props del componente =====
@@ -367,6 +388,25 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
         return allNonEmpty;
       }
 
+     case "verb_table": {
+  if (!ex.title || ex.title.trim() === "") return false;
+  if (!Array.isArray(ex.rows) || ex.rows.length === 0) return false;
+
+  // Validar que todas las filas tengan subject
+  const validRows = ex.rows.every(r => r.subject.trim() !== "");
+  if (!validRows) return false;
+
+  // Validar que haya al menos un blank
+  if (!Array.isArray(ex.blanks) || ex.blanks.length === 0) return false;
+
+  // Validar que cada blank tenga su respuesta correcta
+  const validBlanks = ex.blanks.every(b => {
+    const key = `${b.rowIndex}-${b.column}`;
+    return ex.correct?.[key]?.trim() !== "";
+  });
+
+  return validBlanks;
+}
 
 
       default:
@@ -556,7 +596,22 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
           correctAnswers: [""],
         };
         break;
-    }
+    
+    case "verb_table":
+  base = {
+    id,
+    type: "verb_table",
+    title: "",
+    rows: [
+      { subject: "I", positive: "am", negative: "am not" }
+    ],
+    blanks: [], // vacío inicialmente
+    correct: {}, // vacío inicialmente
+  };
+  break;
+
+
+      }
 
 
     if (!base) return;
@@ -961,6 +1016,240 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
     );
   };
 
+const renderVerbTable = (ex: VerbTableExercise) => {
+  // Helper para toggle blanks
+  const toggleBlank = (rowIdx: number, col: "positive" | "negative") => {
+    const blanks = ex.blanks || [];
+    const exists = blanks.some(b => b.rowIndex === rowIdx && b.column === col);
+    
+    let newBlanks;
+    let newCorrect = { ...(ex.correct || {}) };
+    
+    if (exists) {
+      // Remover blank
+      newBlanks = blanks.filter(b => !(b.rowIndex === rowIdx && b.column === col));
+      delete newCorrect[`${rowIdx}-${col}`];
+    } else {
+      // Agregar blank
+      newBlanks = [...blanks, { rowIndex: rowIdx, column: col }];
+      // La respuesta correcta es el valor actual de la celda
+      const currentValue = ex.rows[rowIdx]?.[col] || "";
+      newCorrect[`${rowIdx}-${col}`] = currentValue;
+    }
+    
+    updateFieldImmediate(ex.id, { blanks: newBlanks, correct: newCorrect });
+  };
+
+  const isBlank = (rowIdx: number, col: "positive" | "negative") => {
+    return (ex.blanks || []).some(b => b.rowIndex === rowIdx && b.column === col);
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Título */}
+      <textarea
+        rows={2}
+        className="w-full border rounded px-3 py-2"
+        placeholder="Instrucciones (ej: Complete the table with the correct verb forms)"
+        value={ex.title}
+        onChange={(e) =>
+          updateFieldImmediate(ex.id, { title: e.target.value })
+        }
+      />
+
+      {/* Instrucción para el profesor */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+        <p className="font-semibold mb-1">💡 Instrucciones:</p>
+        <p>1. Completa la tabla con todos los valores</p>
+        <p>2. Haz clic en el ícono 🔒 para marcar qué celdas debe completar el alumno</p>
+        <p>3. Las celdas marcadas se mostrarán vacías al estudiante</p>
+      </div>
+
+      {/* Tabla editable */}
+      <div className="overflow-x-auto">
+        <table className="w-full border rounded bg-white text-sm">
+          <thead className="bg-slate-100">
+            <tr>
+              <th className="border px-3 py-2 text-left font-semibold">Subject</th>
+              <th className="border px-3 py-2 text-left font-semibold">
+                Positive
+                <span className="text-xs text-slate-500 ml-2">(click 🔒 to hide)</span>
+              </th>
+              <th className="border px-3 py-2 text-left font-semibold">
+                Negative
+                <span className="text-xs text-slate-500 ml-2">(click 🔒 to hide)</span>
+              </th>
+              <th className="border px-2 py-2 w-16"></th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {ex.rows.map((row, idx) => (
+              <tr key={idx}>
+                {/* Subject (siempre visible) */}
+                <td className="border px-3 py-2">
+                  <input
+                    className="w-full border rounded px-2 py-1 bg-slate-50"
+                    value={row.subject}
+                    placeholder="Subject"
+                    onChange={(e) => {
+                      const newRows = [...ex.rows];
+                      newRows[idx].subject = e.target.value;
+                      updateFieldImmediate(ex.id, { rows: newRows });
+                    }}
+                  />
+                </td>
+
+                {/* Positive */}
+                <td className="border px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      className={`flex-1 border rounded px-2 py-1 ${
+                        isBlank(idx, "positive") 
+                          ? "bg-yellow-50 border-yellow-300" 
+                          : "bg-white"
+                      }`}
+                      value={row.positive}
+                      placeholder="Positive form"
+                      onChange={(e) => {
+                        const newRows = [...ex.rows];
+                        newRows[idx].positive = e.target.value;
+                        
+                        // Si está marcado como blank, actualizar correct también
+                        const newCorrect = { ...(ex.correct || {}) };
+                        if (isBlank(idx, "positive")) {
+                          newCorrect[`${idx}-positive`] = e.target.value;
+                        }
+                        
+                        updateFieldImmediate(ex.id, { 
+                          rows: newRows,
+                          correct: newCorrect 
+                        });
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => toggleBlank(idx, "positive")}
+                      className={`px-2 py-1 rounded transition-colors ${
+                        isBlank(idx, "positive")
+                          ? "bg-yellow-200 text-yellow-800 hover:bg-yellow-300"
+                          : "bg-slate-200 text-slate-600 hover:bg-slate-300"
+                      }`}
+                      title={isBlank(idx, "positive") ? "Estudiante debe completar" : "Visible para estudiante"}
+                    >
+                      {isBlank(idx, "positive") ? "🔒" : "👁️"}
+                    </button>
+                  </div>
+                </td>
+
+                {/* Negative */}
+                <td className="border px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      className={`flex-1 border rounded px-2 py-1 ${
+                        isBlank(idx, "negative") 
+                          ? "bg-yellow-50 border-yellow-300" 
+                          : "bg-white"
+                      }`}
+                      value={row.negative}
+                      placeholder="Negative form"
+                      onChange={(e) => {
+                        const newRows = [...ex.rows];
+                        newRows[idx].negative = e.target.value;
+                        
+                        // Si está marcado como blank, actualizar correct también
+                        const newCorrect = { ...(ex.correct || {}) };
+                        if (isBlank(idx, "negative")) {
+                          newCorrect[`${idx}-negative`] = e.target.value;
+                        }
+                        
+                        updateFieldImmediate(ex.id, { 
+                          rows: newRows,
+                          correct: newCorrect 
+                        });
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => toggleBlank(idx, "negative")}
+                      className={`px-2 py-1 rounded transition-colors ${
+                        isBlank(idx, "negative")
+                          ? "bg-yellow-200 text-yellow-800 hover:bg-yellow-300"
+                          : "bg-slate-200 text-slate-600 hover:bg-slate-300"
+                      }`}
+                      title={isBlank(idx, "negative") ? "Estudiante debe completar" : "Visible para estudiante"}
+                    >
+                      {isBlank(idx, "negative") ? "🔒" : "👁️"}
+                    </button>
+                  </div>
+                </td>
+
+                {/* Eliminar fila */}
+                <td className="border px-2 py-2 text-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newRows = ex.rows.filter((_, i) => i !== idx);
+                      // Limpiar blanks y correct de esta fila
+                      const newBlanks = (ex.blanks || []).filter(b => b.rowIndex !== idx);
+                      const newCorrect = { ...(ex.correct || {}) };
+                      delete newCorrect[`${idx}-positive`];
+                      delete newCorrect[`${idx}-negative`];
+                      
+                      updateFieldImmediate(ex.id, { 
+                        rows: newRows,
+                        blanks: newBlanks,
+                        correct: newCorrect
+                      });
+                    }}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    ✖
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Botón añadir fila */}
+      <button
+        type="button"
+        className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 rounded text-sm"
+        onClick={() => {
+          updateFieldImmediate(ex.id, {
+            rows: [...ex.rows, { subject: "", positive: "", negative: "" }],
+          });
+        }}
+      >
+        + Añadir fila
+      </button>
+
+      {/* Preview de blanks */}
+      {(ex.blanks || []).length > 0 && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm">
+          <p className="font-semibold text-green-800 mb-2">
+            ✅ Celdas que el alumno debe completar ({(ex.blanks || []).length}):
+          </p>
+          <ul className="space-y-1 text-green-700">
+            {(ex.blanks || []).map((b, i) => (
+              <li key={i}>
+                • Fila {b.rowIndex + 1}: <strong>{b.column}</strong> 
+                {" → "}
+                <code className="bg-green-100 px-2 py-0.5 rounded">
+                  {ex.correct?.[`${b.rowIndex}-${b.column}`] || "(vacío)"}
+                </code>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+};
+
+
   const renderText = (ex: TextExercise) => (
     <div className="space-y-2">
       {/* Indicación multilínea */}
@@ -992,6 +1281,18 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
 
   const renderTrueFalse = (ex: TrueFalseExercise) => (
     <div className="space-y-2">
+      {/* Enunciado general del ejercicio */}
+<textarea
+  rows={2}
+  className="w-full border rounded px-3 py-2"
+  placeholder="Instrucciones generales (ej: Read the sentences and mark Yes/No...)"
+  value={ex.instructions ?? ""}
+  onChange={(e) =>
+    updateFieldImmediate(ex.id, { instructions: e.target.value })
+  }
+/>
+
+
       {/* Enunciado multilínea */}
       <textarea
         rows={3}
@@ -1350,6 +1651,10 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
       return renderReflection(ex);
     case "sentence_correction":
       return renderSentenceCorrection(ex);
+
+    case "verb_table":
+  return renderVerbTable(ex);
+
       default:
         return null;
     }
@@ -2067,18 +2372,18 @@ const renderSentenceCorrection = (ex: SentenceCorrectionExercise) => {
       if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
     };
   }, []);
-useEffect(() => {
-  if (!mountedRef.current) return; // evitar que se dispare en el montaje
-  if (typeof onChange === "function") {
-    const jsonCurrent = JSON.stringify(exercisesRef.current);
-    const jsonSnapshot = JSON.stringify(snapshot);
-    // solo si el contenido cambió realmente
-    if (jsonCurrent !== jsonSnapshot) {
-      onChange(structuredClone(exercisesRef.current));
-    }
-  }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [snapshot]);
+// useEffect(() => {
+//   if (!mountedRef.current) return; // evitar que se dispare en el montaje
+//   if (typeof onChange === "function") {
+//     const jsonCurrent = JSON.stringify(exercisesRef.current);
+//     const jsonSnapshot = JSON.stringify(snapshot);
+//     // solo si el contenido cambió realmente
+//     if (jsonCurrent !== jsonSnapshot) {
+//       onChange(structuredClone(exercisesRef.current));
+//     }
+//   }
+//   // eslint-disable-next-line react-hooks/exhaustive-deps
+// }, [snapshot]);
 
   // ===== UI =====
   return (
@@ -2111,6 +2416,15 @@ useEffect(() => {
   <button type="button" onClick={() => addExercise("speaking")} className="px-3 py-1.5 rounded bg-pink-600 text-white text-sm">+ Speaking</button>
 
   <button type="button" onClick={() => addExercise("reflection")} className="px-3 py-1.5 rounded bg-lime-600 text-white text-sm">+ Reflexión</button>
+
+  <button
+  type="button"
+  onClick={() => addExercise("verb_table")}
+  className="px-3 py-1.5 rounded bg-indigo-600 text-white"
+>
+  + Verb Table
+</button>
+
 </div>
 
 

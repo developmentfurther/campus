@@ -1,5 +1,67 @@
 {
   "common": {},
+   "coursePlayer": {
+    "loading": "Chargement du matériel...",
+    "noAccessTitle": "Accès refusé",
+    "noAccessDescription": "Connectez-vous avec le bon compte ou contactez l’administrateur.",
+    "goBack": "Retour",
+
+    "sidebar": {
+      "backHome": "Retour à l’accueil",
+      "introduction": "Introduction",
+      "unitClosing": "Clôture de l’unité",
+      "courseClosing": "Clôture du cours",
+      "lessonCurrent": "Leçon actuelle",
+      "inProgress": "En cours",
+      "summary": "Résumé",
+      "noDescription": "Aucune description disponible",
+      "completed": "Complétées",
+      "total": "Total",
+      "progress": "Progression du Matériel Académique",
+      "keepGoing": "Continue comme ça ! Tu progresses très bien",
+      "bibliography": "Bibliographie",
+      "downloadPdf": "Télécharger le PDF",
+      "generatingPdf": "Génération du PDF..."
+    },
+
+    "tabs": {
+      "theory": "Théorie",
+      "vocabulary": "Vocabulaire",
+      "exercises": "Exercices",
+      "theoryTitle": "Contenu théorique",
+      "theorySubtitle": "Matériel de lecture et concepts clés",
+      "vocabTitle": "Vocabulaire",
+      "vocabSubtitle": "Termes et définitions essentiels",
+      "exercisesTitle": "Exercices pratiques",
+      "exercisesSubtitle": "Mets en pratique ce que tu as appris"
+    },
+
+    "exercise": {
+      "exercise": "Exercice",
+      "correct": "Correct",
+      "incorrect": "Incorrect",
+      "correctAnswers": "Réponses correctes :",
+      "maxCharacters": "Maximum {{max}} caractères — Tu as utilisé {{used}}",
+      "emptyIdea": "* Ce champ ne peut pas être vide.",
+      "incorrectSentence": "Phrase incorrecte :",
+      "correction": "Correction :",
+      "writeCorrection": "Écris la phrase corrigée",
+      "notAutoEvaluated": "* Cet exercice n’est pas auto-évalué.",
+      "attemptRegistered": "Tentative enregistrée",
+      "checkAnswers": "Vérifier les réponses",
+      "result": "Résultat :",
+      "true": "Vrai",
+      "false": "Faux",
+      "exercisePrev": "Exercice précédent",
+      "exerciseNext": "Exercice suivant",
+      "correctAnswer": "Bonne réponse :"
+    },
+
+    "cta": {
+      "continueNext": "Continuer vers la prochaine leçon",
+      "excellentWork": "Excellent travail !"
+    }
+  },
   "howToPlay": {
   "guessLetters": "Devinez les lettres une par une",
   "wrongAddsPart": "Chaque erreur ajoute une partie du corps",
