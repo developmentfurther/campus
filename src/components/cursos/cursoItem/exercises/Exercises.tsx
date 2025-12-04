@@ -327,7 +327,7 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
         if (!ex.audioUrl) return false; // basta con que exista, no exigir trim al editar
 
 
-        if (!Array.isArray(ex.questions)) return false;
+        if (!Array.isArray(ex.questions) || ex.questions.length === 0) return false;
         
 
         for (const q of ex.questions) {
@@ -800,24 +800,32 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
     return;
   }
   
-  // Limpiar valores undefined antes de guardar
-  const cleanExercises = structuredClone(exercisesRef.current);
-  cleanExercises.forEach(ex => {
-    // Limpiar reading/listening questions
-    if ((ex.type === "reading" || ex.type === "listening") && ex.questions) {
-      ex.questions.forEach(q => {
-        if (q.kind === "open") {
-          // Remover propiedades undefined
-          if (q.options === undefined) delete (q as any).options;
-          if (q.correctIndex === undefined) delete (q as any).correctIndex;
-          if (q.answer === undefined) delete (q as any).answer;
-          // Asegurar que las opcionales tengan valor
-          if (!q.placeholder) (q as any).placeholder = "";
-          if (!q.maxLength) (q as any).maxLength = 500;
-        }
-      });
+  // Función recursiva para limpiar undefined
+  const cleanUndefined = (obj: any): any => {
+    if (obj === null || obj === undefined) {
+      return null;
     }
-  });
+    
+    if (Array.isArray(obj)) {
+      return obj.map(cleanUndefined);
+    }
+    
+    if (typeof obj === 'object') {
+      const cleaned: any = {};
+      for (const key in obj) {
+        const value = obj[key];
+        if (value !== undefined) {
+          cleaned[key] = cleanUndefined(value);
+        }
+      }
+      return cleaned;
+    }
+    
+    return obj;
+  };
+  
+  // Limpiar valores undefined de todos los ejercicios
+  const cleanExercises = cleanUndefined(structuredClone(exercisesRef.current));
   
   if (typeof onChange === "function")
     onChange(cleanExercises);

@@ -969,4 +969,3 @@ export function getCourseProgressStats(
 
   return { totalLessons, completedCount, progressPercent };
 }
-
