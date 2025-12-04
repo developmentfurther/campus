@@ -14,42 +14,66 @@ if (!admin.apps.length) {
   });
 }
 
+// ========================================
+// 🧼 NORMALIZADOR DE EMAILS
+// ========================================
+function normalizeEmail(raw: string | undefined | null) {
+  if (!raw) return null;
+
+  let email = raw
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "")
+    .split(/[;,/]+/)[0]; // toma el primer email válido
+
+  const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+  return valid ? email : null;
+}
+
 export async function POST() {
   try {
     const db = admin.firestore();
     const snaps = await db.collection("alumnos_raw").get();
     const results: any[] = [];
-    
+
     console.log("📌 Docs encontrados en alumnos_raw:", snaps.size);
 
-    // Procesar cada documento
     for (const docSnap of snaps.docs) {
       const data = docSnap.data();
       const updates: any = {};
 
-      // Procesar cada campo que empiece con "user_"
       for (const key in data) {
         if (!key.startsWith("user_")) continue;
 
         const alumno = data[key];
-        const email = alumno.email?.toLowerCase()?.trim();
-        
+
+        // ===========================
+        // 🧼 Normalizar Email
+        // ===========================
+        const email = normalizeEmail(alumno.email);
+
         if (!email) {
-          console.warn(`⚠️ Campo ${key} sin email válido`);
+          console.warn(`❌ Email inválido en ${key}:`, alumno.email);
+          results.push({
+            email: alumno.email,
+            error: "Email inválido (no se procesó)",
+            status: "error",
+          });
           continue;
         }
 
+        // ===========================
         // Construir password
+        // ===========================
         const basePassword = alumno.password?.toLowerCase()?.replace(/\s+/g, "") || "";
         const firstCourse = alumno.cursosAsignados?.[0]?.curso?.toLowerCase() || "";
         const finalPassword = `${basePassword}${firstCourse}`;
 
-        // Validar que el password tenga al menos 6 caracteres
         if (finalPassword.length < 6) {
-          console.error(`❌ Password demasiado corto para ${email}: "${finalPassword}"`);
           results.push({
             email,
-            error: "Password debe tener al menos 6 caracteres",
+            error: `Password demasiado corto: "${finalPassword}"`,
             status: "error",
           });
           continue;
@@ -59,13 +83,11 @@ export async function POST() {
           let userRecord;
           let wasCreated = false;
 
-          // Intentar obtener el usuario existente
           try {
             userRecord = await admin.auth().getUserByEmail(email);
-            console.log(`✅ Usuario ya existe: ${email}`);
+            console.log(`✔ Usuario ya existe: ${email}`);
           } catch (authError: any) {
-            // Si no existe, crearlo
-            if (authError.code === 'auth/user-not-found') {
+            if (authError.code === "auth/user-not-found") {
               userRecord = await admin.auth().createUser({
                 email,
                 password: finalPassword,
@@ -78,9 +100,9 @@ export async function POST() {
             }
           }
 
-          // Preparar actualización para este campo
           updates[key] = {
             ...alumno,
+            email, // email corregido
             uid: userRecord.uid,
             role: alumno.role || "alumno",
             passwordFinal: finalPassword,
@@ -94,7 +116,6 @@ export async function POST() {
             wasCreated,
             status: "ok",
           });
-
         } catch (err: any) {
           console.error(`❌ Error procesando ${email}:`, err.message);
           results.push({
@@ -106,22 +127,22 @@ export async function POST() {
         }
       }
 
-      // Actualizar el documento con todos los cambios
       if (Object.keys(updates).length > 0) {
         await docSnap.ref.update(updates);
-        console.log(`💾 Documento ${docSnap.id} actualizado con ${Object.keys(updates).length} alumnos`);
+        console.log(
+          `💾 Documento ${docSnap.id} actualizado con ${Object.keys(updates).length} alumnos`
+        );
       }
     }
 
     return NextResponse.json({
       ok: true,
       processed: results.length,
-      created: results.filter(r => r.wasCreated).length,
-      existing: results.filter(r => r.status === 'ok' && !r.wasCreated).length,
-      errors: results.filter(r => r.status === 'error').length,
+      created: results.filter((r) => r.wasCreated).length,
+      existing: results.filter((r) => r.status === "ok" && !r.wasCreated).length,
+      errors: results.filter((r) => r.status === "error").length,
       results,
     });
-
   } catch (err: any) {
     console.error("🔥 Error general:", err);
     return NextResponse.json(

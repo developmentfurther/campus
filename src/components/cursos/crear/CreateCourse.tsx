@@ -233,6 +233,8 @@ const batchId = "batch_1"; // o tomalo desde contexto si lo tenés
   const [activeLeccion, setActiveLeccion] = useState<number>(0);
   const [filterIdioma, setFilterIdioma] = useState("");
   const [filterNivel, setFilterNivel] = useState("");
+  const [filterNombre, setFilterNombre] = useState(""); // 🆕 Búsqueda por nombre
+  const [filterCursoId, setFilterCursoId] = useState("");
 
   /* =========================
      Exam & Capstone (parity)
@@ -471,19 +473,38 @@ async function uploadToImgur(file: File): Promise<string | null> {
     setCurso((p) => ({ ...p, cursantes: [] }));
   };
 
+// 2️⃣ Modificar filteredAlumnos para incluir los nuevos filtros
 const filteredAlumnos = useMemo(() => {
   const list = Array.isArray(alumnos) ? alumnos : [];
 
   return list.filter((a) => {
     const lang = a.learningLanguage || a.idioma || "";
-    const lvl  = a.learningLevel || a.nivel || "";
+    const lvl = a.learningLevel || a.nivel || "";
+    const nombre = (a.displayName || a.nombre || "").toLowerCase();
+    
+    // 🔍 Verificar si el alumno tiene el curso asignado
+    const cursosAsignados = a.cursosAsignados || [];
+    const tieneCurso = filterCursoId 
+      ? cursosAsignados.some((c: any) => 
+          c.curso?.toLowerCase().includes(filterCursoId.toLowerCase())
+        )
+      : true;
 
-    const matchLang = filterIdioma ? lang.toLowerCase() === filterIdioma.toLowerCase() : true;
-    const matchLvl  = filterNivel ? lvl.toLowerCase() === filterNivel.toLowerCase() : true;
+    const matchLang = filterIdioma 
+      ? lang.toLowerCase() === filterIdioma.toLowerCase() 
+      : true;
+    
+    const matchLvl = filterNivel 
+      ? lvl.toLowerCase() === filterNivel.toLowerCase() 
+      : true;
+    
+    const matchNombre = filterNombre
+      ? nombre.includes(filterNombre.toLowerCase())
+      : true;
 
-    return matchLang && matchLvl;
+    return matchLang && matchLvl && matchNombre && tieneCurso;
   });
-}, [alumnos, filterIdioma, filterNivel]);
+}, [alumnos, filterIdioma, filterNivel, filterNombre, filterCursoId]);
 
 
 
@@ -1951,6 +1972,7 @@ const idiomasCurso = [
 
 
 {/* TAB: Cursantes */}
+{/* TAB: Cursantes */}
 {activeMainTab === "cursantes" && (
   <section
     className="
@@ -1980,6 +2002,46 @@ const idiomasCurso = [
 
       {/* === COLUMNA IZQUIERDA: FILTROS + LISTA === */}
       <div className="space-y-6">
+
+        {/* 🆕 BÚSQUEDA POR NOMBRE */}
+        <div className="space-y-1">
+          <label className="text-sm font-semibold text-[#0C212D] flex items-center gap-2">
+            <FiSearch className="w-4 h-4" />
+            Search by Name
+          </label>
+
+          <input
+            type="text"
+            placeholder="Type student name..."
+            value={filterNombre}
+            onChange={(e) => setFilterNombre(e.target.value)}
+            className="
+              w-full rounded-xl border border-[#112C3E]/20 bg-white
+              p-3 text-[#0C212D]
+              focus:ring-2 focus:ring-[#EE7203] outline-none
+            "
+          />
+        </div>
+
+        {/* 🆕 FILTRO POR ID DE CURSO */}
+        <div className="space-y-1">
+          <label className="text-sm font-semibold text-[#0C212D] flex items-center gap-2">
+            <FiTag className="w-4 h-4" />
+            Filter by Course ID
+          </label>
+
+          <input
+            type="text"
+            placeholder="Ex: ADM006"
+            value={filterCursoId}
+            onChange={(e) => setFilterCursoId(e.target.value)}
+            className="
+              w-full rounded-xl border border-[#112C3E]/20 bg-white
+              p-3 text-[#0C212D] font-mono
+              focus:ring-2 focus:ring-[#EE7203] outline-none
+            "
+          />
+        </div>
 
         {/* FILTRO POR IDIOMA */}
         <div className="space-y-1">
@@ -2025,10 +2087,32 @@ const idiomasCurso = [
             <option value="A2">A2</option>
             <option value="B1">B1</option>
             <option value="B2">B2</option>
+            <option value="B2.5">B2.5</option>
             <option value="C1">C1</option>
             <option value="C2">C2</option>
           </select>
         </div>
+
+        {/* 🆕 BOTÓN LIMPIAR FILTROS */}
+        {(filterNombre || filterCursoId || filterIdioma || filterNivel) && (
+          <button
+            type="button"
+            onClick={() => {
+              setFilterNombre("");
+              setFilterCursoId("");
+              setFilterIdioma("");
+              setFilterNivel("");
+            }}
+            className="
+              w-full flex items-center justify-center gap-2 p-2.5
+              rounded-lg border border-[#112C3E]/20
+              bg-gray-50 text-[#0C212D] text-sm font-medium
+              hover:bg-gray-100 transition
+            "
+          >
+            <FiX size={16} /> Clear filters
+          </button>
+        )}
 
         {/* LISTA DE ALUMNOS FILTRADOS */}
         <div
@@ -2042,27 +2126,45 @@ const idiomasCurso = [
               No students match the selected filters.
             </p>
           ) : (
-            filteredAlumnos.map((a) => (
-              <div
-                key={a.email}
-                onClick={() => toggleCursante(a.email)}
-                className="
-                  flex items-center justify-between p-2 rounded-lg
-                  hover:bg-[#EE7203]/10 cursor-pointer transition
-                "
-              >
-                <span className="text-sm font-medium text-[#0C212D]">
-                  {a.displayName || a.nombre || a.email}
-                </span>
-
-                <input
-                  type="checkbox"
-                  checked={curso.cursantes.includes(a.email)}
-                  readOnly
-                  className="h-4 w-4 accent-[#EE7203]"
-                />
+            <>
+              {/* 🆕 Mostrar contador de resultados */}
+              <div className="mb-2 px-2 text-xs text-[#0C212D]/60">
+                Showing {filteredAlumnos.length} student{filteredAlumnos.length !== 1 ? 's' : ''}
               </div>
-            ))
+
+              {filteredAlumnos.map((a) => (
+                <div
+                  key={a.email}
+                  onClick={() => toggleCursante(a.email)}
+                  className="
+                    flex items-center justify-between p-2 rounded-lg
+                    hover:bg-[#EE7203]/10 cursor-pointer transition
+                  "
+                >
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-[#0C212D]">
+                      {a.displayName || a.nombre || a.email}
+                    </span>
+                    {/* 🆕 Mostrar cursos asignados si se está filtrando por ID */}
+                    {filterCursoId && a.cursosAsignados && (
+                      <span className="text-xs text-[#0C212D]/50 font-mono">
+                        {a.cursosAsignados
+                          .filter((c: any) => c.curso)
+                          .map((c: any) => c.curso)
+                          .join(", ")}
+                      </span>
+                    )}
+                  </div>
+
+                  <input
+                    type="checkbox"
+                    checked={curso.cursantes.includes(a.email)}
+                    readOnly
+                    className="h-4 w-4 accent-[#EE7203]"
+                  />
+                </div>
+              ))}
+            </>
           )}
         </div>
 
@@ -2079,9 +2181,10 @@ const idiomasCurso = [
             hover:bg-[#EE7203]/20 transition
           "
         >
-          <FiPlus /> Add all filtered students
+          <FiPlus /> Add all filtered students ({filteredAlumnos.length})
         </button>
       </div>
+
 
       {/* === COLUMNA DERECHA: ALUMNOS SELECCIONADOS === */}
       <div className="space-y-6">

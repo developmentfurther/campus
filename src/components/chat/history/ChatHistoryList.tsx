@@ -15,7 +15,8 @@ export default function ChatHistoryList() {
     title: "Conversation History",
     conversation: "Conversation",
     level: "Level",
-    unknownDate: "Unknown date"
+    unknownDate: "Unknown date",
+    emptyMessage: "Start a conversation to see your summaries here."
   },
   es: {
     loading: "Cargando tus conversaciones…",
@@ -23,7 +24,8 @@ export default function ChatHistoryList() {
     title: "Historial de conversaciones",
     conversation: "Conversación",
     level: "Nivel",
-    unknownDate: "Fecha desconocida"
+    unknownDate: "Fecha desconocida",
+    emptyMessage: "Empezá una conversación para ver tus resúmenes acá."
   },
   pt: {
     loading: "Carregando suas conversas…",
@@ -31,7 +33,8 @@ export default function ChatHistoryList() {
     title: "Histórico de conversas",
     conversation: "Conversa",
     level: "Nível",
-    unknownDate: "Data desconhecida"
+    unknownDate: "Data desconhecida",
+    emptyMessage: "Inicie uma conversa para ver seus resumos aqui."
   },
   it: {
     loading: "Caricamento delle tue conversazioni…",
@@ -39,7 +42,8 @@ export default function ChatHistoryList() {
     title: "Cronologia conversazioni",
     conversation: "Conversazione",
     level: "Livello",
-    unknownDate: "Data sconosciuta"
+    unknownDate: "Data sconosciuta",
+    emptyMessage: "Avvia una conversazione per vedere i tuoi riassunti qui."
   },
   fr: {
     loading: "Chargement de vos conversations…",
@@ -47,7 +51,8 @@ export default function ChatHistoryList() {
     title: "Historique des conversations",
     conversation: "Conversation",
     level: "Niveau",
-    unknownDate: "Date inconnue"
+    unknownDate: "Date inconnue",
+    emptyMessage: "Démarrez une conversation pour voir vos résumés ici."
   }
 };
   // 🔸 TRADUCCIONES AUTOMÁTICAS
@@ -81,7 +86,7 @@ export default function ChatHistoryList() {
             <FiMessageSquare className="text-white" size={40} />
           </div>
           <h3 className="text-2xl font-black text-[#0C212D] mb-3">{tr.empty}</h3>
-          <p className="text-[#112C3E]/60 text-sm">Start a conversation to see your summaries here.</p>
+          <p className="text-[#112C3E]/60 text-sm">{tr.emptyMessage} </p>
         </div>
       </div>
     );

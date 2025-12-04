@@ -37,6 +37,7 @@ interface AuthContextType {
   userProfile: any | null;
 
   alumnos: any[];
+  alumnosRaw?: any[];
   misCursos: any[];
   allCursos?: any[];
 
@@ -109,6 +110,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const { setLang } = useI18n();
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [loadingActivity, setLoadingActivity] = useState(true);
+  const [alumnosRaw, setAlumnosRaw] = useState<any[]>([]);
 
 
 
@@ -134,10 +136,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 /* ==========================================================
    🔹 Cargar alumnos (VERSIÓN CORREGIDA)
    ========================================================== */
+// Modificar loadAlumnos para guardar ambos por separado
 const loadAlumnos = async () => {
   try {
     const alumnosCampus = []; 
-    const alumnosRaw = [];    
+    const alumnosRawList = [];  // 👈 renombrado
 
     // 1) Leer alumnos reales del campus
     const alumnosRef = collection(db, "alumnos");
@@ -149,7 +152,6 @@ const loadAlumnos = async () => {
         if (key.startsWith("user_")) {
           const u = data[key];
 
-          // 🔥 NORMALIZACIÓN: buscar en todos los campos posibles
           const rawLanguage = u.learningLanguage || u.idioma || u.language || "";
           const rawLevel = u.learningLevel || u.nivel || "";
 
@@ -162,11 +164,9 @@ const loadAlumnos = async () => {
             batchId: batchDoc.id,
             userKey: key,
             createdAt: u.createdAt ?? null,
-            // ✅ Guardar normalizado Y el original
             learningLanguage: rawLanguage.toString().toLowerCase().trim(),
             learningLevel: rawLevel.toString().toUpperCase().trim(),
             estadoAlumno: "Active",
-            // 📝 Info adicional para display
             nombre: u.firstName && u.lastName 
               ? `${u.firstName} ${u.lastName}` 
               : u.nombre || u.email?.split("@")[0] || "Unknown",
@@ -187,11 +187,10 @@ const loadAlumnos = async () => {
         if (key.startsWith("user_")) {
           const u = batchData[key];
 
-          // 🔥 NORMALIZACIÓN idéntica a la de arriba
           const rawLanguage = u.learningLanguage || u.idioma || u.language || "";
           const rawLevel = u.learningLevel || u.nivel || "";
 
-          alumnosRaw.push({
+          alumnosRawList.push({
             userKey: key,
             batchId,
             email: u.email,
@@ -199,8 +198,7 @@ const loadAlumnos = async () => {
             learningLanguage: rawLanguage.toString().toLowerCase().trim(),
             learningLevel: rawLevel.toString().toUpperCase().trim(),
             estadoAlumno: u.estadoAlumno ?? "N/A",
-            
-            // Los raw NO tienen uid, createdAt
+            cursosAsignados: u.cursosAsignados || [], // 👈 CRÍTICO
             uid: null,
             createdAt: null,
           });
@@ -208,13 +206,15 @@ const loadAlumnos = async () => {
       }
     });
 
-    // 3) Combinar ambos
-    const all = [...alumnosCampus, ...alumnosRaw];
+    // 3) Guardar por separado
+    const all = [...alumnosCampus, ...alumnosRawList];
+    
+    setAlumnos(all);           // 👈 Todos mezclados (para UI general)
+    setAlumnosRaw(alumnosRawList); // 👈 Solo raw (para filtro de curso)
     
     console.log("✅ Alumnos cargados:", all.length);
-    console.log("📊 Ejemplo de datos:", all[0]);
+    console.log("📦 Alumnos raw:", alumnosRawList.length);
 
-    setAlumnos(all);
   } catch (err) {
     console.error("❌ [AuthContext] Error cargando alumnos:", err);
   }
@@ -822,6 +822,7 @@ const value = useMemo(
 
     // --- Datos académicos ---
     alumnos,
+    alumnosRaw,
     misCursos,
     allCursos,
     profesores,

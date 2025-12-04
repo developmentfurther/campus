@@ -25,6 +25,9 @@ export default function StudentsPage() {
   const [page, setPage] = useState(1);
   const [languageFilter, setLanguageFilter] = useState("");
   const [levelFilter, setLevelFilter] = useState("");
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+
 
   const PAGE_SIZE = 25;
 
@@ -81,39 +84,35 @@ export default function StudentsPage() {
 
   /* 📝 UPDATE FIELDS */
   const handleUpdateField = async (
-    alumno: any,
-    field: "learningLanguage" | "learningLevel",
-    value: string
-  ) => {
-    try {
-      if (!alumno.batchId || !alumno.uid) {
-        toast.error("Unable to update this student.");
-        return;
-      }
-
-      const batchRef = doc(db, "alumnos", alumno.batchId);
-      const snap = await getDoc(batchRef);
-      if (!snap.exists()) return;
-
-      const data = snap.data();
-
-      const userKey = Object.keys(data).find(
-        (k) => k.startsWith("user_") && data[k].uid === alumno.uid
-      );
-      if (!userKey) return;
-
-      await updateDoc(batchRef, {
-        [`${userKey}.${field}`]: value,
-      });
-
-      await reloadData?.();
-
-      toast.success("Updated successfully.");
-    } catch (err) {
-      console.error(err);
-      toast.error("Error saving changes.");
+  alumno: any,
+  field: "learningLanguage" | "learningLevel",
+  value: string
+) => {
+  try {
+    // ✅ Solo necesitamos batchId y userKey
+    if (!alumno.batchId || !alumno.userKey) {
+      toast.error("Unable to update this student.");
+      return;
     }
-  };
+
+    const batchRef = doc(db, "alumnos", alumno.batchId);
+    const snap = await getDoc(batchRef);
+    if (!snap.exists()) return;
+
+    // 🔥 Actualiza directamente el campo anidado
+    await updateDoc(batchRef, {
+      [`${alumno.userKey}.${field}`]: value,
+    });
+
+    await reloadData?.();
+
+    toast.success("Updated successfully.");
+  } catch (err) {
+    console.error(err);
+    toast.error("Error saving changes.");
+  }
+};
+
 
   const languageNames: Record<string, string> = {
     en: "English",
@@ -123,8 +122,205 @@ export default function StudentsPage() {
     it: "Italian",
   };
 
+  const SyncModal = () => (
+  <div className="fixed inset-0 bg-[#0C212D]/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
+      
+      {/* Header minimalista */}
+      <div className="bg-[#0C212D] px-8 py-6 border-b-4 border-[#EE7203]">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-[#EE7203]/10 flex items-center justify-center">
+            <svg className="w-6 h-6 text-[#EE7203]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-white">
+              Synchronization in Progress
+            </h2>
+            <p className="text-sm text-gray-400 mt-0.5">
+              Background process initiated
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Contenido */}
+      <div className="p-8">
+        
+        {/* Status card */}
+        <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 mb-6 border border-gray-200">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 mt-1">
+              <div className="w-10 h-10 rounded-lg bg-white shadow-sm flex items-center justify-center">
+                <div className="w-5 h-5 border-3 border-[#EE7203] border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-[#0C212D] mb-2">
+                Syncing student data...
+              </h3>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                The system is currently synchronizing all student records. This process runs in the background and won't interrupt your work.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Info grid */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <svg className="w-4 h-4 text-[#EE7203]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Duration</span>
+            </div>
+            <p className="text-lg font-bold text-[#0C212D]">~5 minutes</p>
+          </div>
+
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <svg className="w-4 h-4 text-[#EE7203]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Status</span>
+            </div>
+            <p className="text-lg font-bold text-[#EE7203]">Active</p>
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-gray-600">Processing...</span>
+            <span className="text-xs font-mono text-gray-500">Running</span>
+          </div>
+          <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+            <div className="h-full bg-gradient-to-r from-[#EE7203] to-[#FF3816] rounded-full animate-pulse shadow-sm" 
+                 style={{ width: '100%' }}>
+            </div>
+          </div>
+        </div>
+
+        {/* Info note */}
+        <div className="bg-blue-50 border-l-4 border-blue-400 rounded-r-lg p-4 mb-6">
+          <div className="flex gap-3">
+            <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-sm text-blue-900">
+              You can safely close this window and continue working. You'll be notified when the sync is complete.
+            </p>
+          </div>
+        </div>
+
+        {/* Action button */}
+        <button
+          onClick={() => setShowSyncModal(false)}
+          className="w-full py-3.5 rounded-lg bg-[#0C212D] text-white font-semibold text-sm hover:bg-[#112C3E] active:scale-[0.99] transition-all duration-150 shadow-lg"
+        >
+          Continue Working
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+
+// 2. Modal de confirmación
+const ConfirmModal = () => (
+  <div className="fixed inset-0 bg-[#0C212D]/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+      
+      {/* Header */}
+      <div className="bg-[#0C212D] px-8 py-6 border-b-4 border-[#EE7203]">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-[#EE7203]/10 flex items-center justify-center">
+            <svg className="w-6 h-6 text-[#EE7203]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-white">
+              Confirm Synchronization
+            </h2>
+            <p className="text-sm text-gray-400 mt-0.5">
+              Action required
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Contenido */}
+      <div className="p-8">
+        <div className="bg-amber-50 border-l-4 border-amber-400 rounded-r-lg p-4 mb-6">
+          <div className="flex gap-3">
+            <svg className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <p className="text-sm font-semibold text-amber-900 mb-1">
+                About to sync student accounts
+              </p>
+              <p className="text-sm text-amber-800">
+                This will create missing Firebase Auth accounts for all students in the system.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <p className="text-sm text-gray-600 mb-6">
+          Do you want to continue with this operation?
+        </p>
+
+        {/* Botones */}
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowConfirmModal(false)}
+            className="flex-1 py-3 rounded-lg font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-[0.99] transition-all duration-150"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={async () => {
+              setShowConfirmModal(false);
+              
+              try {
+                const res = await fetch("/api/sync-alumnos", { method: "POST" });
+                const data = await res.json();
+
+                if (!data.ok) {
+                  toast.error("Sync failed: " + data.error);
+                  return;
+                }
+
+                // ✔ Mostrar modal de éxito
+                setShowSyncModal(true);
+
+              } catch (err) {
+                console.error(err);
+                toast.error("Unexpected error occurred.");
+              }
+            }}
+            className="flex-1 py-3 rounded-lg font-semibold text-sm bg-[#0C212D] text-white hover:bg-[#112C3E] active:scale-[0.99] transition-all duration-150 shadow-lg"
+          >
+            Yes, Continue
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+
   return (
+    
     <div className="min-h-screen p-6 md:p-10 space-y-8">
+
+       {/* ✅ Render modal si está activo */}
+      {showConfirmModal && <ConfirmModal />}
+{showSyncModal && <SyncModal />}
       {/* HEADER SECTION */}
       <div className="space-y-6">
         {/* Top Header */}
@@ -148,43 +344,33 @@ export default function StudentsPage() {
 
 {/* 🔄 SYNC BUTTON */}
 <button
-  onClick={async () => {
-    try {
-      const confirmed = confirm(
-        "This will create missing Firebase Auth accounts for all students. Continue?"
-      );
-      if (!confirmed) return;
-
-      toast.loading("Syncing accounts...", { id: "sync" });
-
-      const res = await fetch("/api/sync-alumnos", { method: "POST" });
-      const data = await res.json();
-
-      if (!data.ok) {
-        toast.error("Sync failed: " + data.error, { id: "sync" });
-        return;
-      }
-
-      toast.success(`✔ ${data.processed} student accounts processed.`, {
-        id: "sync",
-      });
-
-      // Refrescar los alumnos si querés actualizar la UI
-      await reloadData?.();
-    } catch (err) {
-      console.error(err);
-      toast.error("Unexpected error occurred.", { id: "sync" });
-    }
-  }}
+  onClick={() => setShowConfirmModal(true)}
   className="
-    px-5 py-3 rounded-xl font-semibold text-white text-sm
-    bg-gradient-to-r from-[#EE7203] to-[#FF3816]
-    shadow-md hover:shadow-lg hover:scale-[1.02]
-    transition-all
+    px-6 py-3.5 rounded-lg font-semibold text-white text-sm
+    bg-[#0C212D] hover:bg-[#112C3E]
+    shadow-lg hover:shadow-xl
+    active:scale-[0.99]
+    transition-all duration-150
+    flex items-center justify-center gap-2.5
+    group
   "
 >
-  🔄 Sync Campus Accounts
+  <svg 
+    className="w-5 h-5 text-[#EE7203] group-hover:rotate-180 transition-transform duration-500" 
+    fill="none" 
+    stroke="currentColor" 
+    viewBox="0 0 24 24"
+  >
+    <path 
+      strokeLinecap="round" 
+      strokeLinejoin="round" 
+      strokeWidth={2} 
+      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" 
+    />
+  </svg>
+  <span>Sync Campus Accounts</span>
 </button>
+
 
           {/* Stats Cards */}
           <div className="flex flex-wrap gap-4">
