@@ -1,5 +1,119 @@
 {
   "common": {},
+  "information": {
+    "header": {
+      "badge": "Further English",
+      "title": "Informações Importantes",
+      "subtitle": "Tudo o que você precisa saber sobre sua experiência de aprendizado",
+      "accentureTag": "Configuração Accenture"
+    },
+    "sections": {
+      "welcome": {
+        "title": "Boas-vindas",
+        "p1": "Bem-vindo(a) à Further English! Ficamos muito felizes em acompanhar você no seu processo de aprendizado do idioma.",
+        "p2": "Nesta seção, você encontrará todas as informações importantes sobre nossas políticas, abordagem educacional e canais de contato. Recomendamos que leia tudo com atenção para aproveitar ao máximo sua #ExperiênciaFurther."
+      },
+      "cancellations": {
+        "title": "Política de Cancelamentos",
+        "question": "Com quanto tempo de antecedência podemos cancelar uma aula?",
+        "hoursPrefix": "",
+        "hoursSuffix": " horas de antecedência.",
+        "nonAccentureNote": "Cancelamentos só são recebidos em horário comercial, de segunda a sexta, das 9h30 às 17h. Ou seja, deve haver pelo menos um dia útil entre o pedido de cancelamento e a aula para que seja considerado um cancelamento com aviso.",
+        "importantTitle": "IMPORTANTE",
+        "importantDesc": "Somente são consideradas canceladas as aulas em que todo o grupo não poderá participar.",
+        "whereNotify": "Onde notificamos os cancelamentos?",
+        "individual": "Em aulas individuais",
+        "group": "Em aulas em grupo, somente:",
+        "groupAll": "- quando todo o grupo cancelar.",
+        "groupAbsences": "- quando houver ausências recorrentes por licença, férias, etc.",
+        "howManyTitle": "Quantos cancelamentos com aviso podem ser feitos?",
+        "howManyDescPrefix": "Você pode cancelar com aviso até ",
+        "howManyDescSuffix": " das suas aulas: Isso significa que, se você tem uma aula por semana, pode cancelar com aviso apenas uma vez por mês.",
+        "recoverTitle": "Podemos repor as aulas que cancelamos?",
+        "recoverDesc": "As aulas canceladas com aviso podem ser remarcadas de acordo com a disponibilidade do professor. Você pode combinar diretamente com ele e, após o acordo, deve enviar o pedido formalmente para cancelacoes@furtherenglish.com.",
+        "typesTitle": "Tipos de Cancelamento",
+        "types": {
+          "withNoticeTitle": "Cancelamento com aviso prévio",
+          "withNoticeDescAccent": "Notificado com pelo menos 24 horas de antecedência",
+          "withNoticeDescGeneral": "Notificado com pelo menos 48 horas úteis de antecedência",
+          "withoutNoticeTitle": "Cancelamento sem aviso prévio",
+          "withoutNoticeDescAccent": "Não foi notificado ou não respeitou as 24 horas de antecedência",
+          "withoutNoticeDescGeneral": "Não foi notificado ou não respeitou as 48 horas úteis de antecedência",
+          "excessTitle": "Cancelamento excedente",
+          "excessDescAccent": "Você pode cancelar com aviso até 25% das suas aulas",
+          "excessDescGeneral": "É possível cancelar até 25% das aulas. Cancelamentos adicionais serão considerados excedentes."
+        }
+      },
+      "project": {
+        "title": "Projeto FURTHER: Acompanhamento",
+        "subtitle": "Projeto FURTHER",
+        "p1": "A equipe de Coordenação Acadêmica estará à sua disposição para ajudar nas suas necessidades, seja para solicitar materiais, remarcar uma aula, enviar feedback ou esclarecer qualquer outra dúvida.",
+        "p2": "Além disso, realizaremos um acompanhamento da sua presença nas aulas. Caso detectemos ausências recorrentes, entraremos em contato para entender os motivos e avaliar como podemos oferecer suporte. Isso pode incluir alterar o dia ou horário das aulas, ou até mesmo atribuir um novo professor caso você não esteja totalmente satisfeito(a) com o atual.",
+        "surveyTitle": "Pesquisas",
+        "surveyDesc": "A cada 3 meses, enviaremos uma pesquisa de satisfação para conhecer sua opinião sobre suas aulas e sobre seu professor. Seu feedback é essencial para melhorar nosso serviço e atender às suas necessidades, por isso é muito importante que você reserve um momento para respondê-la.",
+        "closing": "Ofereceremos um acompanhamento próximo e personalizado para que você aproveite ao máximo sua #ExperiênciaFurther."
+      },
+      "camera": {
+        "title": "Benefícios de Manter a Câmera Ligada",
+        "intro": "Manter a câmera ligada durante as aulas virtuais melhora significativamente sua experiência de aprendizado:",
+        "benefits": {
+          "b1t": "Melhora a comunicação",
+          "b1d": "Facilita o fluxo de ideias e demonstra sua disposição para participar.",
+          "b2t": "Incentiva os outros",
+          "b2d": "Ver outras pessoas com a câmera ligada pode motivar você a fazer o mesmo.",
+          "b3t": "Aumenta a observação",
+          "b3d": "Permite uma melhor interação ao ver e ser visto.",
+          "b4t": "Comunicação não verbal",
+          "b4d": "A maior parte da comunicação é visual; desligar a câmera limita isso.",
+          "b5t": "Maior foco",
+          "b5d": "Manter a câmera ligada aumenta sua concentração.",
+          "b6t": "Cria rapport",
+          "b6d": "Favorece empatia e conexão com os demais participantes.",
+          "b7t": "Alinha as ideias",
+          "b7d": "Facilita um ritmo compartilhado de expressão e participação.",
+          "b8t": "Promove proximidade",
+          "b8d": "Ajuda a criar um ambiente de conexão, essencial em interações virtuais."
+        }
+      },
+      "approach": {
+        "title": "Abordagem Comunicativa",
+        "desc": "Na FURTHER, seguimos uma Abordagem Comunicativa, o que significa que todas as aulas são conduzidas exclusivamente no idioma que está sendo aprendido.",
+        "benefitsTitle": "Benefícios",
+        "benefits": {
+          "b1t": "Melhora da Compreensão Auditiva",
+          "b1d": "A exposição constante ao novo idioma desenvolve maior habilidade para entendê-lo em contextos reais.",
+          "b2t": "Prática Ativa",
+          "b2d": "Promovemos o uso ativo do idioma, o que aumenta a confiança e fluência.",
+          "b3t": "Adaptação ao Mundo Real",
+          "b3d": "A imersão prepara melhor para situações práticas no ambiente de trabalho onde o idioma é utilizado.",
+          "b4t": "Cultura e Idioma",
+          "b4d": "Aprender um idioma também significa compreender sua cultura. Manter o idioma nas aulas ajuda a vivenciar e absorver aspectos culturais essenciais para uma comunicação eficaz."
+        }
+      },
+      "communication": {
+        "title": "Comunicação e Contatos",
+        "subtitle": "Comunicação",
+        "p1": "A comunicação com o professor será feita por meio da equipe de Coordenação Acadêmica. Atuamos como intermediários para garantir clareza e organização no acompanhamento das aulas.",
+        "p2": "Sempre que precisar enviar uma mensagem, escreva para cancelacoes@furtherenglish.com informando o nome do seu professor e o horário da sua aula.",
+        "note": "Os professores não têm permissão para compartilhar informações pessoais com os alunos.",
+        "contactsTitle": "Contatos Úteis",
+        "contactAcademic": "Coordenação Acadêmica",
+        "contactAcademicMail": "coordenacaoacademica@furtherenglish.com",
+        "contactCancel": "Cancelamentos e reposições",
+        "contactCancelMail": "cancelacoes@furtherenglish.com"
+      },
+      "survey": {
+        "title": "Sua Opinião é Importante",
+        "desc": "Sua opinião é essencial para que possamos continuar melhorando. Convidamos você a responder esta breve pesquisa para nos ajudar a acompanhar suas necessidades e fortalecer continuamente nosso serviço.",
+        "ctaLabel": "Responder Pesquisa",
+        "closing": "Obrigado por fazer parte da #ExperiênciaFurther! 🚀"
+      }
+    },
+    "footer": {
+      "title": "Precisa de ajuda?",
+      "desc": "Se você tiver alguma dúvida ou precisar de assistência adicional, entre em contato com nossa equipe de Coordenação Acadêmica. Estamos aqui para acompanhar você em seu processo de aprendizado."
+    }
+  },
   "coursePlayer": {
     "loading": "Carregando material...",
     "noAccessTitle": "Sem acesso",

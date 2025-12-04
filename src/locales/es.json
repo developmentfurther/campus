@@ -1,5 +1,119 @@
 {
   "common": {},
+  "information": {
+    "header": {
+      "badge": "Further English",
+      "title": "Información Importante",
+      "subtitle": "Todo lo que necesitas saber sobre tu experiencia de aprendizaje",
+      "accentureTag": "Configuración Accenture"
+    },
+    "sections": {
+      "welcome": {
+        "title": "Bienvenida",
+        "p1": "¡Bienvenido/a a Further English! Estamos encantados de acompañarte en tu proceso de aprendizaje del idioma.",
+        "p2": "En esta sección encontrarás toda la información importante sobre nuestras políticas, enfoque educativo y canales de contacto. Te recomendamos revisarla para aprovechar al máximo tu #ExperienciaFurther."
+      },
+      "cancellations": {
+        "title": "Política de Cancelaciones",
+        "question": "¿Con cuánto tiempo podemos cancelar una clase?",
+        "hoursPrefix": "",
+        "hoursSuffix": " horas de anticipación.",
+        "nonAccentureNote": "Solo se reciben cancelaciones en horario laboral de Lunes a Viernes de 9:30 a 17hs. Es decir, debe mediar un día laboral entre la cancelación y la clase a cancelar para que sea una cancelación con aviso.",
+        "importantTitle": "IMPORTANTE",
+        "importantDesc": "Se consideran cancelaciones aquellas donde el grupo entero no podrá asistir a la clase.",
+        "whereNotify": "¿Dónde notificamos las cancelaciones?",
+        "individual": "En clases individuales",
+        "group": "En clases grupales, únicamente:",
+        "groupAll": "- si cancela todo el grupo.",
+        "groupAbsences": "- si se trata de ausencias reiteradas por motivo de licencia, vacaciones, etc.",
+        "howManyTitle": "¿Cuántas cancelaciones con aviso pueden realizarse?",
+        "howManyDescPrefix": "Podés cancelar con aviso un ",
+        "howManyDescSuffix": " de tus clases: Esto es, si tomás una vez por semana, podés cancelar con aviso una sola clase mensual.",
+        "recoverTitle": "¿Podemos recuperar las clases que cancelamos?",
+        "recoverDesc": "Las clases canceladas con aviso pueden recuperarse de acuerdo a las posibilidades de agenda del docente. Esto lo pueden convenir con el profesor, y una vez acordado, necesitan trasladar el pedido formalmente a cancelaciones@furtherenglish.com.",
+        "typesTitle": "Tipos de Cancelación",
+        "types": {
+          "withNoticeTitle": "Cancelación con aviso previo",
+          "withNoticeDescAccent": "Notificada con al menos 24 hs de anticipación",
+          "withNoticeDescGeneral": "Notificada con al menos 48 hs hábiles de anticipación",
+          "withoutNoticeTitle": "Cancelación sin aviso previo",
+          "withoutNoticeDescAccent": "No fue notificada o no se cumplieron las 24 hs de anticipación",
+          "withoutNoticeDescGeneral": "No fue notificada o no se cumplieron las 48 hs hábiles de anticipación",
+          "excessTitle": "Cancelación excedente",
+          "excessDescAccent": "Podés cancelar con aviso un 25% de tus clases",
+          "excessDescGeneral": "Se pueden cancelar hasta un 25% de las clases. Las cancelaciones adicionales serán consideradas excedentes."
+        }
+      },
+      "project": {
+        "title": "Proyecto FURTHER: Acompañamiento",
+        "subtitle": "Proyecto FURTHER",
+        "p1": "Desde el área de Coordinación Académica, estaremos a tu disposición para ayudarte con tus necesidades, ya sea que precises material, reprogramar una clase, acercarnos feedback o resolver cualquier otra consulta.",
+        "p2": "Además, realizaremos un seguimiento de tu asistencia a clases. Si detectamos ausencias reiteradas, nos contactaremos para entender las razones y explorar cómo podemos brindarte soporte. Esto puede incluir la posibilidad de cambiar el día o el horario de las clases, o incluso asignarte un nuevo docente si no estás completamente satisfecho/a con el actual.",
+        "surveyTitle": "Encuestas",
+        "surveyDesc": "Cada 3 meses te enviaremos una Encuesta de satisfacción para conocer tu opinión sobre tus clases y tu docente. Tu feedback es clave para mejorar nuestro servicio y acompañar tus necesidades, por lo cual es muy valioso que puedas tomarte un momento para completar la Encuesta.",
+        "closing": "Estaremos ofreciéndote un seguimiento cercano y personalizado para que disfrutes y aproveches al máximo tu #ExperienciaFurther."
+      },
+      "camera": {
+        "title": "Beneficios de tu Cámara Encendida",
+        "intro": "Mantener tu cámara encendida durante las clases virtuales potencia significativamente tu experiencia de aprendizaje:",
+        "benefits": {
+          "b1t": "Mejora la comunicación",
+          "b1d": "Facilita el flujo de ideas y muestra tu disposición a participar.",
+          "b2t": "Alienta a los demás",
+          "b2d": "Ver a otros con la cámara encendida puede motivarte a hacerlo.",
+          "b3t": "Fomenta la observación",
+          "b3d": "Permite mejor interacción al ver a los demás y ser visto.",
+          "b4t": "Comunicación no verbal",
+          "b4d": "La mayor parte de la comunicación es visual; al apagar la cámara, te privas de esto.",
+          "b5t": "Mayor atención",
+          "b5d": "Estar con la cámara encendida aumenta tu concentración.",
+          "b6t": "Estableces rapport",
+          "b6d": "Fomenta la empatía y conexión con los demás participantes.",
+          "b7t": "Acompasas ideas",
+          "b7d": "Facilita un ritmo compartido en la expresión y participación.",
+          "b8t": "Estimula la cercanía",
+          "b8d": "Ayuda a crear un ambiente de conexión, vital en interacciones virtuales."
+        }
+      },
+      "approach": {
+        "title": "Enfoque Comunicativo",
+        "desc": "En FURTHER seguimos un Enfoque Comunicativo, lo que implica que todas las clases se llevan a cabo exclusivamente en el idioma que están aprendiendo.",
+        "benefitsTitle": "Beneficios",
+        "benefits": {
+          "b1t": "Mejora de la Comprensión Auditiva",
+          "b1d": "Al estar expuestos constantemente al nuevo idioma, desarrollan una mayor habilidad para entenderlo en contextos reales.",
+          "b2t": "Práctica Activa",
+          "b2d": "Fomentamos el uso activo del idioma, lo que potencia su confianza y fluidez al hablar.",
+          "b3t": "Adaptación a Situaciones Reales",
+          "b3d": "La inmersión los prepara mejor para enfrentar situaciones en el entorno laboral donde se utiliza el idioma de manera práctica.",
+          "b4t": "Cultura e Idioma",
+          "b4d": "Aprender un idioma es también comprender su cultura. Mantener el idioma les ayuda a experimentar y asimilar aspectos culturales que son fundamentales para una comunicación efectiva."
+        }
+      },
+      "communication": {
+        "title": "Comunicación y Contactos",
+        "subtitle": "Comunicación",
+        "p1": "La comunicación con el docente se realizará a través del área de Coordinación Académica. Seremos el intermediario para garantizar una comunicación clara y un seguimiento ordenado de las clases.",
+        "p2": "Cuando precises transmitir algún mensaje, escribinos a cancelaciones@furtherenglish.com indicando el nombre de tu docente y el horario de la capacitación.",
+        "note": "Los docentes no tienen permitido compartir información personal con sus alumnos.",
+        "contactsTitle": "Contactos Útiles",
+        "contactAcademic": "Coordinación Académica",
+        "contactAcademicMail": "coordinacionacademica@furtherenglish.com",
+        "contactCancel": "Cancelaciones y recuperos",
+        "contactCancelMail": "cancelaciones@furtherenglish.com"
+      },
+      "survey": {
+        "title": "Tu Opinión es Importante",
+        "desc": "Tu opinión es esencial para seguir mejorando. Te invitamos a responder esta breve encuesta para ayudarnos a acompañar tus necesidades y seguir fortaleciendo nuestro servicio.",
+        "ctaLabel": "Completar Encuesta",
+        "closing": "¡Gracias por ser parte de la #ExperienciaFurther! 🚀"
+      }
+    },
+    "footer": {
+      "title": "¿Necesitas ayuda?",
+      "desc": "Si tienes alguna pregunta o necesitas asistencia adicional, no dudes en contactar con nuestro equipo de Coordinación Académica. Estamos aquí para acompañarte en tu proceso de aprendizaje."
+    }
+  },
   "coursePlayer": {
     "loading": "Cargando material...",
     "noAccessTitle": "No tienes acceso",

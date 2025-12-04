@@ -12,9 +12,11 @@ import ChatBox from "@/components/chat/ChatBox";
 import ChatHistoryList from "@/components/chat/history/ChatHistoryList";
 import ChatHistorySession from "@/components/chat/history/ChatHistorySession"; 
 import AlumnoInfo from "./AlumnoInfo";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function AlumnoDashboard() {
   const { section } = useDashboardUI();
+  const { user } = useAuth();
 
   switch (section) {
     case "home":
@@ -42,7 +44,7 @@ export default function AlumnoDashboard() {
         return <ChatHistorySession />;
 
     case "infoimportante":
-      return <AlumnoInfo />;
+      return <AlumnoInfo userEmail={user?.email || ""} />;
 
 
     default:

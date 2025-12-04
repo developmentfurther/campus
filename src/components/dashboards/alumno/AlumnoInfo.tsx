@@ -4,206 +4,424 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FiInfo,
-  FiUser,
-  FiMail,
-  FiKey,
-  FiBook,
   FiCalendar,
   FiClock,
+  FiMail,
   FiMessageSquare,
-  FiHelpCircle,
   FiChevronDown,
-  FiChevronUp,
-  FiCopy,
-  FiCheck,
-  FiExternalLink,
+  FiX,
+  FiVideo,
+  FiGlobe,
+  FiAward,
+  FiHelpCircle,
 } from "react-icons/fi";
+import { useI18n } from "@/contexts/I18nContext";
 
-interface ImportantInfoProps {
-  studentData?: {
-    name: string;
-    email: string;
-    studentId: string;
-    enrollmentDate: string;
-    course: string;
-    tutor: string;
-    tutorEmail: string;
-    platformAccess: string;
-    supportEmail: string;
-    supportPhone: string;
-    learningPlatform: string;
-    scheduleInfo: string;
-  };
+interface AlumnoInfoProps {
+  userEmail?: string;
 }
 
-export default function AlumnoInfo({ studentData }: ImportantInfoProps) {
-  // Datos de ejemplo (en producción vendrían por props)
-  const data = studentData || {
-    name: "Ana García Martínez",
-    email: "ana.garcia@ejemplo.com",
-    studentId: "EST-2024-001234",
-    enrollmentDate: "15 de Enero, 2024",
-    course: "Desarrollo Web Full Stack",
-    tutor: "Prof. Carlos Rodríguez",
-    tutorEmail: "carlos.rodriguez@tutor.com",
-    platformAccess: "https://campus.plataforma.com",
-    supportEmail: "soporte@plataforma.com",
-    supportPhone: "+34 900 123 456",
-    learningPlatform: "Campus Virtual",
-    scheduleInfo: "Lunes a Viernes, 9:00 - 18:00",
-  };
+export default function AlumnoInfo({ userEmail = "test@gmail.com" }: AlumnoInfoProps) {
+  const { t } = useI18n();
 
   const [expandedSection, setExpandedSection] = useState<string | null>("welcome");
-  const [copiedField, setCopiedField] = useState<string | null>(null);
 
-  const copyToClipboard = (text: string, field: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedField(field);
-    setTimeout(() => setCopiedField(null), 2000);
-  };
+  const isAccenture = (userEmail || "").toLowerCase().includes("@accenture.com");
 
   const toggleSection = (section: string) => {
     setExpandedSection(expandedSection === section ? null : section);
+  };
+
+  // Configuración dinámica según Accenture
+  const config = {
+    cancellationHours: isAccenture ? "24" : "48",
+    cancellationPercentage: "25%",
+    tableData: [
+      {
+        title: t("information.sections.cancellations.types.withNoticeTitle"),
+        description: isAccenture
+          ? t("information.sections.cancellations.types.withNoticeDescAccent")
+          : t("information.sections.cancellations.types.withNoticeDescGeneral"),
+      },
+      {
+        title: t("information.sections.cancellations.types.withoutNoticeTitle"),
+        description: isAccenture
+          ? t("information.sections.cancellations.types.withoutNoticeDescAccent")
+          : t("information.sections.cancellations.types.withoutNoticeDescGeneral"),
+      },
+      {
+        title: t("information.sections.cancellations.types.excessTitle"),
+        description: isAccenture
+          ? t("information.sections.cancellations.types.excessDescAccent")
+          : t("information.sections.cancellations.types.excessDescGeneral"),
+      },
+    ],
   };
 
   const sections = [
     {
       id: "welcome",
       icon: FiInfo,
-      title: "Bienvenida",
+      title: t("information.sections.welcome.title"),
       color: "from-[#EE7203] to-[#FF3816]",
       content: (
         <div className="space-y-4">
           <p className="text-[#0C212D]/80 leading-relaxed">
-            ¡Bienvenido/a a nuestra plataforma educativa! Estamos encantados de tenerte como parte de nuestra comunidad de aprendizaje.
+            {t("information.sections.welcome.p1")}
           </p>
           <div className="bg-gradient-to-r from-[#EE7203]/10 to-[#FF3816]/10 rounded-xl p-4 border border-[#EE7203]/20">
             <p className="text-sm text-[#0C212D]/70">
-              Esta sección contiene toda la información importante que necesitas para comenzar. Te recomendamos guardar esta página en favoritos para consultarla cuando lo necesites.
+              {t("information.sections.welcome.p2")}
             </p>
           </div>
         </div>
       ),
     },
     {
-      id: "personal",
-      icon: FiUser,
-      title: "Datos Personales",
-      color: "from-[#0C212D] to-[#112C3E]",
-      content: (
-        <div className="space-y-3">
-          <InfoRow
-            label="Nombre completo"
-            value={data.name}
-            icon={FiUser}
-            onCopy={() => copyToClipboard(data.name, "name")}
-            copied={copiedField === "name"}
-          />
-          <InfoRow
-            label="Email"
-            value={data.email}
-            icon={FiMail}
-            onCopy={() => copyToClipboard(data.email, "email")}
-            copied={copiedField === "email"}
-          />
-          <InfoRow
-            label="ID de Estudiante"
-            value={data.studentId}
-            icon={FiKey}
-            onCopy={() => copyToClipboard(data.studentId, "id")}
-            copied={copiedField === "id"}
-          />
-          <InfoRow
-            label="Fecha de alta"
-            value={data.enrollmentDate}
-            icon={FiCalendar}
-          />
-        </div>
-      ),
-    },
-    {
-      id: "course",
-      icon: FiBook,
-      title: "Información del Curso",
-      color: "from-[#EE7203] to-[#FF3816]",
-      content: (
-        <div className="space-y-3">
-          <InfoRow label="Curso" value={data.course} icon={FiBook} />
-          <InfoRow label="Tutor asignado" value={data.tutor} icon={FiUser} />
-          <InfoRow
-            label="Email del tutor"
-            value={data.tutorEmail}
-            icon={FiMail}
-            onCopy={() => copyToClipboard(data.tutorEmail, "tutorEmail")}
-            copied={copiedField === "tutorEmail"}
-          />
-          <div className="bg-[#EE7203]/10 rounded-xl p-4 border border-[#EE7203]/20 mt-4">
-            <p className="text-sm text-[#0C212D]/70">
-              <strong className="text-[#0C212D]">Nota:</strong> Puedes contactar a tu tutor directamente desde la sección de mensajería del campus.
-            </p>
-          </div>
-        </div>
-      ),
-    },
-    {
-      id: "access",
-      icon: FiExternalLink,
-      title: "Acceso a la Plataforma",
+      id: "cancellations",
+      icon: FiCalendar,
+      title: t("information.sections.cancellations.title"),
       color: "from-[#0C212D] to-[#112C3E]",
       content: (
         <div className="space-y-4">
-          <InfoRow
-            label="Plataforma"
-            value={data.learningPlatform}
-            icon={FiBook}
-          />
-          <InfoRow
-            label="URL de acceso"
-            value={data.platformAccess}
-            icon={FiExternalLink}
-            onCopy={() => copyToClipboard(data.platformAccess, "url")}
-            copied={copiedField === "url"}
-            isLink
-          />
-          <div className="bg-blue-500/10 rounded-xl p-4 border border-blue-500/20">
-            <p className="text-sm text-[#0C212D]/70">
-              <strong className="text-[#0C212D]">Importante:</strong> Usa las credenciales que recibiste por email para iniciar sesión. Si olvidaste tu contraseña, usa la opción "Recuperar contraseña".
+          {/* Horas de anticipación */}
+          <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+            <div className="flex items-start gap-3">
+              <FiClock className="text-blue-600 mt-1 flex-shrink-0" size={20} />
+              <div>
+                <h3 className="font-bold text-[#0C212D] mb-2">
+                  {t("information.sections.cancellations.question")}
+                </h3>
+                <p className="text-[#0C212D]/80 text-sm mb-2">
+                  <strong>
+                    {config.cancellationHours}
+                    {t("information.sections.cancellations.hoursSuffix")}
+                  </strong>
+                </p>
+                {!isAccenture && (
+                  <p className="text-[#0C212D]/70 text-sm">
+                    {t("information.sections.cancellations.nonAccentureNote")}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Importante */}
+          <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
+            <div className="flex items-start gap-3">
+              <FiInfo className="text-amber-600 mt-1 flex-shrink-0" size={20} />
+              <div>
+                <h3 className="font-bold text-[#0C212D] mb-2">
+                  {t("information.sections.cancellations.importantTitle")}
+                </h3>
+                <p className="text-[#0C212D]/70 text-sm">
+                  {t("information.sections.cancellations.importantDesc")}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Dónde notificar */}
+          <div className="space-y-3">
+            <h3 className="font-bold text-[#0C212D] flex items-center gap-2">
+              <FiMail size={18} />
+              {t("information.sections.cancellations.whereNotify")}
+            </h3>
+            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+              <a
+                href="mailto:cancelaciones@furtherenglish.com"
+                className="text-[#EE7203] font-semibold hover:text-[#FF3816] transition-colors"
+              >
+                cancelaciones@furtherenglish.com
+              </a>
+
+              <p className="text-sm text-[#0C212D]/70 mt-3">
+                {t("information.sections.cancellations.individual")}
+              </p>
+
+              <ul className="text-sm text-[#0C212D]/70 mt-2 space-y-1 ml-4">
+                <li>• {t("information.sections.cancellations.individual")}</li>
+                <li>
+                  • {t("information.sections.cancellations.group")}
+                  <ul className="ml-4 mt-1 space-y-1">
+                    <li>- {t("information.sections.cancellations.groupAll")}</li>
+                    <li>- {t("information.sections.cancellations.groupAbsences")}</li>
+                  </ul>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Cantidad de cancelaciones */}
+          <div className="bg-red-50 rounded-xl p-4 border border-red-200">
+            <div className="flex items-start gap-3">
+              <FiX className="text-red-600 mt-1 flex-shrink-0" size={20} />
+              <div>
+                <h3 className="font-bold text-[#0C212D] mb-2">
+                  {t("information.sections.cancellations.howManyTitle")}
+                </h3>
+                <p className="text-[#0C212D]/80 text-sm">
+                  {t("information.sections.cancellations.howManyDescPrefix")}
+                  <strong>{config.cancellationPercentage}</strong>
+                  {t("information.sections.cancellations.howManyDescSuffix")}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Recupero de clases */}
+          <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200">
+            <div className="flex items-start gap-3">
+              <FiAward className="text-emerald-600 mt-1 flex-shrink-0" size={20} />
+              <div>
+                <h3 className="font-bold text-[#0C212D] mb-2">
+                  {t("information.sections.cancellations.recoverTitle")}
+                </h3>
+                <p className="text-[#0C212D]/80 text-sm">
+                  {t("information.sections.cancellations.recoverDesc")}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Tipos de cancelación */}
+          <div className="mt-6">
+            <h3 className="font-bold text-[#0C212D] mb-4">
+              {t("information.sections.cancellations.typesTitle")}
+            </h3>
+
+            <div className="grid md:grid-cols-3 gap-3">
+              {config.tableData.map((item, index) => (
+                <div
+                  key={index}
+                  className="bg-white rounded-xl p-4 border-2 border-gray-200 hover:border-[#EE7203]/50 transition-colors"
+                >
+                  <h4 className="font-bold text-[#0C212D] text-sm mb-2">
+                    {item.title}
+                  </h4>
+                  <p className="text-xs text-[#0C212D]/70 leading-relaxed">
+                    {item.description}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ),
+    },
+
+    {
+      id: "project",
+      icon: FiAward,
+      title: t("information.sections.project.title"),
+      color: "from-[#EE7203] to-[#FF3816]",
+      content: (
+        <div className="space-y-4">
+          <div className="bg-gradient-to-r from-[#EE7203]/10 to-[#FF3816]/10 rounded-xl p-5 border border-[#EE7203]/20">
+            <h3 className="font-bold text-[#0C212D] mb-3 flex items-center gap-2">
+              <FiAward size={20} />
+              {t("information.sections.project.subtitle")}
+            </h3>
+
+            <p className="text-[#0C212D]/80 text-sm leading-relaxed">
+              {t("information.sections.project.p1")}
+            </p>
+
+            <p className="text-[#0C212D]/80 text-sm leading-relaxed mt-3">
+              {t("information.sections.project.p2")}
+            </p>
+          </div>
+
+          {/* Encuestas */}
+          <div className="bg-purple-50 rounded-xl p-5 border border-purple-200">
+            <h3 className="font-bold text-[#0C212D] mb-3 flex items-center gap-2">
+              <FiMessageSquare size={20} />
+              {t("information.sections.project.surveyTitle")}
+            </h3>
+            <p className="text-[#0C212D]/80 text-sm leading-relaxed">
+              {t("information.sections.project.surveyDesc")}
+            </p>
+          </div>
+
+          <div className="bg-gradient-to-r from-[#0C212D] to-[#112C3E] rounded-xl p-5 text-white">
+            <p className="text-sm leading-relaxed">
+              {t("information.sections.project.closing")}
             </p>
           </div>
         </div>
       ),
     },
+
     {
-      id: "support",
-      icon: FiHelpCircle,
-      title: "Soporte y Ayuda",
-      color: "from-[#EE7203] to-[#FF3816]",
+      id: "camera",
+      icon: FiVideo,
+      title: t("information.sections.camera.title"),
+      color: "from-[#0C212D] to-[#112C3E]",
       content: (
         <div className="space-y-3">
-          <InfoRow
-            label="Email de soporte"
-            value={data.supportEmail}
-            icon={FiMail}
-            onCopy={() => copyToClipboard(data.supportEmail, "support")}
-            copied={copiedField === "support"}
-          />
-          <InfoRow
-            label="Teléfono de soporte"
-            value={data.supportPhone}
-            icon={FiMessageSquare}
-            onCopy={() => copyToClipboard(data.supportPhone, "phone")}
-            copied={copiedField === "phone"}
-          />
-          <InfoRow
-            label="Horario de atención"
-            value={data.scheduleInfo}
-            icon={FiClock}
-          />
-          <div className="bg-emerald-500/10 rounded-xl p-4 border border-emerald-500/20 mt-4">
-            <p className="text-sm text-[#0C212D]/70">
-              <strong className="text-[#0C212D]">Consejo:</strong> Nuestro equipo de soporte está disponible para ayudarte con cualquier duda técnica o académica.
+          <p className="text-[#0C212D]/80 text-sm mb-4">
+            {t("information.sections.camera.intro")}
+          </p>
+
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div
+              key={i}
+              className="bg-gray-50 rounded-xl p-4 border border-gray-200 hover:border-[#EE7203]/30 transition-colors"
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[#EE7203] to-[#FF3816] flex items-center justify-center flex-shrink-0 text-white font-bold text-sm">
+                  {i + 1}
+                </div>
+                <div>
+                  <h4 className="font-bold text-[#0C212D] text-sm mb-1">
+                    {t(`information.sections.camera.benefits.b${i + 1}t`)}
+                  </h4>
+                  <p className="text-xs text-[#0C212D]/70">
+                    {t(`information.sections.camera.benefits.b${i + 1}d`)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ),
+    },
+
+    {
+      id: "approach",
+      icon: FiGlobe,
+      title: t("information.sections.approach.title"),
+      color: "from-[#EE7203] to-[#FF3816]",
+      content: (
+        <div className="space-y-4">
+          <div className="bg-gradient-to-r from-[#EE7203]/10 to-[#FF3816]/10 rounded-xl p-5 border border-[#EE7203]/20">
+            <h3 className="font-bold text-[#0C212D] mb-3">
+              {t("information.sections.approach.title")}
+            </h3>
+            <p className="text-[#0C212D]/80 text-sm leading-relaxed">
+              {t("information.sections.approach.desc")}
             </p>
           </div>
+
+          <h3 className="font-bold text-[#0C212D] mt-6 mb-3">
+            {t("information.sections.approach.benefitsTitle")}
+          </h3>
+
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div
+                key={i}
+                className="bg-white rounded-xl p-4 border border-gray-200"
+              >
+                <h4 className="font-bold text-[#0C212D] text-sm mb-2">
+                  {t(`information.sections.approach.benefits.b${i + 1}t`)}
+                </h4>
+                <p className="text-xs text-[#0C212D]/70 leading-relaxed">
+                  {t(`information.sections.approach.benefits.b${i + 1}d`)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      ),
+    },
+
+    {
+      id: "communication",
+      icon: FiMail,
+      title: t("information.sections.communication.title"),
+      color: "from-[#0C212D] to-[#112C3E]",
+      content: (
+        <div className="space-y-4">
+          <div className="bg-amber-50 rounded-xl p-5 border border-amber-200">
+            <h3 className="font-bold text-[#0C212D] mb-3 flex items-center gap-2">
+              <FiInfo size={20} />
+              {t("information.sections.communication.subtitle")}
+            </h3>
+            <p className="text-[#0C212D]/80 text-sm leading-relaxed mb-3">
+              {t("information.sections.communication.p1")}
+            </p>
+            <p className="text-[#0C212D]/80 text-sm leading-relaxed mb-3">
+              {t("information.sections.communication.p2")}
+            </p>
+            <p className="text-[#0C212D]/70 text-xs italic">
+              {t("information.sections.communication.note")}
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl p-5 border-2 border-[#EE7203]/30">
+            <h3 className="font-bold text-[#0C212D] mb-4">
+              {t("information.sections.communication.contactsTitle")}
+            </h3>
+
+            <div className="space-y-3">
+              {/* Coordinación académica */}
+              <a
+                href={`mailto:${t("information.sections.communication.contactAcademicMail")}`}
+                className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-[#EE7203]/10 transition-colors group"
+              >
+                <FiMail className="text-[#EE7203] group-hover:scale-110 transition-transform" size={20} />
+                <div>
+                  <p className="text-xs text-[#0C212D]/60 font-medium">
+                    {t("information.sections.communication.contactAcademic")}
+                  </p>
+                  <p className="text-sm font-semibold text-[#0C212D]">
+                    {t("information.sections.communication.contactAcademicMail")}
+                  </p>
+                </div>
+              </a>
+
+              {/* Cancelaciones */}
+              <a
+                href={`mailto:${t("information.sections.communication.contactCancelMail")}`}
+                className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-[#EE7203]/10 transition-colors group"
+              >
+                <FiCalendar className="text-[#EE7203] group-hover:scale-110 transition-transform" size={20} />
+                <div>
+                  <p className="text-xs text-[#0C212D]/60 font-medium">
+                    {t("information.sections.communication.contactCancel")}
+                  </p>
+                  <p className="text-sm font-semibold text-[#0C212D]">
+                    {t("information.sections.communication.contactCancelMail")}
+                  </p>
+                </div>
+              </a>
+            </div>
+          </div>
+        </div>
+      ),
+    },
+
+    {
+      id: "survey",
+      icon: FiHelpCircle,
+      title: t("information.sections.survey.title"),
+      color: "from-[#EE7203] to-[#FF3816]",
+      content: (
+        <div className="space-y-4">
+          <div className="bg-gradient-to-r from-[#EE7203]/10 to-[#FF3816]/10 rounded-xl p-5 border border-[#EE7203]/20">
+            <h3 className="font-bold text-[#0C212D] mb-3">
+              {t("information.sections.survey.title")}
+            </h3>
+            <p className="text-[#0C212D]/80 text-sm leading-relaxed mb-4">
+              {t("information.sections.survey.desc")}
+            </p>
+
+            <a
+              href="https://forms.gle/DXa1RXgeHtLtTRSh7"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white px-6 py-3 rounded-xl font-bold hover:shadow-lg transition-all transform hover:scale-105"
+            >
+              {t("information.sections.survey.ctaLabel")}
+              <FiAward size={18} />
+            </a>
+          </div>
+
+          <p className="text-center text-[#0C212D]/70 text-sm">
+            {t("information.sections.survey.closing")}
+          </p>
         </div>
       ),
     },
@@ -221,15 +439,23 @@ export default function AlumnoInfo({ studentData }: ImportantInfoProps) {
           <div className="inline-flex items-center gap-3 bg-gradient-to-r from-[#EE7203] to-[#FF3816] px-6 py-2 rounded-full mb-4 shadow-lg">
             <FiInfo className="text-white" size={20} />
             <span className="text-white font-bold text-sm uppercase tracking-wider">
-              Campus Virtual
+              {t("information.header.badge")}
             </span>
           </div>
+
           <h1 className="text-4xl md:text-5xl font-black text-[#0C212D] mb-2">
-            Información Importante
+            {t("information.header.title")}
           </h1>
+
           <p className="text-[#0C212D]/70 text-lg">
-            Toda la información que necesitas en un solo lugar
+            {t("information.header.subtitle")}
           </p>
+
+          {isAccenture && (
+            <div className="mt-3 inline-block bg-blue-100 text-blue-800 px-4 py-1 rounded-full text-sm font-semibold">
+              {t("information.header.accentureTag")}
+            </div>
+          )}
         </motion.div>
 
         {/* Sections */}
@@ -246,7 +472,6 @@ export default function AlumnoInfo({ studentData }: ImportantInfoProps) {
                 transition={{ delay: index * 0.1 }}
                 className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden"
               >
-                {/* Header de la sección */}
                 <button
                   onClick={() => toggleSection(section.id)}
                   className="w-full p-6 flex items-center justify-between hover:bg-gray-50 transition-colors"
@@ -263,6 +488,7 @@ export default function AlumnoInfo({ studentData }: ImportantInfoProps) {
                       </h2>
                     </div>
                   </div>
+
                   <motion.div
                     animate={{ rotate: isExpanded ? 180 : 0 }}
                     transition={{ duration: 0.3 }}
@@ -271,7 +497,6 @@ export default function AlumnoInfo({ studentData }: ImportantInfoProps) {
                   </motion.div>
                 </button>
 
-                {/* Contenido expandible */}
                 <AnimatePresence>
                   {isExpanded && (
                     <motion.div
@@ -292,7 +517,7 @@ export default function AlumnoInfo({ studentData }: ImportantInfoProps) {
           })}
         </div>
 
-        {/* Footer informativo */}
+        {/* Footer */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -305,74 +530,15 @@ export default function AlumnoInfo({ studentData }: ImportantInfoProps) {
             </div>
             <div>
               <h3 className="text-white font-bold text-lg mb-2">
-                ¿Necesitas ayuda?
+                {t("information.footer.title")}
               </h3>
               <p className="text-white/80 text-sm leading-relaxed">
-                Si tienes alguna pregunta o necesitas asistencia adicional, no dudes en contactar con nuestro equipo de soporte. Estamos aquí para ayudarte en tu proceso de aprendizaje.
+                {t("information.footer.desc")}
               </p>
             </div>
           </div>
         </motion.div>
       </div>
-    </div>
-  );
-}
-
-// Componente auxiliar para mostrar filas de información
-function InfoRow({
-  label,
-  value,
-  icon: Icon,
-  onCopy,
-  copied,
-  isLink,
-}: {
-  label: string;
-  value: string;
-  icon: any;
-  onCopy?: () => void;
-  copied?: boolean;
-  isLink?: boolean;
-}) {
-  return (
-    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200 hover:border-[#EE7203]/30 transition-colors group">
-      <div className="flex items-center gap-3 flex-1 min-w-0">
-        <div className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center flex-shrink-0 group-hover:border-[#EE7203]/30 transition-colors">
-          <Icon className="text-[#0C212D]/60" size={16} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-xs text-[#0C212D]/60 font-medium mb-0.5">
-            {label}
-          </p>
-          {isLink ? (
-            <a
-              href={value}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm font-semibold text-[#EE7203] hover:text-[#FF3816] truncate block"
-            >
-              {value}
-            </a>
-          ) : (
-            <p className="text-sm font-semibold text-[#0C212D] truncate">
-              {value}
-            </p>
-          )}
-        </div>
-      </div>
-      {onCopy && (
-        <button
-          onClick={onCopy}
-          className="ml-2 p-2 rounded-lg hover:bg-white transition-colors flex-shrink-0"
-          title="Copiar"
-        >
-          {copied ? (
-            <FiCheck className="text-emerald-500" size={18} />
-          ) : (
-            <FiCopy className="text-[#0C212D]/40 hover:text-[#EE7203]" size={18} />
-          )}
-        </button>
-      )}
     </div>
   );
 }

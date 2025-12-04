@@ -1,5 +1,119 @@
 {
   "common": {},
+  "information": {
+    "header": {
+      "badge": "Further English",
+      "title": "Informazioni Importanti",
+      "subtitle": "Tutto ciò che devi sapere sulla tua esperienza di apprendimento",
+      "accentureTag": "Configurazione Accenture"
+    },
+    "sections": {
+      "welcome": {
+        "title": "Benvenuto/a",
+        "p1": "Benvenuto/a in Further English! Siamo lieti di accompagnarti nel tuo percorso di apprendimento della lingua.",
+        "p2": "In questa sezione troverai tutte le informazioni importanti sulle nostre politiche, sul nostro approccio educativo e sui canali di contatto. Ti consigliamo di leggerla per sfruttare al massimo la tua #EsperienzaFurther."
+      },
+      "cancellations": {
+        "title": "Politica di Cancellazione",
+        "question": "Con quanto anticipo possiamo cancellare una lezione?",
+        "hoursPrefix": "",
+        "hoursSuffix": " ore di anticipo.",
+        "nonAccentureNote": "Le cancellazioni vengono accettate solo durante l’orario lavorativo, dal lunedì al venerdì, dalle 9:30 alle 17:00. Ciò significa che deve esserci almeno un giorno lavorativo tra la richiesta di cancellazione e la lezione affinché sia considerata una cancellazione valida con preavviso.",
+        "importantTitle": "IMPORTANTE",
+        "importantDesc": "Si considerano cancellate solo le lezioni in cui l’intero gruppo non può partecipare.",
+        "whereNotify": "Dove notifichiamo le cancellazioni?",
+        "individual": "Nelle lezioni individuali",
+        "group": "Nelle lezioni di gruppo, esclusivamente:",
+        "groupAll": "- se l’intero gruppo cancella.",
+        "groupAbsences": "- in caso di assenze ripetute per motivi di ferie, permessi, ecc.",
+        "howManyTitle": "Quante cancellazioni con preavviso sono permesse?",
+        "howManyDescPrefix": "Puoi cancellare con preavviso fino al ",
+        "howManyDescSuffix": " delle tue lezioni: Questo significa che, se hai una lezione alla settimana, puoi cancellarne una al mese con preavviso.",
+        "recoverTitle": "Possiamo recuperare le lezioni che cancelliamo?",
+        "recoverDesc": "Le lezioni cancellate con preavviso possono essere recuperate in base alla disponibilità dell’insegnante. Puoi concordarlo direttamente con lui/lei e, una volta deciso, dovrai inviare la richiesta formalmente a cancelaciones@furtherenglish.com.",
+        "typesTitle": "Tipi di Cancellazione",
+        "types": {
+          "withNoticeTitle": "Cancellazione con preavviso",
+          "withNoticeDescAccent": "Notificata con almeno 24 ore di anticipo",
+          "withNoticeDescGeneral": "Notificata con almeno 48 ore lavorative di anticipo",
+          "withoutNoticeTitle": "Cancellazione senza preavviso",
+          "withoutNoticeDescAccent": "Non notificata o notificata con meno di 24 ore di anticipo",
+          "withoutNoticeDescGeneral": "Non notificata o notificata con meno di 48 ore lavorative di anticipo",
+          "excessTitle": "Cancellazione eccedente",
+          "excessDescAccent": "Puoi cancellare con preavviso fino al 25% delle tue lezioni",
+          "excessDescGeneral": "È possibile cancellare fino al 25% delle lezioni. Le cancellazioni aggiuntive saranno considerate eccedenti."
+        }
+      },
+      "project": {
+        "title": "Progetto FURTHER: Supporto e Accompagnamento",
+        "subtitle": "Progetto FURTHER",
+        "p1": "Il team di Coordinamento Accademico sarà a tua disposizione per assisterti in qualsiasi necessità, che si tratti di richiedere materiali, riprogrammare una lezione, inviare feedback o risolvere qualsiasi altra domanda.",
+        "p2": "Inoltre, monitoreremo la tua partecipazione alle lezioni. Se rileviamo assenze ripetute, ti contatteremo per capire le ragioni e valutare come possiamo supportarti. Questo può includere la possibilità di modificare il giorno o l’orario delle lezioni o persino assegnarti un nuovo insegnante se non sei completamente soddisfatto/a di quello attuale.",
+        "surveyTitle": "Sondaggi",
+        "surveyDesc": "Ogni 3 mesi ti invieremo un sondaggio di soddisfazione per conoscere la tua opinione sulle lezioni e sul tuo insegnante. Il tuo feedback è fondamentale per migliorare il nostro servizio e rispondere alle tue esigenze, quindi è molto prezioso che tu possa dedicare un momento per compilarlo.",
+        "closing": "Ti offriremo un accompagnamento vicino e personalizzato affinché tu possa godere e sfruttare al massimo la tua #EsperienzaFurther."
+      },
+      "camera": {
+        "title": "Benefici della Webcam Accesa",
+        "intro": "Mantenere la webcam accesa durante le lezioni virtuali migliora significativamente la tua esperienza di apprendimento:",
+        "benefits": {
+          "b1t": "Migliora la comunicazione",
+          "b1d": "Facilita il flusso delle idee e mostra la tua disponibilità a partecipare.",
+          "b2t": "Incoraggia gli altri",
+          "b2d": "Vedere gli altri con la webcam accesa può motivarti a fare lo stesso.",
+          "b3t": "Favorisce l’osservazione",
+          "b3d": "Permette un’interazione migliore vedendo e venendo visti.",
+          "b4t": "Comunicazione non verbale",
+          "b4d": "Gran parte della comunicazione è visiva; spegnere la webcam limita questo aspetto.",
+          "b5t": "Maggiore concentrazione",
+          "b5d": "Avere la webcam accesa aumenta il livello di attenzione.",
+          "b6t": "Crea empatia (rapport)",
+          "b6d": "Favorisce l’empatia e la connessione con gli altri partecipanti.",
+          "b7t": "Sincronizza le idee",
+          "b7d": "Facilita un ritmo condiviso di espressione e partecipazione.",
+          "b8t": "Aumenta la vicinanza",
+          "b8d": "Aiuta a creare un ambiente di connessione, fondamentale nelle interazioni virtuali."
+        }
+      },
+      "approach": {
+        "title": "Approccio Comunicativo",
+        "desc": "In FURTHER seguiamo un Approccio Comunicativo, il che significa che tutte le lezioni vengono svolte esclusivamente nella lingua che si sta imparando.",
+        "benefitsTitle": "Benefici",
+        "benefits": {
+          "b1t": "Miglioramento della Comprensione Orale",
+          "b1d": "L’esposizione costante alla nuova lingua sviluppa una maggiore capacità di comprenderla in contesti reali.",
+          "b2t": "Pratica Attiva",
+          "b2d": "Promuoviamo l’uso attivo della lingua, aumentando fiducia e fluidità.",
+          "b3t": "Adattamento a Situazioni Reali",
+          "b3d": "L’immersione prepara meglio ad affrontare situazioni pratiche nel mondo del lavoro dove la lingua è utilizzata.",
+          "b4t": "Cultura e Lingua",
+          "b4d": "Imparare una lingua significa anche comprenderne la cultura. Mantenere la lingua durante le lezioni permette di vivere e assimilare aspetti culturali essenziali per una comunicazione efficace."
+        }
+      },
+      "communication": {
+        "title": "Comunicazione e Contatti",
+        "subtitle": "Comunicazione",
+        "p1": "La comunicazione con l’insegnante avverrà attraverso il team di Coordinamento Accademico. Saremo gli intermediari per garantire chiarezza e un seguito organizzato delle lezioni.",
+        "p2": "Quando hai bisogno di inviare un messaggio, scrivi a cancelaciones@furtherenglish.com indicando il nome del tuo insegnante e l’orario della lezione.",
+        "note": "Gli insegnanti non sono autorizzati a condividere informazioni personali con gli studenti.",
+        "contactsTitle": "Contatti Utili",
+        "contactAcademic": "Coordinamento Accademico",
+        "contactAcademicMail": "coordinacionacademica@furtherenglish.com",
+        "contactCancel": "Cancellazioni e recuperi",
+        "contactCancelMail": "cancelaciones@furtherenglish.com"
+      },
+      "survey": {
+        "title": "La Tua Opinione è Importante",
+        "desc": "La tua opinione è fondamentale per continuare a migliorare. Ti invitiamo a rispondere a questo breve sondaggio per aiutarci a comprendere le tue esigenze e a rafforzare continuamente il nostro servizio.",
+        "ctaLabel": "Compila il Sondaggio",
+        "closing": "Grazie per far parte della #EsperienzaFurther! 🚀"
+      }
+    },
+    "footer": {
+      "title": "Hai bisogno di aiuto?",
+      "desc": "Se hai domande o necessiti di assistenza aggiuntiva, non esitare a contattare il nostro team di Coordinamento Accademico. Siamo qui per accompagnarti nel tuo percorso di apprendimento."
+    }
+  },
   "coursePlayer": {
     "loading": "Caricamento del materiale...",
     "noAccessTitle": "Nessun accesso",

@@ -79,10 +79,17 @@ export interface ComprehensionTFQuestion extends ComprehensionQuestionBase {
   kind: "tf";
   answer: boolean;
 }
+export interface ComprehensionOpenQuestion extends ComprehensionQuestionBase {
+  kind: "open";
+  placeholder?: string; // opcional
+  maxLength?: number;  // opcional
+}
+
 
 type ComprehensionQuestion =
   | ComprehensionMCQuestion
-  | ComprehensionTFQuestion;
+  | ComprehensionTFQuestion
+  | ComprehensionOpenQuestion;
 
 /* =========================================
    Nuevos tipos de ejercicios
@@ -300,6 +307,11 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
           if (q.kind === "tf") {
             if (typeof q.answer !== "boolean") return false;
           }
+          if (q.kind === "open") {
+  if (!q.prompt || q.prompt.trim() === "") return false;
+  return true; // No requiere opciones ni respuesta correcta
+}
+
         }
 
         return true;
@@ -335,7 +347,14 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
           if (q.kind === "tf") {
             if (typeof q.answer !== "boolean") return false;
           }
+
+          if (q.kind === "open") {
+  if (!q.prompt || q.prompt.trim() === "") return false;
+  return true; // No requiere opciones ni respuesta correcta
+}
+
         }
+        
 
         return true;
       }
@@ -1689,25 +1708,35 @@ const renderVerbTable = (ex: VerbTableExercise) => {
     update({ questions: ex.questions.filter((q) => q.id !== qid) });
   };
 
-  const toggleKind = (qid: string, newKind: "mc" | "tf") => {
-    const q = ex.questions.find((x) => x.id === qid);
-    if (!q) return;
+  const toggleKind = (qid: string, newKind: "mc" | "tf" | "open") => {
+  const q = ex.questions.find((x) => x.id === qid);
+  if (!q) return;
 
-    if (newKind === "tf") {
-      updateQuestion(qid, {
-        kind: "tf",
-        options: undefined,
-        correctIndex: undefined,
-        answer: true,
-      });
-    } else {
-      updateQuestion(qid, {
-        kind: "mc",
-        options: ["", ""],
-        correctIndex: 0,
-      });
-    }
-  };
+  if (newKind === "open") {
+    updateQuestion(qid, {
+      kind: "open",
+      options: undefined,
+      correctIndex: undefined,
+      answer: undefined,
+      placeholder: "",
+      maxLength: 500,
+    });
+  } else if (newKind === "tf") {
+    updateQuestion(qid, {
+      kind: "tf",
+      options: undefined,
+      correctIndex: undefined,
+      answer: true,
+    });
+  } else {
+    updateQuestion(qid, {
+      kind: "mc",
+      options: ["", ""],
+      correctIndex: 0,
+    });
+  }
+};
+
 
   return (
     <div className="space-y-4">
@@ -1797,6 +1826,15 @@ const renderVerbTable = (ex: VerbTableExercise) => {
                 />
                 Verdadero / Falso
               </label>
+              <label className="flex items-center gap-1">
+    <input
+      type="radio"
+      checked={q.kind === "open"}
+      onChange={() => toggleKind(q.id, "open")}
+    />
+    Pregunta abierta
+  </label>
+
             </div>
 
             {/* ================================
@@ -1878,6 +1916,32 @@ const renderVerbTable = (ex: VerbTableExercise) => {
                 </label>
               </div>
             )}
+            {q.kind === "open" && (
+  <div className="space-y-2">
+    <input
+      className="w-full border rounded px-2 py-1"
+      placeholder="Placeholder de la respuesta…"
+      value={q.placeholder || ""}
+      onChange={(e) =>
+        updateQuestion(q.id, { placeholder: e.target.value })
+      }
+    />
+
+    <input
+      type="number"
+      min={20}
+      max={2000}
+      className="w-32 border rounded px-2 py-1"
+      value={q.maxLength || 500}
+      onChange={(e) =>
+        updateQuestion(q.id, {
+          maxLength: parseInt(e.target.value || "500"),
+        })
+      }
+    />
+  </div>
+)}
+
           </div>
         ))}
       </div>
@@ -1916,25 +1980,35 @@ const renderListening = (ex: ListeningExercise) => {
     update({ questions: ex.questions.filter((q) => q.id !== qid) });
   };
 
-  const toggleKind = (qid: string, newKind: "mc" | "tf") => {
-    const q = ex.questions.find((x) => x.id === qid);
-    if (!q) return;
+const toggleKind = (qid: string, newKind: "mc" | "tf" | "open") => {
+  const q = ex.questions.find((x) => x.id === qid);
+  if (!q) return;
 
-    if (newKind === "tf") {
-      updateQuestion(qid, {
-        kind: "tf",
-        options: undefined,
-        correctIndex: undefined,
-        answer: true,
-      });
-    } else {
-      updateQuestion(qid, {
-        kind: "mc",
-        options: ["", ""],
-        correctIndex: 0,
-      });
-    }
-  };
+  if (newKind === "open") {
+    updateQuestion(qid, {
+      kind: "open",
+      options: undefined,
+      correctIndex: undefined,
+      answer: undefined,
+      placeholder: "",
+      maxLength: 500,
+    });
+  } else if (newKind === "tf") {
+    updateQuestion(qid, {
+      kind: "tf",
+      options: undefined,
+      correctIndex: undefined,
+      answer: true,
+    });
+  } else {
+    updateQuestion(qid, {
+      kind: "mc",
+      options: ["", ""],
+      correctIndex: 0,
+    });
+  }
+};
+
 
   return (
     <div className="space-y-4">
@@ -2047,6 +2121,14 @@ const renderListening = (ex: ListeningExercise) => {
                 />
                 Verdadero / Falso
               </label>
+              <label className="flex items-center gap-1">
+    <input
+      type="radio"
+      checked={q.kind === "open"}
+      onChange={() => toggleKind(q.id, "open")}
+    />
+    Pregunta abierta
+  </label>
             </div>
 
             {/* ===== Multiple choice ===== */}
@@ -2126,6 +2208,31 @@ const renderListening = (ex: ListeningExercise) => {
                 </label>
               </div>
             )}
+            {q.kind === "open" && (
+  <div className="space-y-2">
+    <input
+      className="w-full border rounded px-2 py-1"
+      placeholder="Placeholder de la respuesta…"
+      value={q.placeholder || ""}
+      onChange={(e) =>
+        updateQuestion(q.id, { placeholder: e.target.value })
+      }
+    />
+
+    <input
+      type="number"
+      min={20}
+      max={2000}
+      className="w-32 border rounded px-2 py-1"
+      value={q.maxLength || 500}
+      onChange={(e) =>
+        updateQuestion(q.id, {
+          maxLength: parseInt(e.target.value || "500"),
+        })
+      }
+    />
+  </div>
+)}
           </div>
         ))}
       </div>

@@ -34,6 +34,9 @@ import Image from "next/image";
 import { jsPDF } from "jspdf";
 import { FURTHER_LOGO_BASE64 } from "@/lib/logoBase64";
 import { useI18n } from "@/contexts/I18nContext";
+import MobileMenu from "@/components/ui/MobileMenu";
+
+
 
 
 
@@ -221,7 +224,7 @@ if (u.urlVideo || u.descripcion) {
     key: buildKey(unitId, "intro"),
     id: "intro",
     unitId,
-    title: `Introducción`,      // 👈 título fijo o podés usar u.titulo
+    title: t("coursePlayer.sidebar.introduction"),
     description: u.descripcion || "",  // 👈 descripción real
     videoUrl: u.introVideo || "",        // 👈 video de introducción
     theory: "",                         // vacío
@@ -725,7 +728,10 @@ const evaluate = async () => {
 
       if (q.kind === "mc") isCorrect = ans === q.correctIndex;
       if (q.kind === "tf") isCorrect = ans === q.answer;
-
+      if (q.kind === "open") {
+  // Las preguntas abiertas siempre suman 1 punto si hay texto
+    isCorrect = ans?.trim() ? true : false;
+  }
       if (isCorrect) ok++;
     });
 
@@ -852,6 +858,12 @@ const evalTable = (ex: any) => {
       case "verb_table":
   evalTable(ex);
   break;
+
+  case "open_question":
+  // nunca falla, siempre suma 1/1
+  correct = 1;
+  totalItems = 1;
+  break;
       
     default:
       correct = 0;
@@ -956,7 +968,9 @@ const renderReading = (ex: any) => {
                         : "bg-rose-50 text-rose-700 border border-rose-200"
                     }`}
                   >
-                    {isCorrect ? "Correcto" : "Incorrecto"}
+                    {isCorrect
+  ? t("coursePlayer.exercise.correct")
+  : t("coursePlayer.exercise.incorrect")}
                   </span>
                 )}
               </div>
@@ -1027,6 +1041,27 @@ const renderReading = (ex: any) => {
                   })}
                 </div>
               )}
+
+              {q.kind === "open" && (
+  <div className="space-y-3">
+    <textarea
+      rows={4}
+      disabled={submitted}
+      value={answers[qKey] || ""}
+      maxLength={q.maxLength || 500}
+      onChange={(e) => handleAnswer(qKey, e.target.value)}
+      placeholder={q.placeholder || "Escribe tu respuesta..."}
+      className={`w-full p-3 rounded-xl border text-sm bg-white transition ${
+        submitted
+          ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+          : "border-slate-300 focus:ring-2 focus:ring-blue-300"
+      }`}
+    />
+    <p className="text-xs text-slate-500">
+      {(answers[qKey] || "").length}/{q.maxLength || 500} characters
+    </p>
+  </div>
+)}
 
               {submitted && !isCorrect && (
                 <div className="text-xs text-rose-600 mt-2">
@@ -1222,12 +1257,41 @@ const renderFillBlank = (ex: any) => {
               ans?.trim()?.toLowerCase() !== ex.answers[idx]?.trim()?.toLowerCase()
           ) && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <span className="font-semibold">Respuestas correctas:</span>{" "}
+              <span className="font-semibold">{t("coursePlayer.exercise.correctAnswers")}</span>{" "}
               {ex.answers.join(", ")}
             </div>
           )}
         </div>
       )}
+    </div>
+  );
+};
+
+const renderOpenQuestion = (ex: any) => {
+  const key = makeLocalKey(ex.id);
+  const txt = answers[key] || "";
+  const max = ex.maxLength || 500;
+
+  return (
+    <div className="space-y-3 max-w-[800px]">
+      <p className="font-medium text-slate-800">{ex.prompt}</p>
+
+      <textarea
+        rows={4}
+        disabled={submitted}
+        value={txt}
+        maxLength={max}
+        onChange={(e) => handleAnswer(key, e.target.value)}
+        className={`w-full p-3 rounded-xl border text-sm bg-white transition ${
+          submitted
+            ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+            : "border-slate-300 focus:ring-2 focus:ring-blue-300"
+        }`}
+      />
+
+      <p className="text-xs text-slate-500">
+        {txt.length}/{max} characters
+      </p>
     </div>
   );
 };
@@ -1258,12 +1322,15 @@ const renderText = (ex: any) => {
       />
 
       <p className="text-xs text-slate-500">
-        Máximo {max} caracteres — Usaste {txt.length}
-      </p>
+  {t("coursePlayer.exercise.maxCharacters", {
+    max,
+    used: txt.length,
+  })}
+</p>
 
       {submitted && !txt.trim() && (
         <p className="text-xs text-rose-600">
-          Este campo no puede estar vacío.
+          {t("coursePlayer.exercise.emptyIdea")}
         </p>
       )}
     </div>
@@ -1405,7 +1472,7 @@ const renderReflection = (ex: any) => {
 
             {submitted && !txt.trim() && (
               <span className="text-xs text-rose-500">
-                * Esta idea no puede estar vacía.
+                {t("coursePlayer.exercise.emptyIdea")}
               </span>
             )}
           </div>
@@ -1428,7 +1495,7 @@ const renderSentenceCorrection = (ex: any) => {
 
   return (
     <div className="space-y-4 max-w-[750px]">
-      <p className="font-medium text-slate-900">Corrige esta frase:</p>
+      <p className="font-medium text-slate-900">{t("coursePlayer.exercise.incorrectSentence")}</p>
 
       <p className="italic text-slate-600">“{ex.incorrect}”</p>
 
@@ -1449,7 +1516,7 @@ const renderSentenceCorrection = (ex: any) => {
 
       {submitted && !isCorrect && (
         <p className="text-xs text-rose-600">
-          Respuesta correcta:
+          {t("coursePlayer.exercise.correctAnswer")}
           <br />
           <b>{ex.correctAnswers[0]}</b>
         </p>
@@ -1474,7 +1541,7 @@ const renderSpeaking = (ex: any) => {
       )}
 
       <p className="text-xs text-slate-500">
-        * Este ejercicio no es auto-evaluable.
+        {t("coursePlayer.exercise.correction")}
       </p>
     </div>
   );
@@ -1535,7 +1602,7 @@ const renderSpeaking = (ex: any) => {
           🧠
         </div>
         <div>
-          <h3 className="text-xl font-semibold text-slate-900">Ejercicio</h3>
+          <h3 className="text-xl font-semibold text-slate-900">{t("coursePlayer.exercise.exercise")}</h3>
           
         </div>
       </motion.div>
@@ -1595,6 +1662,8 @@ const renderSpeaking = (ex: any) => {
 
         {ex.type === "fill_blank" && renderFillBlank(ex)}
         {ex.type === "text" && renderText(ex)}
+        {ex.type === "open_question" && renderOpenQuestion(ex)}
+
         {ex.type === "matching" && renderMatching(ex)}
         {ex.type === "reorder" && renderReorder(ex)}
         {ex.type === "reflection" && renderReflection(ex)}
@@ -2268,7 +2337,7 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
  <div className="flex h-screen overflow-hidden bg-gradient-to-br from-gray-50 to-white text-slate-900">
    
     {/* ======================= SIDEBAR IZQUIERDA ======================= */}
-      <aside className="w-80 shrink-0 bg-gradient-to-b from-[#0C212D] via-[#112C3E] to-[#0C212D] sticky top-0 h-screen overflow-y-auto shadow-2xl">
+      <aside className="w-80 hidden xl:block shrink-0 bg-gradient-to-b from-[#0C212D] via-[#112C3E] to-[#0C212D] sticky top-0 h-screen overflow-y-auto shadow-2xl">
         
         {/* Header con efecto de luz */}
         <div className="relative p-6 border-b border-[#EE7203]/20">
@@ -2279,7 +2348,7 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
             <div className="w-8 h-8 rounded-lg bg-[#EE7203]/20 flex items-center justify-center group-hover:bg-[#EE7203]/30 transition-colors">
               <FiChevronLeft className="text-[#EE7203] group-hover:text-[#FF3816] transform group-hover:-translate-x-0.5 transition-all" />
             </div>
-            <span>Volver al inicio</span>
+            <span>{t("coursePlayer.sidebar.backHome")}</span>
           </button>
         </div>
 
@@ -2317,7 +2386,7 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#EE7203] to-[#FF3816] flex items-center justify-center shadow-lg">
                       <span className="text-xl">🎓</span>
                     </div>
-                    <span>Cierre del curso</span>
+                    <span>{t("coursePlayer.sidebar.courseClosing")}</span>
                   </div>
                   
                   <button
@@ -2334,7 +2403,7 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="truncate">{l?.title || "Cierre del Curso"}</span>
+                      <span className="truncate">{l?.title || t("coursePlayer.sidebar.courseClosing")}</span>
                       {done && <FiCheckCircle size={16} className="text-emerald-400 flex-shrink-0" />}
                     </div>
                   </button>
@@ -2397,7 +2466,7 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
                           <div className="flex items-center justify-between gap-2">
                             <span className="truncate text-xs">
                               {l.id === "closing"
-                                ? "🏁 Cierre de la unidad"
+                                ? `🏁 ${t("coursePlayer.sidebar.unitClosing")}`
                                 : `${uIdx + 1}.${lIdx + 1}  ${l.title}`}
                             </span>
                             {done && (
@@ -2435,7 +2504,7 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
                 <div className="flex items-center gap-3">
                   <div className="w-2 h-12 bg-gradient-to-b from-[#EE7203] via-[#FF3816] to-[#EE7203] rounded-full shadow-lg"></div>
                   <h1 className="text-4xl font-black text-white tracking-tight">
-                    {activeLesson?.title || "Lección actual"}
+                    {activeLesson?.title || t("coursePlayer.sidebar.lessonCurrent")}
                   </h1>
                 </div>
                 {activeLesson?.description && (
@@ -2446,7 +2515,7 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
               </div>
               <div className="flex items-center gap-2 bg-gradient-to-r from-[#EE7203] to-[#FF3816] px-5 py-2.5 rounded-2xl shadow-lg">
                 <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                <span className="text-white font-bold text-sm">En progreso</span>
+                <span className="text-white font-bold text-sm">{t("coursePlayer.sidebar.inProgress")}</span>
               </div>
             </div>
           </div>
@@ -2487,8 +2556,8 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
                   <FiFileText className="text-white" size={28} />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-black text-white">Material de estudio</h3>
-                  <p className="text-slate-300 text-sm font-medium">Resumen descargable de la unidad</p>
+                  <h3 className="text-2xl font-black text-white">{t("coursePlayer.sidebar.bibliography")}</h3>
+                  <p className="text-slate-300 text-sm font-medium">{t("coursePlayer.sidebar.downloadPdf")}</p>
                 </div>
               </div>
             </div>
@@ -2525,7 +2594,7 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
                   >
                     <div className="flex items-center justify-center gap-2">
                       <span className="text-xl">📖</span>
-                      <span>Teoría</span>
+                      <span>{t("coursePlayer.tabs.theory")}</span>
                     </div>
                   </button>
                 )}
@@ -2541,7 +2610,7 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
                   >
                     <div className="flex items-center justify-center gap-2">
                       <span className="text-xl">📝</span>
-                      <span>Vocabulario</span>
+                      <span>{t("coursePlayer.tabs.vocabulary")}</span>
                     </div>
                   </button>
                 )}
@@ -2557,7 +2626,7 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
                   >
                     <div className="flex items-center justify-center gap-2">
                       <span className="text-xl">🧠</span>
-                      <span>Ejercicios</span>
+                      <span>{t("coursePlayer.tabs.exercises")}</span>
                     </div>
                   </button>
                 )}
@@ -2583,8 +2652,8 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
                         <span className="text-3xl">📖</span>
                       </div>
                       <div>
-                        <h2 className="text-3xl font-black text-[#0C212D]">Contenido teórico</h2>
-                        <p className="text-slate-600 font-medium">Material de lectura y conceptos clave</p>
+                        <h2 className="text-3xl font-black text-[#0C212D]">{t("coursePlayer.tabs.theoryTitle")}</h2>
+                        <p className="text-slate-600 font-medium">{t("coursePlayer.tabs.theorySubtitle")}</p>
                       </div>
                     </div>
                     <article className="prose prose-lg prose-slate max-w-none prose-headings:text-[#0C212D] prose-headings:font-black prose-a:text-[#EE7203] prose-a:font-semibold prose-strong:text-[#0C212D] prose-strong:font-bold prose-p:leading-relaxed prose-p:text-slate-700">
@@ -2612,8 +2681,8 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
                         <span className="text-3xl">📝</span>
                       </div>
                       <div>
-                        <h2 className="text-3xl font-black text-[#0C212D]">Vocabulario</h2>
-                        <p className="text-slate-600 font-medium">Términos y definiciones esenciales</p>
+                        <h2 className="text-3xl font-black text-[#0C212D]">{t("coursePlayer.tabs.vocabTitle")}</h2>
+                        <p className="text-slate-600 font-medium">{t("coursePlayer.tabs.vocabSubtitle")}</p>
                       </div>
                     </div>
                     <RenderVocabularyBlock vocab={activeLesson.vocabulary} />
@@ -2641,8 +2710,8 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
                           <span className="text-3xl">🧠</span>
                         </div>
                         <div>
-                          <h2 className="text-3xl font-black text-[#0C212D]">Ejercicios prácticos</h2>
-                          <p className="text-slate-600 font-medium">Aplica lo aprendido</p>
+                          <h2 className="text-3xl font-black text-[#0C212D]"> {t("coursePlayer.tabs.exercisesTitle")}</h2>
+                          <p className="text-slate-600 font-medium">{t("coursePlayer.tabs.exercisesSubtitle")}</p>
                         </div>
                       </div>
                       <div className="px-6 py-3 bg-gradient-to-r from-[#0C212D] to-[#112C3E] text-white rounded-2xl shadow-lg">
@@ -2670,14 +2739,14 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
                         className="group px-8 py-4 rounded-2xl bg-white border-2 border-slate-200 hover:border-[#0C212D] text-[#0C212D] disabled:opacity-30 disabled:cursor-not-allowed text-sm font-bold transition-all hover:shadow-xl disabled:hover:shadow-none flex items-center gap-3"
                       >
                         <FiChevronLeft className="group-hover:-translate-x-1 transition-transform" />
-                        Ejercicio anterior
+                        {t("coursePlayer.exercise.exercisePrev")}
                       </button>
                       <button
                         onClick={nextExercise}
                         disabled={currentExercise >= activeLesson.ejercicios.length - 1}
                         className="group px-8 py-4 rounded-2xl bg-gradient-to-r from-[#EE7203] to-[#FF3816] hover:shadow-2xl hover:shadow-[#EE7203]/40 text-white font-bold text-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:scale-105 disabled:hover:scale-100 flex items-center gap-3"
                       >
-                        Siguiente ejercicio
+                        {t("coursePlayer.exercise.exerciseNext")}
                         <FiChevronRight className="group-hover:translate-x-1 transition-transform" />
                       </button>
                     </div>
@@ -2703,7 +2772,7 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
                   <span className="text-3xl">🎉</span>
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-2xl font-black text-emerald-900 mb-2">¡Excelente trabajo!</h3>
+                  <h3 className="text-2xl font-black text-emerald-900 mb-2">{t("coursePlayer.cta.excellentWork")}</h3>
                   <p className="text-emerald-800 font-medium leading-relaxed">{activeLesson.finalMessage}</p>
                 </div>
               </div>
@@ -2723,7 +2792,7 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
             className="group relative px-12 py-6 rounded-3xl font-black text-lg shadow-2xl bg-gradient-to-r from-[#EE7203] via-[#FF3816] to-[#EE7203] bg-size-200 bg-pos-0 hover:bg-pos-100 text-white transition-all duration-500 hover:scale-105 hover:shadow-[#EE7203]/50 flex items-center gap-4"
             style={{ backgroundSize: '200% 100%' }}
           >
-            <span>Continuar a la siguiente lección</span>
+            <span>{t("coursePlayer.cta.continueNext")}</span>
             <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
               <FiChevronRight size={24} className="group-hover:translate-x-1 transition-transform" />
             </div>
@@ -2743,11 +2812,11 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
             <div className="flex items-center gap-3 mb-2">
               <div className="w-2 h-8 bg-gradient-to-b from-[#EE7203] via-[#FF3816] to-[#EE7203] rounded-full shadow-lg"></div>
               <h3 className="text-xl font-black text-white">
-                Resumen
+                {t("coursePlayer.sidebar.summary")}
               </h3>
             </div>
             <p className="text-sm text-white/70 leading-relaxed">
-              {curso?.descripcion || "Sin descripción disponible"}
+              {curso?.descripcion ||  t("coursePlayer.sidebar.noDescription")}
             </p>
           </div>
         </div>
@@ -2764,7 +2833,7 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
                 </div>
                 <div>
                   <p className="text-[10px] text-[#112C3E]/50 uppercase tracking-widest font-bold mb-1">
-                    Lección Actual
+                     {t("coursePlayer.sidebar.lessonCurrent")}
                   </p>
                   <p className="text-xs text-[#0C212D] font-semibold">
                     {units[activeU]?.title || "—"}
@@ -2795,7 +2864,7 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
                   {Object.values(progress).filter(p => p.videoEnded || p.exSubmitted).length}
                 </div>
                 <div className="text-[10px] text-white/60 uppercase tracking-wider font-bold">
-                  Completadas
+                  {t("coursePlayer.sidebar.completed")}
                 </div>
               </div>
               <div className="text-center">
@@ -2803,7 +2872,7 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
                   {units.reduce((acc, u) => acc + (u.lessons?.length || 0), 0)}
                 </div>
                 <div className="text-[10px] text-white/60 uppercase tracking-wider font-bold">
-                  Total
+                  {t("coursePlayer.sidebar.total")}
                 </div>
               </div>
             </div>
@@ -2811,7 +2880,7 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
             {/* Barra de progreso */}
             <div className="mt-5 pt-4 border-t border-white/10">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-white/70 font-semibold">Progreso del Material Academico</span>
+                <span className="text-xs text-white/70 font-semibold">{t("coursePlayer.sidebar.progress")}</span>
                 <span className="text-xs text-[#EE7203] font-black">
                   {Math.round((Object.values(progress).filter(p => p.videoEnded || p.exSubmitted).length / units.reduce((acc, u) => acc + (u.lessons?.length || 0), 0)) * 100)}%
                 </span>
@@ -2844,11 +2913,28 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
         <div className="px-6 pb-8">
           <div className="bg-gradient-to-r from-[#EE7203]/5 via-[#FF3816]/5 to-[#EE7203]/5 rounded-xl p-4 text-center">
             <p className="text-xs text-slate-600 font-medium">
-              💪 ¡Sigue así! Estás haciendo un gran progreso
+              💪 {t("coursePlayer.sidebar.keepGoing")}
             </p>
           </div>
         </div>
       </aside>
+      <MobileMenu
+  curso={curso}
+  units={units}
+  progress={progress}
+  activeU={activeU}
+  activeL={activeL}
+  setActiveU={setActiveU}
+  setActiveL={setActiveL}
+  expandedUnits={expandedUnits}
+  setExpandedUnits={setExpandedUnits}
+  activeLesson={activeLesson}
+  currentUnit={units[activeU]}
+  router={router}
+  t={t}
+  DownloadBibliographyButton={DownloadBibliographyButton}
+/>
+
   </div>
 );
 

@@ -1,5 +1,119 @@
 {
   "common": {},
+   "information": {
+    "header": {
+      "badge": "Further English",
+      "title": "Informations Importantes",
+      "subtitle": "Tout ce que vous devez savoir sur votre expérience d’apprentissage",
+      "accentureTag": "Configuration Accenture"
+    },
+    "sections": {
+      "welcome": {
+        "title": "Bienvenue",
+        "p1": "Bienvenue chez Further English ! Nous sommes ravis de vous accompagner dans votre parcours d’apprentissage de la langue.",
+        "p2": "Dans cette section, vous trouverez toutes les informations importantes concernant nos politiques, notre approche pédagogique et nos canaux de communication. Nous vous recommandons de la consulter afin de profiter pleinement de votre #ExpérienceFurther."
+      },
+      "cancellations": {
+        "title": "Politique d’Annulation",
+        "question": "Avec quel délai peut-on annuler un cours ?",
+        "hoursPrefix": "",
+        "hoursSuffix": " heures à l’avance.",
+        "nonAccentureNote": "Les annulations sont acceptées uniquement pendant les heures de bureau, du lundi au vendredi, de 9h30 à 17h. Cela signifie qu’il doit y avoir au moins un jour ouvrable entre la demande d’annulation et le cours pour que celle-ci soit considérée comme valable avec préavis.",
+        "importantTitle": "IMPORTANT",
+        "importantDesc": "Les annulations ne sont prises en compte que lorsque l’ensemble du groupe ne peut pas assister au cours.",
+        "whereNotify": "Où notifier les annulations ?",
+        "individual": "Pour les cours individuels",
+        "group": "Pour les cours en groupe, uniquement :",
+        "groupAll": "- si tout le groupe annule.",
+        "groupAbsences": "- en cas d’absences répétées pour congés, vacances, etc.",
+        "howManyTitle": "Combien d’annulations avec préavis sont autorisées ?",
+        "howManyDescPrefix": "Vous pouvez annuler avec préavis jusqu’à ",
+        "howManyDescSuffix": " de vos cours : Cela signifie que si vous avez un cours par semaine, vous pouvez n’en annuler qu’un seul par mois avec préavis.",
+        "recoverTitle": "Peut-on rattraper les cours annulés ?",
+        "recoverDesc": "Les cours annulés avec préavis peuvent être rattrapés selon les disponibilités de l’enseignant. Vous pouvez convenir d’un nouvel horaire avec lui/elle puis envoyer la demande formelle à cancelaciones@furtherenglish.com.",
+        "typesTitle": "Types d’Annulation",
+        "types": {
+          "withNoticeTitle": "Annulation avec préavis",
+          "withNoticeDescAccent": "Notifiée au moins 24 heures à l’avance",
+          "withNoticeDescGeneral": "Notifiée au moins 48 heures ouvrables à l’avance",
+          "withoutNoticeTitle": "Annulation sans préavis",
+          "withoutNoticeDescAccent": "Non notifiée ou notifiée avec moins de 24 heures d’avance",
+          "withoutNoticeDescGeneral": "Non notifiée ou notifiée avec moins de 48 heures ouvrables d’avance",
+          "excessTitle": "Annulation excédentaire",
+          "excessDescAccent": "Vous pouvez annuler avec préavis jusqu’à 25% de vos cours",
+          "excessDescGeneral": "Il est possible d’annuler jusqu’à 25% des cours. Toute annulation supplémentaire sera considérée comme excédentaire."
+        }
+      },
+      "project": {
+        "title": "Projet FURTHER : Accompagnement",
+        "subtitle": "Projet FURTHER",
+        "p1": "L’équipe de Coordination Académique est à votre disposition pour vous aider dans vos besoins : demande de matériel, reprogrammation d’un cours, envoi de feedback ou toute autre question.",
+        "p2": "Nous assurerons également un suivi de votre assiduité. En cas d’absences répétées, nous vous contacterons afin de comprendre les raisons et d’évaluer comment nous pouvons vous accompagner. Cela peut inclure un changement de jour ou d’horaire, voire l’attribution d’un nouvel enseignant si vous n’êtes pas pleinement satisfait(e) de votre enseignant actuel.",
+        "surveyTitle": "Sondages",
+        "surveyDesc": "Tous les 3 mois, nous vous enverrons un sondage de satisfaction afin de connaître votre avis sur vos cours et votre enseignant. Votre retour est essentiel pour améliorer notre service et répondre à vos besoins ; il est donc très précieux que vous puissiez prendre un moment pour le compléter.",
+        "closing": "Nous vous offrirons un accompagnement personnalisé et attentif pour que vous puissiez profiter pleinement de votre #ExpérienceFurther."
+      },
+      "camera": {
+        "title": "Avantages de Garder la Caméra Allumée",
+        "intro": "Garder votre caméra allumée pendant les cours virtuels améliore considérablement votre expérience d’apprentissage :",
+        "benefits": {
+          "b1t": "Améliore la communication",
+          "b1d": "Facilite l’échange d’idées et montre votre volonté de participer.",
+          "b2t": "Encourage les autres",
+          "b2d": "Voir les autres avec la caméra activée peut vous motiver à faire de même.",
+          "b3t": "Favorise l’observation",
+          "b3d": "Permet une meilleure interaction en voyant et en étant vu.",
+          "b4t": "Communication non verbale",
+          "b4d": "Une grande partie de la communication est visuelle ; éteindre la caméra limite cet aspect.",
+          "b5t": "Meilleure concentration",
+          "b5d": "Avoir la caméra allumée augmente votre attention.",
+          "b6t": "Crée du rapport",
+          "b6d": "Favorise l’empathie et la connexion avec les autres participants.",
+          "b7t": "Harmonise les idées",
+          "b7d": "Facilite un rythme partagé d’expression et de participation.",
+          "b8t": "Renforce la proximité",
+          "b8d": "Aide à créer un environnement connecté, essentiel lors d’interactions virtuelles."
+        }
+      },
+      "approach": {
+        "title": "Approche Communicative",
+        "desc": "Chez FURTHER, nous suivons une Approche Communicative, ce qui signifie que tous les cours se déroulent exclusivement dans la langue étudiée.",
+        "benefitsTitle": "Avantages",
+        "benefits": {
+          "b1t": "Amélioration de la Compréhension Orale",
+          "b1d": "L’exposition constante à la langue renforce la capacité à la comprendre dans des contextes réels.",
+          "b2t": "Pratique Active",
+          "b2d": "Nous encourageons l’utilisation active de la langue, ce qui renforce la confiance et la fluidité.",
+          "b3t": "Adaptation à des Situations Réelles",
+          "b3d": "L’immersion prépare mieux à faire face à des situations professionnelles où la langue est utilisée.",
+          "b4t": "Culture et Langue",
+          "b4d": "Apprendre une langue signifie aussi comprendre sa culture. Garder la langue pendant les cours permet de vivre et d’intégrer des aspects culturels essentiels à une communication efficace."
+        }
+      },
+      "communication": {
+        "title": "Communication et Contacts",
+        "subtitle": "Communication",
+        "p1": "La communication avec l’enseignant se fera par l’intermédiaire de l’équipe de Coordination Académique. Nous agissons comme médiateurs afin d’assurer une communication claire et un suivi organisé des cours.",
+        "p2": "Si vous devez transmettre un message, écrivez à cancelaciones@furtherenglish.com en indiquant le nom de votre enseignant et l’horaire de votre cours.",
+        "note": "Les enseignants ne sont pas autorisés à partager des informations personnelles avec les élèves.",
+        "contactsTitle": "Contacts Utiles",
+        "contactAcademic": "Coordination Académique",
+        "contactAcademicMail": "coordinacionacademica@furtherenglish.com",
+        "contactCancel": "Annulations et récupérations",
+        "contactCancelMail": "cancelaciones@furtherenglish.com"
+      },
+      "survey": {
+        "title": "Votre Avis est Important",
+        "desc": "Votre avis est essentiel pour nous permettre d’améliorer continuellement notre service. Nous vous invitons à répondre à ce court sondage afin de nous aider à mieux comprendre vos besoins et à renforcer notre accompagnement.",
+        "ctaLabel": "Remplir le Sondage",
+        "closing": "Merci de faire partie de la #ExpérienceFurther ! 🚀"
+      }
+    },
+    "footer": {
+      "title": "Besoin d’aide ?",
+      "desc": "Si vous avez des questions ou si vous avez besoin d’une assistance supplémentaire, n’hésitez pas à contacter notre équipe de Coordination Académique. Nous sommes là pour vous accompagner tout au long de votre apprentissage."
+    }
+  },
    "coursePlayer": {
     "loading": "Chargement du matériel...",
     "noAccessTitle": "Accès refusé",

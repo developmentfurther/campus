@@ -1,5 +1,119 @@
 {
   "common": {},
+  "information": {
+    "header": {
+      "badge": "Further English",
+      "title": "Important Information",
+      "subtitle": "Everything you need to know about your learning experience",
+      "accentureTag": "Accenture Configuration"
+    },
+    "sections": {
+      "welcome": {
+        "title": "Welcome",
+        "p1": "Welcome to Further English! We are delighted to accompany you on your language learning journey.",
+        "p2": "In this section, you will find all the important information about our policies, educational approach, and communication channels. We recommend reviewing it to make the most out of your #FurtherExperience."
+      },
+      "cancellations": {
+        "title": "Cancellation Policy",
+        "question": "How far in advance can we cancel a class?",
+        "hoursPrefix": "",
+        "hoursSuffix": " hours in advance.",
+        "nonAccentureNote": "Cancellations are only received during business hours Monday to Friday, 9:30 AM to 5 PM. This means there must be at least one business day between the cancellation request and the class for it to be considered a valid cancellation with notice.",
+        "importantTitle": "IMPORTANT",
+        "importantDesc": "Cancellations are considered only when the entire group is unable to attend the class.",
+        "whereNotify": "Where do we notify cancellations?",
+        "individual": "For individual classes",
+        "group": "For group classes, only:",
+        "groupAll": "- if the entire group cancels.",
+        "groupAbsences": "- if there are repeated absences due to leave, vacations, etc.",
+        "howManyTitle": "How many cancellations with notice can be made?",
+        "howManyDescPrefix": "You may cancel with notice up to ",
+        "howManyDescSuffix": " of your classes: This means that if you take one class per week, you may cancel with notice only once per month.",
+        "recoverTitle": "Can we reschedule classes that we cancel?",
+        "recoverDesc": "Classes canceled with notice may be rescheduled depending on your teacher’s availability. You may coordinate directly with your teacher, and once agreed, you need to formally send the request to cancelaciones@furtherenglish.com.",
+        "typesTitle": "Types of Cancellations",
+        "types": {
+          "withNoticeTitle": "Cancellation with prior notice",
+          "withNoticeDescAccent": "Notified at least 24 hours in advance",
+          "withNoticeDescGeneral": "Notified at least 48 business hours in advance",
+          "withoutNoticeTitle": "Cancellation without prior notice",
+          "withoutNoticeDescAccent": "Not notified or notified less than 24 hours in advance",
+          "withoutNoticeDescGeneral": "Not notified or notified less than 48 business hours in advance",
+          "excessTitle": "Excess cancellation",
+          "excessDescAccent": "You may cancel with notice up to 25% of your classes",
+          "excessDescGeneral": "Up to 25% of classes may be canceled with notice. Any additional cancellations will be considered excess."
+        }
+      },
+      "project": {
+        "title": "FURTHER Project: Support & Follow-up",
+        "subtitle": "FURTHER Project",
+        "p1": "From the Academic Coordination team, we will be available to assist you with any needs, whether you require materials, need to reschedule a class, want to share feedback, or have any other inquiry.",
+        "p2": "Additionally, we will monitor your class attendance. If we detect repeated absences, we will contact you to understand the reasons and explore how we can support you. This may include changing the day or time of your classes or even assigning a new teacher if you are not fully satisfied with your current one.",
+        "surveyTitle": "Surveys",
+        "surveyDesc": "Every 3 months, we will send you a satisfaction survey to learn about your experience with your classes and teacher. Your feedback is essential for improving our service and supporting your needs, so it is very valuable that you take a moment to complete it.",
+        "closing": "We will provide close and personalized support so that you can enjoy and make the most of your #FurtherExperience."
+      },
+      "camera": {
+        "title": "Benefits of Keeping Your Camera On",
+        "intro": "Keeping your camera on during virtual classes significantly enhances your learning experience:",
+        "benefits": {
+          "b1t": "Improves communication",
+          "b1d": "Facilitates the flow of ideas and shows your willingness to participate.",
+          "b2t": "Encourages others",
+          "b2d": "Seeing others with their camera on can motivate you to do the same.",
+          "b3t": "Enhances observation",
+          "b3d": "Allows better interaction by seeing and being seen.",
+          "b4t": "Non-verbal communication",
+          "b4d": "Most communication is visual; turning off your camera limits this.",
+          "b5t": "Greater focus",
+          "b5d": "Having your camera on increases your concentration.",
+          "b6t": "Builds rapport",
+          "b6d": "Promotes empathy and connection with other participants.",
+          "b7t": "Aligns ideas",
+          "b7d": "Facilitates a shared rhythm of expression and participation.",
+          "b8t": "Strengthens closeness",
+          "b8d": "Helps create a connected environment, essential in virtual interactions."
+        }
+      },
+      "approach": {
+        "title": "Communicative Approach",
+        "desc": "At FURTHER, we follow a Communicative Approach, which means that all classes are conducted exclusively in the language being learned.",
+        "benefitsTitle": "Benefits",
+        "benefits": {
+          "b1t": "Improved Listening Comprehension",
+          "b1d": "By being constantly exposed to the new language, learners develop stronger skills to understand it in real-life contexts.",
+          "b2t": "Active Practice",
+          "b2d": "We promote active use of the language, which boosts confidence and fluency.",
+          "b3t": "Real-world Adaptation",
+          "b3d": "Immersion prepares learners to face practical situations in the workplace where the language is used.",
+          "b4t": "Culture and Language",
+          "b4d": "Learning a language also involves understanding its culture. Staying in the target language allows learners to experience and absorb cultural aspects that are essential for effective communication."
+        }
+      },
+      "communication": {
+        "title": "Communication and Contacts",
+        "subtitle": "Communication",
+        "p1": "Communication with the teacher will take place through the Academic Coordination team. We act as the intermediary to ensure clear communication and organized class follow-up.",
+        "p2": "If you need to convey a message, please write to cancelaciones@furtherenglish.com, including your teacher’s name and your class schedule.",
+        "note": "Teachers are not allowed to share personal information with their students.",
+        "contactsTitle": "Useful Contacts",
+        "contactAcademic": "Academic Coordination",
+        "contactAcademicMail": "coordinacionacademica@furtherenglish.com",
+        "contactCancel": "Cancellations and Make-up Classes",
+        "contactCancelMail": "cancelaciones@furtherenglish.com"
+      },
+      "survey": {
+        "title": "Your Feedback Matters",
+        "desc": "Your feedback is essential for continuous improvement. We invite you to answer this short survey to help us better support your needs and continue strengthening our service.",
+        "ctaLabel": "Complete Survey",
+        "closing": "Thank you for being part of the #FurtherExperience! 🚀"
+      }
+    },
+    "footer": {
+      "title": "Need help?",
+      "desc": "If you have any questions or need additional assistance, feel free to contact our Academic Coordination team. We are here to support you throughout your learning journey."
+    }
+  },
   "coursePlayer": {
     "loading": "Loading material...",
     "noAccessTitle": "No access",
@@ -94,7 +208,7 @@
 },
 
   "sidebar": {
-    "important": "Important Information",
+    "importantinfo": "Important Information",
     "headerTitle": "Further Campus",
     "headerSubtitle": "Student Portal",
     "campusSection": "My Campus",
