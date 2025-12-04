@@ -307,9 +307,9 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
           if (q.kind === "tf") {
             if (typeof q.answer !== "boolean") return false;
           }
-          if (q.kind === "open") {
+            if (q.kind === "open") {
   if (!q.prompt || q.prompt.trim() === "") return false;
-  return true; // No requiere opciones ni respuesta correcta
+  continue; // ✅ Seguir validando las demás preguntas
 }
 
         }
@@ -324,10 +324,11 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
       ==================================*/
       case "listening": {
         if (!ex.title || ex.title.trim() === "") return false;
-        if (!ex.audioUrl || ex.audioUrl.trim() === "") return false;
+        if (!ex.audioUrl) return false; // basta con que exista, no exigir trim al editar
 
-        if (!Array.isArray(ex.questions) || ex.questions.length === 0)
-          return false;
+
+        if (!Array.isArray(ex.questions)) return false;
+        
 
         for (const q of ex.questions) {
           if (!q.prompt || q.prompt.trim() === "") return false;
@@ -350,7 +351,12 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
 
           if (q.kind === "open") {
   if (!q.prompt || q.prompt.trim() === "") return false;
-  return true; // No requiere opciones ni respuesta correcta
+
+  // Estas dos son opcionales → siempre válidas
+  // q.placeholder
+  // q.maxLength
+
+  continue; // 👈 NO return — deja seguir validando las demás preguntas
 }
 
         }
@@ -789,16 +795,36 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
 
   // ===== Guardar / Revertir =====
   const handleSave = () => {
-    if (!allValid) {
-      setSavedMessage("Hay ejercicios incompletos o no válidos.");
-      return;
+  if (!allValid) {
+    setSavedMessage("Hay ejercicios incompletos o no válidos.");
+    return;
+  }
+  
+  // Limpiar valores undefined antes de guardar
+  const cleanExercises = structuredClone(exercisesRef.current);
+  cleanExercises.forEach(ex => {
+    // Limpiar reading/listening questions
+    if ((ex.type === "reading" || ex.type === "listening") && ex.questions) {
+      ex.questions.forEach(q => {
+        if (q.kind === "open") {
+          // Remover propiedades undefined
+          if (q.options === undefined) delete (q as any).options;
+          if (q.correctIndex === undefined) delete (q as any).correctIndex;
+          if (q.answer === undefined) delete (q as any).answer;
+          // Asegurar que las opcionales tengan valor
+          if (!q.placeholder) (q as any).placeholder = "";
+          if (!q.maxLength) (q as any).maxLength = 500;
+        }
+      });
     }
-    if (typeof onChange === "function")
-      onChange(structuredClone(exercisesRef.current));
-    setTouched(false);
-    setSavedMessage("Ejercicios guardados.");
-    setTimeout(() => setSavedMessage(""), 2200);
-  };
+  });
+  
+  if (typeof onChange === "function")
+    onChange(cleanExercises);
+  setTouched(false);
+  setSavedMessage("Ejercicios guardados.");
+  setTimeout(() => setSavedMessage(""), 2200);
+};
 
   const handleRevert = () => {
     exercisesRef.current = initial ?
@@ -1708,34 +1734,46 @@ const renderVerbTable = (ex: VerbTableExercise) => {
     update({ questions: ex.questions.filter((q) => q.id !== qid) });
   };
 
-  const toggleKind = (qid: string, newKind: "mc" | "tf" | "open") => {
+ const toggleKind = (qid: string, newKind: "mc" | "tf" | "open") => {
   const q = ex.questions.find((x) => x.id === qid);
   if (!q) return;
 
   if (newKind === "open") {
     updateQuestion(qid, {
       kind: "open",
-      options: undefined,
-      correctIndex: undefined,
-      answer: undefined,
       placeholder: "",
       maxLength: 500,
+      options: null,
+      correctIndex: null,
+      answer: null,
     });
-  } else if (newKind === "tf") {
+    return;
+  }
+
+  if (newKind === "tf") {
     updateQuestion(qid, {
       kind: "tf",
-      options: undefined,
-      correctIndex: undefined,
       answer: true,
+      options: null,
+      correctIndex: null,
+      placeholder: null,
+      maxLength: null,
     });
-  } else {
+    return;
+  }
+
+  if (newKind === "mc") {
     updateQuestion(qid, {
       kind: "mc",
       options: ["", ""],
       correctIndex: 0,
+      answer: null,
+      placeholder: null,
+      maxLength: null,
     });
   }
 };
+
 
 
   return (

@@ -174,15 +174,15 @@ export default function GamingHub() {
       <div className="max-w-7xl mx-auto relative z-10">
         <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 auto-rows-fr">
           {GAMES.map((game, index) => {
-            const isWide = index === 0 || index === GAMES.length - 1;
+            
             const isHovered = hoveredGame === game.slug;
 
             return (
               <div
                 key={game.slug}
-                className={`group relative rounded-3xl overflow-hidden transform hover:scale-[1.02] transition-all duration-500 ${
-                  isWide ? "md:col-span-2 lg:col-span-1" : ""
-                }`}
+                className={`group relative rounded-3xl overflow-hidden transform hover:scale-[1.02] transition-all duration-500 md:col-span-2 lg:col-span-1
+
+                `}
                 style={{
                   animation: "fadeInUp 0.6s ease-out forwards",
                   animationDelay: `${index * 0.1}s`,

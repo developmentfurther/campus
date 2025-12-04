@@ -139,11 +139,52 @@ export default function StudentsPage() {
             <h1 className="text-4xl lg:text-5xl font-bold text-[#0C212D] tracking-tight">
               Campus Students
             </h1>
+            
             <p className="text-lg text-gray-600 max-w-2xl">
               Manage and monitor all registered students across the Further
               Corporate learning platform.
             </p>
           </div>
+
+{/* 🔄 SYNC BUTTON */}
+<button
+  onClick={async () => {
+    try {
+      const confirmed = confirm(
+        "This will create missing Firebase Auth accounts for all students. Continue?"
+      );
+      if (!confirmed) return;
+
+      toast.loading("Syncing accounts...", { id: "sync" });
+
+      const res = await fetch("/api/sync-alumnos", { method: "POST" });
+      const data = await res.json();
+
+      if (!data.ok) {
+        toast.error("Sync failed: " + data.error, { id: "sync" });
+        return;
+      }
+
+      toast.success(`✔ ${data.processed} student accounts processed.`, {
+        id: "sync",
+      });
+
+      // Refrescar los alumnos si querés actualizar la UI
+      await reloadData?.();
+    } catch (err) {
+      console.error(err);
+      toast.error("Unexpected error occurred.", { id: "sync" });
+    }
+  }}
+  className="
+    px-5 py-3 rounded-xl font-semibold text-white text-sm
+    bg-gradient-to-r from-[#EE7203] to-[#FF3816]
+    shadow-md hover:shadow-lg hover:scale-[1.02]
+    transition-all
+  "
+>
+  🔄 Sync Campus Accounts
+</button>
 
           {/* Stats Cards */}
           <div className="flex flex-wrap gap-4">
