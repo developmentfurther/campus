@@ -57,6 +57,7 @@ import {
 } from "react-icons/fi";
 import { storage, db } from "@/lib/firebase";
 import VocabularyEditor from "../cursoItem/VocabularyEditor";
+import BlockEditor from "../cursoItem/blocks/BlockEditor";
 
 
 
@@ -66,27 +67,55 @@ import VocabularyEditor from "../cursoItem/VocabularyEditor";
 
 
 
+interface BlockTitle {
+  type: "title";
+  value: string;
+}
+
+interface BlockDescription {
+  type: "description";
+  value: string;
+}
+
+interface BlockTheory {
+  type: "theory";
+  value: string;
+}
+
+interface BlockVideo {
+  type: "video";
+  url: string;
+}
+
+interface BlockPdf {
+  type: "pdf";
+  url: string;
+}
+
+interface BlockVocabulary {
+  type: "vocabulary";
+  entries: { term: string; translation: string; example?: string }[];
+}
+
+interface BlockExercise {
+  type: "exercise";
+  exercise: Exercise; // tu exercise actual
+}
+
+type LessonBlock =
+  | BlockTitle
+  | BlockDescription
+  | BlockTheory
+  | BlockVideo
+  | BlockPdf
+  | BlockVocabulary
+  | BlockExercise;
+
 interface Leccion {
   id: string;
-  titulo: string;
-  descripcion?: string;
-  teoria?: string;
-  urlVideo: string;
-  urlImagen: string;
-  pdfUrl: string;
-
-  vocabulary?: {
-  entries: {
-    term: string;
-    translation: string;
-    example?: string;
-  }[];
-};
-
-
-  ejercicios: Exercise[];
-  finalMessage: string;
+  blocks: LessonBlock[];
 }
+
 
 
 interface Unidad {
@@ -94,7 +123,6 @@ interface Unidad {
   titulo: string;
   descripcion: string;
   introVideo?: string;
-  duracion?: number; // Optional duration in minutes
   urlImagen: string;
   ejercicios: Exercise[]; // Legacy, kept for backward compat
   textoCierre: string;
@@ -279,7 +307,6 @@ const batchId = "batch_1"; // o tomalo desde contexto si lo tenés
       titulo: "",
       descripcion: "",
       urlVideo: "", // 🧹 removed from UI usage
-      duracion: undefined, // optional
       urlImagen: "",
       ejercicios: [],
       textoCierre: "",
@@ -340,22 +367,66 @@ const updateLeccion = useCallback(
   []
 );
 
+const defaultBlock = (type: LessonBlock["type"]): LessonBlock => {
+  switch (type) {
+    case "title":
+      return { type: "title", value: "" };
+    case "description":
+      return { type: "description", value: "" };
+    case "theory":
+      return { type: "theory", value: "" };
+    case "video":
+      return { type: "video", url: "" };
+    case "pdf":
+      return { type: "pdf", url: "" };
+    case "vocabulary":
+      return { type: "vocabulary", entries: [] };
+    case "exercise":
+  return { type: "exercise", exercise: null };
+
+  }
+};
+
+const updateBlock = (uIdx: number, lIdx: number, bIdx: number, updated: LessonBlock) => {
+  setUnidades(prev => {
+    const copy = structuredClone(prev);
+    copy[uIdx].lecciones[lIdx].blocks[bIdx] = updated;
+    return copy;
+  });
+};
+
+const deleteBlock = (uIdx: number, lIdx: number, bIdx: number) => {
+  setUnidades(prev => {
+    const copy = structuredClone(prev);
+    copy[uIdx].lecciones[lIdx].blocks.splice(bIdx, 1);
+    return copy;
+  });
+};
+
+
+const addBlock = (type: LessonBlock["type"]) => {
+  setUnidades(prev => {
+    const copy = structuredClone(prev);
+    const unidad = copy[activeUnidad];
+    const leccion = unidad.lecciones[activeLeccion];
+
+    leccion.blocks.push(defaultBlock(type));
+
+    return copy;
+  });
+};
+
+
 
   /* =========================
      Lessons
      ========================= */
   const agregarLeccion = (unidadIdx: number) => {
     const nueva: Leccion = {
-      id: makeId(),
-      titulo: "",
-      descripcion: "",
-      teoria: "",
-      urlVideo: "",
-      urlImagen: "",
-      pdfUrl: "",
-      ejercicios: [],
-      finalMessage: "",
-    };
+  id: makeId(),
+  blocks: [],
+};
+
     setUnidades((p) =>
       p.map((u, i) =>
         i === unidadIdx ? { ...u, lecciones: [...u.lecciones, nueva] } : u
@@ -544,27 +615,12 @@ const filteredAlumnos = useMemo(() => {
   descripcion: u.descripcion || "",
   introVideo: u.introVideo || "",
   urlImagen: u.urlImagen || "",
-  duracion: u.duracion ? Number(u.duracion) : undefined,
   textoCierre: u.textoCierre || "",
   lecciones: (u.lecciones || []).map((l) => ({
   id: l.id || makeId(),
-  titulo: l.titulo || "",
-  descripcion: l.descripcion || "",
-  teoria: l.teoria || "",
-  urlVideo: l.urlVideo || "",
-  urlImagen: l.urlImagen || "",
-  pdfUrl: l.pdfUrl || "",
-
-  vocabulary: l.vocabulary
-  ? {
-      entries: l.vocabulary.entries || [],
-    }
-  : null,
-
-
-  ejercicios: Array.isArray(l.ejercicios) ? l.ejercicios : [],
-  finalMessage: l.finalMessage || "",
+  blocks: l.blocks ?? [],
 })),
+
 
 
   closing: {
@@ -961,6 +1017,46 @@ const idiomasCurso = [
             </div>
           </div>
 
+          {/* Introductory Video */}
+<div className="space-y-1">
+  <label className="text-sm font-semibold text-[#0C212D] flex items-center gap-2">
+    <FiVideo className="w-4 h-4" /> Introductory video (Optional)
+  </label>
+
+  <div className="relative">
+    <FiLink2 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+    <input
+      type="url"
+      name="videoPresentacion"
+      placeholder="https://vimeo.com/12345"
+      value={curso.videoPresentacion}
+      onChange={(e) => {
+        const url = e.target.value;
+        if (url && !url.includes("vimeo.com")) {
+          toast.error("Only Vimeo links are allowed.");
+        }
+        handleChange(e);
+      }}
+      className="
+        w-full p-3 pl-10 rounded-xl border border-[#112C3E]/20
+        focus:ring-2 focus:ring-[#EE7203] outline-none
+      "
+    />
+  </div>
+
+  {curso.videoPresentacion && curso.videoPresentacion.includes("vimeo.com") && (
+    <div className="aspect-video rounded-xl overflow-hidden border bg-[#F2F4F7] mt-2">
+      <iframe
+        src={curso.videoPresentacion.replace("vimeo.com", "player.vimeo.com/video")}
+        className="w-full h-full"
+        allow="autoplay; fullscreen; picture-in-picture"
+        allowFullScreen
+      />
+    </div>
+  )}
+</div>
+
+
         </div>
 
       </div>
@@ -989,7 +1085,7 @@ const idiomasCurso = [
           <FiLayers className="w-5 h-5" />
         </div>
         <h3 className="text-xl font-black text-[#0C212D] tracking-tight">
-          Material Content: Units & Lessons
+          Material Content: Units & Sections
         </h3>
       </div>
 
@@ -1115,23 +1211,10 @@ const idiomasCurso = [
                         }
                       `}
                     >
-                      Lessons ({unidades[activeUnidad]?.lecciones?.length || 0})
+                      Sections ({unidades[activeUnidad]?.lecciones?.length || 0})
                     </button>
 
-                    <button
-                      type="button"
-                      onClick={() => setActiveUnitTab("cierre")}
-                      className={`
-                        px-3 py-1.5 rounded-lg text-sm font-medium
-                        ${
-                          activeUnitTab === "cierre"
-                            ? "bg-[#EE7203] text-white"
-                            : "bg-[#F3F4F6] text-[#0C212D]"
-                        }
-                      `}
-                    >
-                      Closing
-                    </button>
+                    
                   </div>
                 </div>
 
@@ -1182,28 +1265,7 @@ const idiomasCurso = [
                       />
                     </div>
 
-                    {/* Estimated Duration */}
-                    <div className="space-y-1">
-                      <label className="text-sm font-semibold text-[#0C212D] flex items-center gap-2">
-                        <FiClock className="w-4 h-4" /> Estimated duration (minutes)
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="e.g., 60"
-                        value={unidades[activeUnidad]?.duracion || ""}
-                        onChange={(e) =>
-                          updateUnidad(activeUnidad, {
-                            duracion:
-                              parseInt(e.target.value, 10) || undefined,
-                          })
-                        }
-                        className="
-                          w-full p-3 border border-[#112C3E]/20 rounded-xl
-                          focus:ring-2 focus:ring-[#EE7203] outline-none
-                        "
-                      />
-                    </div>
+                    
 
                     {/* Thumbnail */}
                     <div className="space-y-1">
@@ -1295,7 +1357,8 @@ const idiomasCurso = [
                           {/* Header */}
                           <div className="flex items-center justify-between">
                             <h4 className="font-semibold text-[#0C212D]">
-                              Lesson {lIdx + 1}: {l.titulo || "Untitled"}
+                              Section {String.fromCharCode(65 + lIdx)}: {l.titulo || "Untitled"}
+
                             </h4>
 
                             <div className="flex gap-2">
@@ -1330,144 +1393,88 @@ const idiomasCurso = [
 
                           {/* FORMULARIO LECCIÓN ACTIVA */}
                           {activeLeccion === lIdx && (
-                            <div className="mt-3 space-y-4 border-t border-[#112C3E]/15 pt-3">
-                              
-                              {/* Título */}
-                              <div className="space-y-1">
-                                <label className="text-sm font-semibold text-[#0C212D]">
-                                  Lesson Title
-                                </label>
-                                <input
-                                  type="text"
-                                  value={l.titulo || ""}
-                                  onChange={(e) =>
-                                    updateLeccion(activeUnidad, lIdx, {
-                                      titulo: e.target.value,
-                                    })
-                                  }
-                                  className="
-                                    w-full rounded-xl border border-[#112C3E]/20 p-3
-                                    focus:ring-2 focus:ring-[#EE7203] outline-none
-                                  "
-                                />
-                              </div>
+  <div className="mt-3 space-y-4 border-t pt-4">
 
-                              {/* Description */}
-                              <div className="space-y-1">
-                                <label className="text-sm font-semibold text-[#0C212D]">
-                                  Description (short)
-                                </label>
-                                <textarea
-                                  rows={2}
-                                  value={l.descripcion || ""}
-                                  onChange={(e) =>
-                                    updateLeccion(activeUnidad, lIdx, {
-                                      descripcion: e.target.value,
-                                    })
-                                  }
-                                  className="
-                                    w-full rounded-xl border border-[#112C3E]/20 p-3
-                                    focus:ring-2 focus:ring-[#EE7203] outline-none
-                                    resize-none
-                                  "
-                                />
-                              </div>
+    {/* === Botonera para agregar bloques === */}
+    <div className="flex flex-wrap gap-2 mb-4">
+      {/* === Botonera para agregar bloques === */}
+<div className="flex flex-wrap gap-2 mb-4">
+  <button 
+    type="button" 
+    onClick={() => addBlock("title")} 
+    className="px-3 py-1 bg-blue-100 hover:bg-blue-200 rounded"
+  >
+    + Título
+  </button>
+  
+  <button 
+    type="button" 
+    onClick={() => addBlock("description")} 
+    className="px-3 py-1 bg-blue-100 hover:bg-blue-200 rounded"
+  >
+    + Descripción
+  </button>
+  
+  <button 
+    type="button" 
+    onClick={() => addBlock("theory")} 
+    className="px-3 py-1 bg-blue-100 hover:bg-blue-200 rounded"
+  >
+    + Teoría
+  </button>
+  
+  <button 
+    type="button" 
+    onClick={() => addBlock("video")} 
+    className="px-3 py-1 bg-blue-100 hover:bg-blue-200 rounded"
+  >
+    + Video
+  </button>
+  
+  <button 
+    type="button" 
+    onClick={() => addBlock("pdf")} 
+    className="px-3 py-1 bg-blue-100 hover:bg-blue-200 rounded"
+  >
+    + PDF
+  </button>
+  
+  <button 
+    type="button" 
+    onClick={() => addBlock("vocabulary")} 
+    className="px-3 py-1 bg-blue-100 hover:bg-blue-200 rounded"
+  >
+    + Vocabulario
+  </button>
+  
+  <button 
+    type="button" 
+    onClick={() => addBlock("exercise")} 
+    className="px-3 py-1 bg-blue-100 hover:bg-blue-200 rounded"
+  >
+    + Ejercicio
+  </button>
+</div>
+    </div>
 
-                              {/* Video */}
-                              <div className="space-y-1">
-                                <label className="text-sm font-semibold text-[#0C212D] flex items-center gap-2">
-                                  <FiVideo className="text-[#EE7203]" />
-                                  Lesson Video (Vimeo)
-                                </label>
+    {/* === Render dinámico de bloques === */}
+    {l.blocks.map((block, blockIdx) => (
+      <div key={blockIdx} className="p-4 border rounded-lg bg-white">
+        <BlockEditor 
+          block={block}
+          onChange={(updated) => updateBlock(activeUnidad, lIdx, blockIdx, updated)}
+          onDelete={() => deleteBlock(activeUnidad, lIdx, blockIdx)}
+        />
+      </div>
+    ))}
 
-                                <input
-                                  type="url"
-                                  placeholder="https://vimeo.com/123456789"
-                                  value={l.urlVideo || ""}
-                                  onChange={(e) =>
-                                    updateLeccion(activeUnidad, lIdx, {
-                                      urlVideo: e.target.value,
-                                    })
-                                  }
-                                  className="
-                                    w-full rounded-xl border border-[#112C3E]/20 p-3
-                                    focus:ring-2 focus:ring-[#EE7203] outline-none
-                                  "
-                                />
-
-                                {l.urlVideo &&
-                                  isValidUrl(l.urlVideo) && (
-                                    <div className="aspect-video rounded-xl overflow-hidden border border-[#112C3E]/20 bg-[#F2F4F7]">
-                                      <iframe
-                                        src={l.urlVideo.replace(
-                                          'vimeo.com',
-                                          'player.vimeo.com/video'
-                                        )}
-                                        className="w-full h-full"
-                                        allow="autoplay; fullscreen; picture-in-picture"
-                                        allowFullScreen
-                                      />
-                                    </div>
-                                  )}
-                              </div>
-
-                              {/* Theory */}
-                              <div className="space-y-1">
-                                <label className="text-sm font-semibold text-[#0C212D]">
-                                  Theory (Markdown)
-                                </label>
-                                <textarea
-                                  rows={5}
-                                  placeholder="Use Markdown: **bold**, _italic_, - lists..."
-                                  value={l.teoria || ""}
-                                  onChange={(e) =>
-                                    updateLeccion(activeUnidad, lIdx, {
-                                      teoria: e.target.value,
-                                    })
-                                  }
-                                  className="
-                                    w-full p-3 border border-[#112C3E]/20 rounded-xl
-                                    focus:ring-2 focus:ring-[#EE7203] outline-none resize-none
-                                  "
-                                />
-                              </div>
-
-                              {/* Vocabulary */}
-                              <div className="space-y-1">
-                                <label className="text-sm font-semibold text-[#0C212D]">
-                                  Vocabulary
-                                </label>
-                                <VocabularyEditor
-                                  value={l.vocabulary}
-                                  onChange={(val) =>
-                                    updateLeccion(activeUnidad, lIdx, {
-                                      vocabulary: val,
-                                    })
-                                  }
-                                />
-                              </div>
-
-                              {/* Exercises */}
-                              <div className="space-y-1">
-                                <label className="text-sm font-semibold text-[#0C212D]">
-                                  Exercises
-                                </label>
-                                <Exercises
-                                  initial={l.ejercicios}
-                                  onChange={(newExercises) =>
-                                    updateLeccion(activeUnidad, lIdx, {
-                                      ejercicios: [...newExercises],
-                                    })
-                                  }
-                                />
-                              </div>
-                            </div>
-                          )}
+  </div>
+)}
                         </div>
                       ))
                     ) : (
                       <div className="text-center text-gray-500 py-10">
-                        No lessons yet.
+                        No sections yet.
                       </div>
                     )}
 
@@ -1481,170 +1488,13 @@ const idiomasCurso = [
                         rounded-xl text-[#0C212D] hover:bg-[#EEF1F5]
                       "
                     >
-                      <FiPlus size={16} /> Add New Lesson
+                      <FiPlus size={16} /> + Add New Section
+
                     </button>
                   </div>
                 )}
 
-                {/* === TAB: CIERRE === */}
-                {activeUnitTab === "cierre" && (
-                  <div className="space-y-6">
-                    
-                    <div className="rounded-xl border border-[#112C3E]/20 bg-white p-4">
-
-                      <h3 className="text-[#0C212D] font-semibold mb-3 text-sm">
-                        Final unit exam
-                      </h3>
-
-                      {/* Intro exam text */}
-                      <div className="space-y-1 mb-4">
-                        <label className="text-sm font-semibold text-[#0C212D]">
-                          Introductory text
-                        </label>
-                        <textarea
-                          rows={3}
-                          placeholder="Intro or instructions"
-                          value={unidades[activeUnidad]?.closing?.examIntro || ""}
-                          onChange={(e) =>
-                            updateUnidad(activeUnidad, (prev) => ({
-                              ...prev,
-                              closing: {
-                                ...(prev.closing || {}),
-                                examIntro: e.target.value,
-                              },
-                            }))
-                          }
-                          className="
-                            w-full rounded-xl border border-[#112C3E]/20 p-3
-                            focus:ring-2 focus:ring-[#EE7203] outline-none resize-none
-                          "
-                        />
-                      </div>
-
-                      {/* Closing video */}
-                      <div className="space-y-1">
-                        <label className="text-sm font-semibold text-[#0C212D] flex items-center gap-2">
-                          <FiVideo className="w-4 h-4" /> Closing Video (optional)
-                        </label>
-
-                        <div className="relative">
-                          <FiLink2 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                          <input
-                            type="url"
-                            placeholder="https://vimeo.com/123..."
-                            value={unidades[activeUnidad]?.closing?.videoUrl || ""}
-                            onChange={(e) =>
-                              updateUnidad(activeUnidad, (prev) => ({
-                                ...prev,
-                                closing: {
-                                  ...(prev.closing || {}),
-                                  videoUrl: e.target.value,
-                                },
-                              }))
-                            }
-                            className="
-                              w-full p-3 pl-10 rounded-xl border border-[#112C3E]/20
-                              focus:ring-2 focus:ring-[#EE7203] outline-none
-                            "
-                          />
-                        </div>
-
-                        {unidades[activeUnidad]?.closing?.videoUrl &&
-                          isValidUrl(unidades[activeUnidad]?.closing?.videoUrl || "") && (
-                            <div className="aspect-video mt-2 rounded-xl overflow-hidden border border-[#112C3E]/20 bg-[#F2F4F7]">
-                              <iframe
-                                src={unidades[activeUnidad]?.closing?.videoUrl}
-                                className="w-full h-full"
-                                allow="accelerometer; autoplay; encrypted-media; picture-in-picture"
-                                allowFullScreen
-                              />
-                            </div>
-                          )}
-                      </div>
-
-                      {/* Exam exercises */}
-                      <div className="space-y-1">
-                        <label className="text-sm font-semibold text-[#0C212D]">
-                          Exam exercises
-                        </label>
-                        <Exercises
-                          initial={unidades[activeUnidad]?.closing?.examExercises || []}
-                          onChange={(updatedExercises) =>
-                            updateUnidad(activeUnidad, (prev) => ({
-                              ...prev,
-                              closing: {
-                                ...(prev.closing || {}),
-                                examExercises: [...updatedExercises],
-                              },
-                            }))
-                          }
-                        />
-                      </div>
-                    </div>
-
-                    {/* Closing text */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-semibold text-[#0C212D]">
-                        Closing text
-                      </label>
-                      <textarea
-                        rows={4}
-                        value={unidades[activeUnidad]?.closing?.closingText || ""}
-                        onChange={(e) =>
-                          updateUnidad(activeUnidad, (prev) => ({
-                            ...prev,
-                            closing: {
-                              ...(prev.closing || {}),
-                              closingText: e.target.value,
-                            },
-                          }))
-                        }
-                        className="
-                          w-full p-3 rounded-xl border border-[#112C3E]/20
-                          focus:ring-2 focus:ring-[#EE7203] outline-none resize-none
-                        "
-                      />
-                    </div>
-
-                    {/* PDF URL */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-semibold text-[#0C212D] flex items-center gap-2">
-                        <FiLink2 className="w-4 h-4" /> PDF summary URL (optional)
-                      </label>
-
-                      <input
-                        type="url"
-                        placeholder="https://drive.google.com/yourfile.pdf"
-                        value={unidades[activeUnidad]?.closing?.pdfUrl || ""}
-                        onChange={(e) =>
-                          updateUnidad(activeUnidad, (prev) => ({
-                            ...prev,
-                            closing: {
-                              ...(prev.closing || {}),
-                              pdfUrl: e.target.value,
-                            },
-                          }))
-                        }
-                        className="
-                          w-full p-3 rounded-xl border border-[#112C3E]/20
-                          focus:ring-2 focus:ring-[#EE7203] outline-none
-                        "
-                      />
-
-                      {unidades[activeUnidad]?.closing?.pdfUrl && (
-                        <a
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          href={unidades[activeUnidad]?.closing?.pdfUrl}
-                          className="text-[#EE7203] text-sm hover:underline flex items-center gap-2"
-                        >
-                          <FiFileText size={14} />
-                          Preview PDF
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                )}
+                
               </>
             )}
           </div>

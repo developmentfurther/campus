@@ -39,32 +39,30 @@ import {
   FiGlobe,
 } from "react-icons/fi";
 import VocabularyEditor from "../cursoItem/VocabularyEditor";
+import BlockEditor from "../cursoItem/blocks/BlockEditor";
 
 /* ----------------- Interfaces ----------------- */
 
 
 
 
+interface LessonBlock {
+  type:
+    | "title"
+    | "description"
+    | "theory"
+    | "video"
+    | "pdf"
+    | "vocabulary"
+    | "exercise";
+  [key: string]: any;
+}
+
 interface Leccion {
   id: string;
-  titulo: string;
-  descripcion?: string;
-  teoria?: string;
-  urlVideo: string;
-  urlImagen: string;
-  pdfUrl: string;
-
-  vocabulary?: {
-  entries: {
-    term: string;
-    translation: string;
-    example?: string;
-  }[];
-};
-
-  ejercicios: Exercise[];
-  finalMessage: string;
+  blocks: LessonBlock[];
 }
+
 
 
 
@@ -73,7 +71,6 @@ interface Unidad {
   titulo: string;
   descripcion: string;
   introVideo?: string;
-  duracion?: number;
   urlImagen: string;
   ejercicios: Exercise[];
   textoCierre: string;
@@ -124,6 +121,31 @@ interface Alumno {
   nombre?: string;
 }
 
+// Convierte una lección vieja → estructura de bloques
+function convertLegacyLessonToBlocks(old: any) {
+  const blocks: any[] = [];
+
+  if (old.titulo) blocks.push({ type: "title", value: old.titulo });
+  if (old.descripcion) blocks.push({ type: "description", value: old.descripcion });
+  if (old.teoria) blocks.push({ type: "theory", value: old.teoria });
+  if (old.urlVideo) blocks.push({ type: "video", url: old.urlVideo });
+  if (old.pdfUrl) blocks.push({ type: "pdf", url: old.pdfUrl });
+
+  if (old.vocabulary)
+    blocks.push({ type: "vocabulary", entries: old.vocabulary.entries || [] });
+
+  if (Array.isArray(old.ejercicios))
+    old.ejercicios.forEach((ex: any) =>
+      blocks.push({ type: "exercise", exercise: ex })
+    );
+
+  return {
+    id: old.id || makeId(),
+    blocks,
+  };
+}
+
+
 /* ----------------- Helpers ----------------- */
 const makeId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const isValidUrl = (s: string) => {
@@ -139,6 +161,30 @@ const uploadFile = async (storage: any, path: string, file: File): Promise<strin
   await uploadBytes(storageRef, file);
   return await getDownloadURL(storageRef);
 };
+
+// Crea un bloque vacío según el tipo
+const defaultBlock = (type: string) => {
+  switch (type) {
+    case "title":
+      return { type: "title", value: "" };
+    case "description":
+      return { type: "description", value: "" };
+    case "theory":
+      return { type: "theory", value: "" };
+    case "video":
+      return { type: "video", url: "" };
+    case "pdf":
+      return { type: "pdf", url: "" };
+    case "vocabulary":
+      return { type: "vocabulary", entries: [] };
+    case "exercise":
+      return { type: "exercise", exercise: null };
+    default:
+      return null;
+  }
+};
+
+
 
 /* ==============================================================
    COMPONENTE PRINCIPAL
@@ -188,15 +234,17 @@ const [activeLeccion, setActiveLeccion] = useState<number>(0);
   /* ==============================================================
      🔹 Cargar datos del curso desde Firestore
      ============================================================== */
- useEffect(() => {
-    if (!initialData) return;
-    
-    // Setear los datos inmediatamente desde las props
-    setCurso(initialData);
-    setUnidades(initialData.unidades || []);
-    setExamenFinal(initialData.examenFinal || { introTexto: "", ejercicios: [] });
-    setCapstone(initialData.capstone || { videoUrl: "", instrucciones: "", checklist: [] });
-  }, [initialData]);
+useEffect(() => {
+  if (!initialData) return;
+
+  setCurso(initialData);
+
+  // ✅ Renderizar directamente sin conversiones
+  setUnidades(initialData.unidades || []);
+  setExamenFinal(initialData.examenFinal || { introTexto: "", ejercicios: [] });
+  setCapstone(initialData.capstone || { videoUrl: "", instrucciones: "", checklist: [] });
+}, [initialData]);
+
 
   function normalizeExercise(ex: any) {
   if (!ex || typeof ex !== "object") return {};
@@ -255,6 +303,20 @@ const [activeLeccion, setActiveLeccion] = useState<number>(0);
   }
 }
 
+function normalizeLessonBlocks(lesson: any) {
+  return {
+    id: lesson.id,
+    blocks: lesson.blocks.map((b: any) => {
+      if (b.type === "exercise" && b.exercise) {
+        return {
+          ...b,
+          exercise: normalizeExercise(b.exercise)
+        };
+      }
+      return b;
+    }),
+  };
+}
 
 
   /* ==============================================================
@@ -268,47 +330,25 @@ const [activeLeccion, setActiveLeccion] = useState<number>(0);
 
   const refCurso = doc(firestore, "cursos", courseId);
 
-  // 1️⃣ Normalizar unidades
-  const unidadesToSave = (unidades || []).map((u: any) => ({
-    ...u,
-    closing: {
-  examIntro: u.closing?.examIntro ?? "",
-  examExercises: Array.isArray(u.closing?.examExercises)
-  ? [...u.closing.examExercises]
-  : [],
-
-  closingText: u.closing?.closingText ?? "",
-  pdfUrl: u.closing?.pdfUrl ?? "",
-  videoUrl: u.closing?.videoUrl ?? "",
-},
-
-  lecciones: (u.lecciones || []).map((l) => {
-  return {
-    ...l,
-
-    vocabulary: l.vocabulary
-  ? { entries: l.vocabulary.entries || [] }
-  : null,
-
-    ejercicios: Array.isArray(l.ejercicios)
-      ? l.ejercicios.map((ex: any) => normalizeExercise(ex))
-      : [],
-  };
-}),
-
-
-
-
+  // ✅ Guardar directamente sin normalizaciones raras
+  const unidadesToSave = unidades.map((u) => ({
+    id: u.id,
+    titulo: u.titulo,
+    descripcion: u.descripcion,
+    introVideo: u.introVideo || "",
+    urlImagen: u.urlImagen,
+    textoCierre: u.textoCierre,
+    lecciones: u.lecciones.map((l) => ({
+      id: l.id,
+      blocks: l.blocks,
+    })),
+    closing: u.closing || {},
   }));
 
-  // 2️⃣ Normalizar cursantes
   const nuevosCursantes =
     curso.cursantes?.map((e) => e.toLowerCase().trim()).filter(Boolean) || [];
 
   try {
-
-
-    // 4️⃣ Payload limpio
     const payload: any = {
       ...curso,
       unidades: unidadesToSave,
@@ -318,13 +358,10 @@ const [activeLeccion, setActiveLeccion] = useState<number>(0);
       updatedAt: serverTimestamp(),
     };
 
-    // 5️⃣ Guardar curso
     await updateDoc(refCurso, payload);
 
-    // 6️⃣ Enrolamiento en alumnos/batch_X/user_Y.cursosAdquiridos
+    // 🔹 Enrolamiento (lo mantienes igual)
     if (nuevosCursantes.length > 0) {
-      console.log("🚀 Comenzando ENROLAMIENTO...");
-
       for (const email of nuevosCursantes) {
         let userFound = false;
 
@@ -343,14 +380,8 @@ const [activeLeccion, setActiveLeccion] = useState<number>(0);
             await updateDoc(batchRef, {
               [path]: arrayUnion(courseId),
             });
-
-            console.log(`✅ ${email} enrolado en ${batchRef.id}/${userKey}`);
             userFound = true;
           }
-        }
-
-        if (!userFound) {
-          console.warn(`⚠️ Usuario ${email} no encontrado en ningún batch`);
         }
       }
     }
@@ -448,16 +479,10 @@ const [activeLeccion, setActiveLeccion] = useState<number>(0);
 
   const agregarLeccion = (unidadIdx: number) => {
     const nueva: Leccion = {
-      id: makeId(),
-      titulo: "",
-      descripcion: "",
-      teoria: "",
-      urlVideo: "",
-      urlImagen: "",
-      pdfUrl: "",
-      ejercicios: [],
-      finalMessage: "",
-    };
+  id: makeId(),
+  blocks: [],
+};
+
     setUnidades((p) =>
       p.map((u, i) =>
         i === unidadIdx ? { ...u, lecciones: [...u.lecciones, nueva] } : u
@@ -625,6 +650,34 @@ const idiomasCurso = [
       </div>
     );
   }
+
+const addBlock = (type: string) => {
+  setUnidades(prev => {
+    const copy = structuredClone(prev);
+    const unidad = copy[activeUnidad];
+    const leccion = unidad.lecciones[activeLeccion];
+
+    leccion.blocks.push(defaultBlock(type));
+
+    return copy;
+  });
+};
+
+const updateBlock = (uIdx: number, lIdx: number, bIdx: number, updated: any) => {
+  setUnidades(prev => {
+    const copy = structuredClone(prev);
+    copy[uIdx].lecciones[lIdx].blocks[bIdx] = updated;
+    return copy;
+  });
+};
+
+const deleteBlock = (uIdx: number, lIdx: number, bIdx: number) => {
+  setUnidades(prev => {
+    const copy = structuredClone(prev);
+    copy[uIdx].lecciones[lIdx].blocks.splice(bIdx, 1);
+    return copy;
+  });
+};
 
 
 
@@ -1106,128 +1159,81 @@ const idiomasCurso = [
 
           {/* Contenido editable solo si está activa */}
           {activeLeccion === lIdx && (
-            <div className="mt-3 space-y-4 border-t border-gray-200 pt-3">
-              {/* Título */}
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700">
-                  Lesson Title
-                </label>
-                <input
-                  type="text"
-                  value={l.titulo}
-                  onChange={(e) =>
-                    updateLeccion(activeUnidad, lIdx, {
-                      titulo: e.target.value,
-                    })
-                  }
-                  className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+  <div className="mt-3 space-y-4 border-t pt-4">
 
-              {/* Descripción */}
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700">
-                  Short Description
-                </label>
-                <textarea
-                  placeholder="Short description of this lesson..."
-                  value={l.descripcion || ""}
-                  onChange={(e) =>
-                    updateLeccion(activeUnidad, lIdx, {
-                      descripcion: e.target.value,
-                    })
-                  }
-                  rows={2}
-                  className="w-full rounded-lg border border-gray-300 bg-white p-2 text-gray-800 focus:ring-2 focus:ring-blue-500 resize-none"
-                />
-              </div>
+    {/* === Botonera para agregar bloques === */}
+<div className="flex flex-wrap gap-2 mb-4">
+  <button 
+    type="button" 
+    onClick={() => addBlock("title")} 
+    className="px-3 py-1 bg-blue-100 hover:bg-blue-200 rounded"
+  >
+    + Título
+  </button>
+  
+  <button 
+    type="button" 
+    onClick={() => addBlock("description")} 
+    className="px-3 py-1 bg-blue-100 hover:bg-blue-200 rounded"
+  >
+    + Descripción
+  </button>
+  
+  <button 
+    type="button" 
+    onClick={() => addBlock("theory")} 
+    className="px-3 py-1 bg-blue-100 hover:bg-blue-200 rounded"
+  >
+    + Teoría
+  </button>
+  
+  <button 
+    type="button" 
+    onClick={() => addBlock("video")} 
+    className="px-3 py-1 bg-blue-100 hover:bg-blue-200 rounded"
+  >
+    + Video
+  </button>
+  
+  <button 
+    type="button" 
+    onClick={() => addBlock("pdf")} 
+    className="px-3 py-1 bg-blue-100 hover:bg-blue-200 rounded"
+  >
+    + PDF
+  </button>
+  
+  <button 
+    type="button" 
+    onClick={() => addBlock("vocabulary")} 
+    className="px-3 py-1 bg-blue-100 hover:bg-blue-200 rounded"
+  >
+    + Vocabulario
+  </button>
+  
+  <button 
+    type="button" 
+    onClick={() => addBlock("exercise")} 
+    className="px-3 py-1 bg-blue-100 hover:bg-blue-200 rounded"
+  >
+    + Ejercicio
+  </button>
+</div>
 
+    {/* === Render dinámico de los bloques === */}
+    {l.blocks.map((block, blockIdx) => (
+      <div key={blockIdx} className="p-4 border rounded-lg bg-white">
+        <BlockEditor
+          block={block}
+          onChange={(updated) => updateBlock(activeUnidad, lIdx, blockIdx, updated)}
+          onDelete={() => deleteBlock(activeUnidad, lIdx, blockIdx)}
+        />
+      </div>
+    ))}
 
-{/* URL del Video */}
-<div className="space-y-1">
-  <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-    <FiVideo className="w-4 h-4" /> Video URL (Vimeo, YouTube o archivo)
-  </label>
-
-  <div className="relative">
-    <FiLink2 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-    <input
-      type="url"
-      placeholder="https://vimeo.com/123...  |  https://..."
-      value={l.urlVideo || ""}
-      onChange={(e) =>
-        updateLeccion(activeUnidad, lIdx, {
-          urlVideo: e.target.value,
-        })
-      }
-      className="w-full p-3 pl-10 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-    />
   </div>
+)}
 
-  {/* PREVIEW AUTOMÁTICO */}
-  {l.urlVideo && isValidUrl(l.urlVideo) && (
-    <div className="aspect-video rounded-xl overflow-hidden border border-slate-200 bg-slate-50 mt-2">
-      <iframe
-        src={l.urlVideo}
-        className="w-full h-full"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowFullScreen
-      />
-    </div>
-  )}
-</div>
-
-              {/* Teoría en Markdown */}
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700">
-                  Theory (Markdown)
-                </label>
-                <textarea
-                  placeholder="Use Markdown: **bold**, _italic_, - lists, [link](https://...)"
-                  value={l.teoria || ""}
-                  onChange={(e) =>
-                    updateLeccion(activeUnidad, lIdx, {
-                      teoria: e.target.value,
-                    })
-                  }
-                  rows={5}
-                  className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-blue-500 resize-none"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Supports <code>**bold**</code>, <code>_italic_</code>, lists (-) and links.
-                </p>
-              </div>
-
-{/* VOCABULARY */}
-<div className="space-y-1">
-  <label className="text-sm font-medium text-gray-700">
-    Vocabulary
-  </label>
-
-  <VocabularyEditor
-    value={l.vocabulary}
-    onChange={(val) =>
-      updateLeccion(activeUnidad, lIdx, {
-        vocabulary: val,
-      })
-    }
-  />
-</div>
-
-              {/* Ejercicios */}
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700">Exercises</label>
-                <Exercises
-                  initial={l.ejercicios}
-                  onChange={(newExercises: Exercise[]) =>
-                    updateLeccion(activeUnidad, lIdx, {
-                      ejercicios: [...newExercises],
-                    })
-                  }
-                />
-              </div>
-            </div>
-          )}
         </div>
       ))
     ) : (
