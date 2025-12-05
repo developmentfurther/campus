@@ -6,9 +6,9 @@ import SentenceBuilder from "./SentenceBuilder";
 import ErrorFinder from "./ErrorFinder";
 export const GAMES_MAP: Record<string, React.FC> = {
   "hangman": Hangman,
-  // "emojiIdioms": EmojiIdioms,
+  "emojiIdioms": EmojiIdioms,
   "wordScramble": WordScramble,
   "wordle": Wordle,
-  // "sentenceBuilder": SentenceBuilder,
-  // "errorFinder": ErrorFinder,
+  "sentenceBuilder": SentenceBuilder,
+  "errorFinder": ErrorFinder,
 };
