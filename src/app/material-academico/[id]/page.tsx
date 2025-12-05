@@ -198,22 +198,86 @@ useEffect(() => {
   (curso.unidades || []).forEach((u: any, idxU: number) => {
     const unitId = u.id || `unit-${idxU + 1}`;
 
-   const lessons = (u.lecciones || []).map((l: any, idxL: number) => {
+ const lessons = (u.lecciones || []).map((l: any, idxL: number) => {
   const lessonId = l.id || `lesson-${idxU + 1}-${idxL + 1}`;
 
+  // ============================================================
+  // 🔹 DETECTAR SI ES ESTRUCTURA NUEVA (blocks) O LEGACY
+  // ============================================================
+  
+  const isNewStructure = Array.isArray(l.blocks) && l.blocks.length > 0;
+
+  let title = "";
+  let description = "";
+  let theory = "";
+  let videoUrl = "";
+  let pdfUrl = "";
+  let vocabulary = null;
+  const ejercicios: any[] = [];
+
+  if (isNewStructure) {
+    // ============================================================
+    // 🆕 ESTRUCTURA NUEVA: Extraer de blocks[]
+    // ============================================================
+    l.blocks.forEach((block: any) => {
+      switch (block.type) {
+        case "title":
+          title = block.value || "";
+          break;
+        case "description":
+          description = block.value || "";
+          break;
+        case "theory":
+          theory = block.value || "";
+          break;
+        case "video":
+          videoUrl = block.url || "";
+          break;
+        case "pdf":
+          pdfUrl = block.url || "";
+          break;
+        case "vocabulary":
+          vocabulary = block;
+          break;
+        case "exercise":
+          if (block.exercise) {
+            ejercicios.push(block.exercise);
+          }
+          break;
+      }
+    });
+  } else {
+    // ============================================================
+    // 🔙 ESTRUCTURA LEGACY: Leer campos directos
+    // ============================================================
+    title = l.titulo || "";
+    description = l.descripcion || "";
+    theory = l.teoria || "";
+    videoUrl = l.urlVideo || "";
+    pdfUrl = l.pdfUrl || "";
+    vocabulary = l.vocabulary || null;
+    
+    // Ejercicios legacy
+    if (Array.isArray(l.ejercicios)) {
+      ejercicios.push(...l.ejercicios);
+    }
+  }
+
+  // ============================================================
+  // 🎯 RETURN UNIFICADO (mismo formato para ambas estructuras)
+  // ============================================================
   return {
     key: buildKey(unitId, lessonId),
     id: lessonId,
     unitId,
-    title: l.titulo || `Lección ${idxL + 1}`,
-    description: l.descripcion || "",
-    text: l.texto || "",
-    theory: l.teoria || "",
-    videoUrl: l.urlVideo || "",
-    pdfUrl: l.pdfUrl || "",
-    vocabulary: l.vocabulary || null,
-  
-    ejercicios: Array.isArray(l.ejercicios) ? l.ejercicios : [],
+    title: title || `Lección ${idxL + 1}`,
+    description,
+    text: "", // Campo obsoleto pero lo mantenemos vacío
+    theory,
+    videoUrl,
+    pdfUrl,
+    vocabulary,
+    ejercicios,
   };
 });
 

@@ -447,7 +447,6 @@ function normalizeLessonBlocks(lesson: any) {
       titulo: "",
       descripcion: "",
       urlVideo: "",
-      duracion: undefined,
       urlImagen: "",
       ejercicios: [],
       textoCierre: "",
@@ -893,7 +892,7 @@ const deleteBlock = (uIdx: number, lIdx: number, bIdx: number) => {
     <FiLayers className="w-5 h-5 text-[#0C212D]" />
   </div>
   <h3 className="text-xl font-bold text-[#0C212D] tracking-tight">
-    Material Content: Units & Lessons
+    Material Content: Units & Sections
   </h3>
 </div>
 
@@ -978,19 +977,9 @@ const deleteBlock = (uIdx: number, lIdx: number, bIdx: number) => {
                           : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                       }`}
                     >
-                      Lessons ({unidades[activeUnidad]?.lecciones?.length || 0})
+                      Sections ({unidades[activeUnidad]?.lecciones?.length || 0})
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveUnitTab("cierre")}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                        activeUnitTab === "cierre"
-                          ? "bg-indigo-600 text-white"
-                          : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                      }`}
-                    >
-                      Closing
-                    </button>
+                    
                   </div>
                 </div>
 
@@ -1030,24 +1019,7 @@ const deleteBlock = (uIdx: number, lIdx: number, bIdx: number) => {
                         rows={3}
                       />
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
-                        <FiClock className="w-4 h-4" /> Estimated duration (minutes)
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="e.g., 60"
-                        value={unidades[activeUnidad]?.duracion || ""}
-                        onChange={(e) =>
-                          updateUnidad(activeUnidad, {
-                            duracion:
-                              parseInt(e.target.value, 10) || undefined,
-                          })
-                        }
-                        className="w-full p-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                      />
-                    </div>
+                    
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                         <FiImage className="w-4 h-4" /> Unit thumbnail (optional URL)
@@ -1130,7 +1102,7 @@ const deleteBlock = (uIdx: number, lIdx: number, bIdx: number) => {
           {/* Header */}
           <div className="flex items-center justify-between mb-2">
             <h4 className="font-medium text-slate-800">
-              Lesson {lIdx + 1}: {l.titulo || "Untitled"}
+              Section {String.fromCharCode(65 + lIdx)}: {l.titulo || "Untitled"}
             </h4>
             <div className="flex gap-2">
               <button
@@ -1238,7 +1210,7 @@ const deleteBlock = (uIdx: number, lIdx: number, bIdx: number) => {
       ))
     ) : (
       <div className="text-center text-slate-500 py-10">
-        No lessons yet.
+        No sections yet.
       </div>
     )}
 
@@ -1248,154 +1220,13 @@ const deleteBlock = (uIdx: number, lIdx: number, bIdx: number) => {
       onClick={() => agregarLeccion(activeUnidad)}
       className="w-full flex items-center justify-center gap-2 p-3 bg-blue-50 text-blue-600 rounded-xl border border-dashed border-blue-200 hover:bg-blue-100 transition-colors"
     >
-      <FiPlus size={16} /> Add New Lesson
+      <FiPlus size={16} /> Add New Section
     </button>
   </div>
 )}
 
 
-                {/* === TAB: Cierre === */}
-                {activeUnitTab === "cierre" && (
-                  <div className="space-y-6">
-                    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-                      <h3 className="text-gray-800 font-semibold mb-3 text-sm">
-                        Final unit exam
-                      </h3>
-                      <div className="space-y-1 mb-4">
-                        <label className="text-sm font-medium text-gray-700">
-                          Introductory text
-                        </label>
-                        <textarea
-                          placeholder="Intro or instructions"
-                          value={unidades[activeUnidad]?.closing?.examIntro || ""}
-                          onChange={(e) =>
-                            updateUnidad(activeUnidad, (prev) => ({
-                              ...prev,
-                              closing: {
-                                ...(prev.closing || {}),
-                                examIntro: e.target.value,
-                              },
-                            }))
-                          }
-                          rows={3}
-                          className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-{/* VIDEO DEL CIERRE DE LA UNIDAD */}
-<div className="space-y-1">
-  <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
-    <FiVideo className="w-4 h-4" /> Closing Video (optional)
-  </label>
-
-  <div className="relative">
-    <FiLink2 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-    <input
-      type="url"
-      placeholder="https://vimeo.com/123...  |  https://youtube.com/..."
-      value={unidades[activeUnidad]?.closing?.videoUrl || ""}
-      onChange={(e) =>
-        updateUnidad(activeUnidad, (prev) => ({
-          ...prev,
-          closing: {
-            ...(prev.closing || {}),
-            videoUrl: e.target.value,
-          },
-        }))
-      }
-      className="w-full p-3 pl-10 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-    />
-  </div>
-
-  {/* PREVIEW */}
-  {unidades[activeUnidad]?.closing?.videoUrl &&
-    isValidUrl(unidades[activeUnidad]?.closing?.videoUrl || "") && (
-      <div className="aspect-video mt-2 rounded-xl overflow-hidden border border-slate-200 bg-slate-100">
-        <iframe
-          src={unidades[activeUnidad]?.closing?.videoUrl}
-          className="w-full h-full"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-        />
-      </div>
-    )}
-</div>
-
-
-                      <div className="space-y-1">
-                        <label className="text-sm font-medium text-gray-700">
-                          Exam exercises
-                        </label>
-                        <Exercises
-  initial={unidades[activeUnidad]?.closing?.examExercises || []}
-  onChange={(updatedExercises) => {
-    console.log("🧩 [DEBUG] setExercises CIERRE ejecutado", {
-      unidad: activeUnidad,
-      updatedExercises,
-    });
-    updateUnidad(activeUnidad, (prevUnidad) => ({
-      ...prevUnidad,
-      closing: {
-        ...(prevUnidad.closing || {}),
-        examExercises: [...updatedExercises],
-      },
-    }));
-  }}
-/>
-
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium text-gray-700">
-                        Closing text
-                      </label>
-                      <textarea
-                        placeholder="Displayed after finishing the unit"
-                        value={unidades[activeUnidad]?.closing?.closingText || ""}
-                        onChange={(e) =>
-                          updateUnidad(activeUnidad, (prev) => ({
-                            ...prev,
-                            closing: {
-                              ...(prev.closing || {}),
-                              closingText: e.target.value,
-                            },
-                          }))
-                        }
-                        rows={4}
-                        className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-800 focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
-                        <FiLink2 className="w-4 h-4" /> PDF summary URL (optional)
-                      </label>
-                      <input
-                        type="url"
-                        placeholder="https://drive.google.com/yourfile.pdf"
-                        value={unidades[activeUnidad]?.closing?.pdfUrl || ""}
-                        onChange={(e) =>
-                          updateUnidad(activeUnidad, (prev) => ({
-                            ...prev,
-                            closing: {
-                              ...(prev.closing || {}),
-                              pdfUrl: e.target.value,
-                            },
-                          }))
-                        }
-                        className="w-full p-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      />
-                      {unidades[activeUnidad]?.closing?.pdfUrl && (
-                        <a
-                          href={unidades[activeUnidad]?.closing?.pdfUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-blue-600 hover:underline flex items-center gap-1"
-                        >
-                          <FiFileText size={14} /> Preview PDF
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                )}
+                
               </>
             )}
           </div>
