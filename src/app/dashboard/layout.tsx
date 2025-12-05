@@ -11,6 +11,7 @@ import SidebarAlumno from "@/components/layout/SidebarAlumno";
 import MobileNavbarAlumno from "@/components/layout/MobileNavbarAlumno";
 import MobileNavbarAdmin from "@/components/layout/MobileNavbarAdmin";
 import MobileNavbarProfesor from "@/components/layout/MobileNavbarProfesor";
+import LoaderUi from "@/components/ui/LoaderUi";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, role, authReady, loading } = useAuth();
@@ -21,7 +22,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [authReady, user, router]);
 
   if (!authReady || loading)
-    return <div className="flex h-screen items-center justify-center text-gray-500">Cargando sesión...</div>;
+   return <LoaderUi />;
 
   if (!user) return null;
 

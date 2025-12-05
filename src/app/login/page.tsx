@@ -7,6 +7,8 @@ import { auth } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { validateUserStatus } from '@/lib/userValidation'; // 👈 IMPORTAR VALIDACIÓN
 import { FiMail, FiLock, FiArrowRight, FiZap, FiAlertCircle } from "react-icons/fi";
+import LoaderUi from '@/components/ui/LoaderUi';
+import FancyBackground from '@/components/ui/FancyBackground';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -15,7 +17,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [showBajaModal, setShowBajaModal] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { user, authReady } = useAuth();
+  const { user, authReady, loggingOut } = useAuth();
   const router = useRouter();
 
   // Redirección si ya está logueado
@@ -55,7 +57,7 @@ export default function LoginPage() {
       // Usuario no existe en el sistema
       if (!validation.exists) {
         console.warn("⚠️ Usuario no registrado en el sistema");
-        setError("Este correo no está registrado en Further Campus. Contactá a soporte@furthercampus.com");
+        setError("Este correo no está registrado en Further Campus. Contactá a coordinacionacademica@furtherenglish.com ");
         setLoading(false);
         return;
       }
@@ -109,10 +111,12 @@ export default function LoginPage() {
       </div>
     );
   }
+if (loggingOut) return <LoaderUi />;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gray-100 px-4 relative overflow-hidden">
 
+<FancyBackground />
       {/* 🔥 MODAL USUARIO DADO DE BAJA */}
       {showBajaModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">

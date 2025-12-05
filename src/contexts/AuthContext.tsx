@@ -59,6 +59,7 @@ interface AuthContextType {
     courseId: string
   ) => Promise<any>;   // 👈 AGREGAR ESTO
 
+  loggingOut: boolean;
   logout?: () => Promise<void>;
   firestore?: any;
 
@@ -81,6 +82,8 @@ const AuthContext = createContext<AuthContextType>({
   misCursos: [],
   loadingCursos: false,
   userProfile: null,
+  loggingOut: false,
+logout: async () => {},
 });
 
 /* ==========================================================
@@ -112,6 +115,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loadingActivity, setLoadingActivity] = useState(true);
   const [alumnosRaw, setAlumnosRaw] = useState<any[]>([]);
 
+  const [loggingOut, setLoggingOut] = useState(false);
+
+
 
 
   /* ==========================================================
@@ -119,6 +125,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
      ========================================================== */
   const logout = async () => {
     try {
+      setLoggingOut(true);
       await signOut(auth);
       setUser(null);
       setRole(null);
@@ -127,6 +134,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (err) {
       console.error("❌ Error al cerrar sesión:", err);
       toast.error("Error al cerrar sesión");
+    } finally{
+      setLoggingOut(false);
     }
   };
 
@@ -847,6 +856,7 @@ const value = useMemo(
     getCourseProgress,
 
     logout,
+    loggingOut,
     setUserProfile,
     getCourseById,
     chatSessions,

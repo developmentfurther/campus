@@ -35,6 +35,7 @@ import { jsPDF } from "jspdf";
 import { FURTHER_LOGO_BASE64 } from "@/lib/logoBase64";
 import { useI18n } from "@/contexts/I18nContext";
 import MobileMenu from "@/components/ui/MobileMenu";
+import LoaderUi from "@/components/ui/LoaderUi";
 
 
 
@@ -1821,12 +1822,7 @@ const prevExercise = () => {
      🔹 Guards de acceso
      ========================================================= */
   if (!authReady || authLoading || loading) {
-    return (
-      <div className="min-h-[60vh] grid place-items-center text-slate-300">
-        {t("coursePlayer.loading")}
-
-      </div>
-    );
+    return <LoaderUi />
   }
 
   const canAccess =
