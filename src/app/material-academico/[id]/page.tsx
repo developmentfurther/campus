@@ -36,6 +36,7 @@ import { FURTHER_LOGO_BASE64 } from "@/lib/logoBase64";
 import { useI18n } from "@/contexts/I18nContext";
 import MobileMenu from "@/components/ui/MobileMenu";
 import LoaderUi from "@/components/ui/LoaderUi";
+import MarkdownWYSIWYG from "@/components/cursos/cursoItem/blocks/MarkdownWYSIWYG";
 
 
 
@@ -184,152 +185,209 @@ export default function CoursePlayerPage() {
     fetchCourse();
   }, [firestore, courseId]);
 
-  /* =========================================================
-     🔹 Normalizar unidades
-     ========================================================= */
+/* =========================================================
+   🔹 Normalizar unidades (ahora soporta contentTimeline)
+   ========================================================= */
 useEffect(() => {
   if (!curso) return;
 
-  console.log("📦 Normalizando curso:", curso.unidades);
+  console.log("📦 Normalizando curso (raw):", curso);
 
   const normalized: any[] = [];
 
-  // 1️⃣ Unidades normales
-  (curso.unidades || []).forEach((u: any, idxU: number) => {
-    const unitId = u.id || `unit-${idxU + 1}`;
+  // 1️⃣ Detectar si el curso ya tiene contentTimeline
+  const hasTimeline =
+    Array.isArray((curso as any).contentTimeline) &&
+    (curso as any).contentTimeline.length > 0;
 
- const lessons = (u.lecciones || []).map((l: any, idxL: number) => {
-  const lessonId = l.id || `lesson-${idxU + 1}-${idxL + 1}`;
+  // 2️⃣ Construir una "timeline" base
+  const timeline = hasTimeline
+    ? (curso as any).contentTimeline
+    : // 🔙 MODO LEGACY: si no hay contentTimeline, armamos uno simple
+      (curso.unidades || []).map((u: any, idx: number) => ({
+        type: "unit",
+        refId: u.id || `unit-${idx + 1}`,
+      }));
 
-  // ============================================================
-  // 🔹 DETECTAR SI ES ESTRUCTURA NUEVA (blocks) O LEGACY
-  // ============================================================
-  
-  const isNewStructure = Array.isArray(l.blocks) && l.blocks.length > 0;
+  timeline.forEach((item: any, idxTimeline: number) => {
+  if (item.type !== "unit") return;
 
-  let title = "";
-  let description = "";
-  let theory = "";
-  let videoUrl = "";
-  let pdfUrl = "";
-  let vocabulary = null;
-  const ejercicios: any[] = [];
+  const u =
+    (curso.unidades || []).find((uu: any) => uu.id === item.refId) ||
+    (curso.unidades || [])[idxTimeline];
 
-  if (isNewStructure) {
-    // ============================================================
-    // 🆕 ESTRUCTURA NUEVA: Extraer de blocks[]
-    // ============================================================
-    l.blocks.forEach((block: any) => {
-      switch (block.type) {
-        case "title":
-          title = block.value || "";
-          break;
-        case "description":
-          description = block.value || "";
-          break;
-        case "theory":
-          theory = block.value || "";
-          break;
-        case "video":
-          videoUrl = block.url || "";
-          break;
-        case "pdf":
-          pdfUrl = block.url || "";
-          break;
-        case "vocabulary":
-          vocabulary = block;
-          break;
-        case "exercise":
-  if (Array.isArray(block.exercises)) {
-    ejercicios.push(...block.exercises);
-  }
-  break;
+  if (!u) return;
 
+  const unitId = u.id || `unit-${idxTimeline + 1}`;
+
+  // Procesar lecciones...
+  const lessons = (u.lecciones || []).map((l: any, idxL: number) => {
+      const lessonId = l.id || `lesson-${idxU + 1}-${idxL + 1}`;
+
+      // Detectar si es estructura nueva (blocks) o legacy
+      const isNewStructure = Array.isArray(l.blocks) && l.blocks.length > 0;
+
+      let title = "";
+      let description = "";
+      let theory = "";
+      let videoUrl = "";
+      let pdfUrl = "";
+      let vocabulary = null;
+      const ejercicios: any[] = [];
+
+      if (isNewStructure) {
+        // 🆕 NUEVA ESTRUCTURA: blocks[]
+        l.blocks.forEach((block: any) => {
+          switch (block.type) {
+            case "title":
+              title = block.value || "";
+              break;
+            case "description":
+              description = block.value || "";
+              break;
+            case "theory":
+              theory = block.value || "";
+              break;
+            case "video":
+              videoUrl = block.url || "";
+              break;
+            case "pdf":
+              pdfUrl = block.url || "";
+              break;
+            case "vocabulary":
+              vocabulary = block;
+              break;
+            case "exercise":
+              if (Array.isArray(block.exercises)) {
+                ejercicios.push(...block.exercises);
+              }
+              break;
+          }
+        });
+      } else {
+        // 🔙 LEGACY: campos directos
+        title = l.titulo || "";
+        description = l.descripcion || "";
+        theory = l.teoria || "";
+        videoUrl = l.urlVideo || "";
+        pdfUrl = l.pdfUrl || "";
+        vocabulary = l.vocabulary || null;
+
+        if (Array.isArray(l.ejercicios)) {
+          ejercicios.push(...l.ejercicios);
+        }
       }
+
+      return {
+        key: buildKey(unitId, lessonId),
+        id: lessonId,
+        unitId,
+        title: title || `Lección ${idxL + 1}`,
+        description,
+        text: "", // obsoleto, lo dejamos vacío
+        theory,
+        videoUrl,
+        pdfUrl,
+        vocabulary,
+        ejercicios,
+      };
     });
-  } else {
-    // ============================================================
-    // 🔙 ESTRUCTURA LEGACY: Leer campos directos
-    // ============================================================
-    title = l.titulo || "";
-    description = l.descripcion || "";
-    theory = l.teoria || "";
-    videoUrl = l.urlVideo || "";
-    pdfUrl = l.pdfUrl || "";
-    vocabulary = l.vocabulary || null;
-    
-    // Ejercicios legacy
-    if (Array.isArray(l.ejercicios)) {
-      ejercicios.push(...l.ejercicios);
-    }
+
+  // Introducción
+  if (u.urlVideo || u.descripcion) {
+    lessons.unshift({
+      key: buildKey(unitId, "intro"),
+      id: "intro",
+      unitId,
+      title: t("coursePlayer.sidebar.introduction"),
+      description: u.descripcion || "",
+      videoUrl: u.introVideo || "",
+      ejercicios: [],
+      pdfUrl: "",
+      theory: ""
+    });
   }
 
-  // ============================================================
-  // 🎯 RETURN UNIFICADO (mismo formato para ambas estructuras)
-  // ============================================================
-  return {
-    key: buildKey(unitId, lessonId),
-    id: lessonId,
-    unitId,
-    title: title || `Lección ${idxL + 1}`,
-    description,
-    text: "", // Campo obsoleto pero lo mantenemos vacío
-    theory,
-    videoUrl,
-    pdfUrl,
-    vocabulary,
-    ejercicios,
-  };
+  normalized.push({
+    id: unitId,
+    title: u.titulo || `Unidad ${idxTimeline + 1}`,
+    description: u.descripcion || "",
+    lessons,
+  });
 });
-
-
-
-// 1️⃣ Introducción como primera lección (si tiene video o descripción)
-if (u.urlVideo || u.descripcion) {
-  lessons.unshift({
-    key: buildKey(unitId, "intro"),
-    id: "intro",
-    unitId,
-    title: t("coursePlayer.sidebar.introduction"),
-    description: u.descripcion || "",  // 👈 descripción real
-    videoUrl: u.introVideo || "",        // 👈 video de introducción
-    theory: "",                         // vacío
-    ejercicios: [],                     // vacío
-    pdfUrl: "",                         // vacío
+// FINAL EXAM
+if (timeline.some(i => i.type === "final_exam") && curso.examenFinal) {
+  const ex = curso.examenFinal;
+  normalized.push({
+    id: "final_exam",
+    title: "Final Exam",
+    lessons: [
+      {
+        key: buildKey("final_exam", "exam"),
+        id: "exam",
+        unitId: "final_exam",
+        title: ex.introTexto || "Final Exam",
+        description: ex.introTexto || "",
+        theory: ex.introTexto || "",
+        ejercicios: ex.ejercicios || [],
+        videoUrl: ex.videoUrl || "",
+        pdfUrl: "",
+      }
+    ]
   });
 }
+if (timeline.some(i => i.type === "project") && curso.capstone) {
+  const cap = curso.capstone;
 
-
-    // 2️⃣ Cierre / examen final de la unidad (solo 1)
-if (u.closing && (u.closing.examIntro || u.closing.examExercises?.length || u.closing.pdfUrl)) {
-  lessons.push({
-    key: buildKey(unitId, "closing"),
+  normalized.push({
+    id: "project",
+    title: "Capstone Project",
+    lessons: [
+      {
+        key: buildKey("project", "cap1"),
+        id: "cap1",
+        unitId: "project",
+        title: "Capstone Project",
+        description: cap.instrucciones || "",
+        theory: cap.instrucciones || "",
+        videoUrl: cap.videoUrl || "",
+        ejercicios: [],
+        pdfUrl: ""
+      }
+    ]
+  });
+}
+if (timeline.some(i => i.type === "closing") &&
+   (curso.textoFinalCurso || curso.textoFinalCursoVideoUrl)) 
+{
+  normalized.push({
     id: "closing",
-    unitId,
-    title: "🧠 Cierre de la unidad",
-    text: u.closing.examIntro || "",
-    ejercicios: Array.isArray(u.closing.examExercises)
-      ? u.closing.examExercises
-      : [],
-    pdfUrl: u.closing.pdfUrl || "", // ✅ nuevo campo PDF
-    videoUrl: u.closing.videoUrl || "",
+    title: "Closing Section",
+    lessons: [
+      {
+        key: buildKey("closing", "end"),
+        id: "end",
+        unitId: "closing",
+        title: "Closing Section",
+        description: curso.textoFinalCurso || "",
+        theory: curso.textoFinalCurso || "",
+        videoUrl: curso.textoFinalCursoVideoUrl || "",
+        ejercicios: [],
+        pdfUrl: ""
+      }
+    ]
   });
 }
 
 
-    normalized.push({
-  id: unitId,
-  title: u.titulo || `Unidad ${idxU + 1}`,
-  description: u.descripcion || "",
-  introVideo: u.introVideo || null,
-  lessons,
-  
-});
 
-  });
+  // ⚠️ IMPORTANTE:
+  // Si estamos en modo LEGACY (sin contentTimeline) y hay cierre de curso,
+  // seguimos creando el "closing-course" como antes.
+  const hasClosingTimelineItem = hasTimeline &&
+    (curso as any).contentTimeline?.some((it: any) => it.type === "closing");
 
-  // 3️⃣ Cierre final del curso (video + mensaje final)
-  if (curso.textoFinalCurso || curso.textoFinalCursoVideoUrl) {
+  if (!hasClosingTimelineItem && (curso.textoFinalCurso || curso.textoFinalCursoVideoUrl)) {
     normalized.push({
       id: "closing-course",
       title: "Cierre del Curso",
@@ -350,8 +408,7 @@ if (u.closing && (u.closing.examIntro || u.closing.examExercises?.length || u.cl
   console.log("✅ Unidades normalizadas (final):", normalized);
   setUnits(normalized);
   if (normalized.length > 0) setExpandedUnits({ 0: true });
-}, [curso]);
-
+}, [curso, t]);
 
 
 /* =========================================================
@@ -1950,29 +2007,97 @@ const prevExercise = () => {
     (user?.email && (curso?.cursantes || []).includes(user.email));
 
   if (!curso || !canAccess) {
-    return (
-      <div className="min-h-[60vh] grid place-items-center px-6 bg-[#0B1220]">
-        <div className="max-w-md bg-slate-800 rounded-2xl border border-slate-700 p-6 text-center">
-          <div className="mx-auto w-12 h-12 rounded-full bg-yellow-400/20 text-yellow-400 grid place-items-center">
-            <FiAlertTriangle />
-          </div>
-          <h2 className="mt-3 text-lg font-bold text-white">
-            {t("coursePlayer.noAccessTitle")}
-          </h2>
-          <p className="mt-1 text-sm text-slate-300">
-            {t("coursePlayer.noAccessDescription")}
-          </p>
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="mt-4 inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-yellow-400 text-slate-900 font-semibold hover:bg-yellow-300"
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-[#0C212D] via-[#112C3E] to-[#0C212D] grid place-items-center px-6 py-12 relative overflow-hidden">
+      
+      {/* Elementos decorativos de fondo */}
+      <div className="absolute top-0 left-0 w-96 h-96 bg-[#EE7203]/5 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-[#FF3816]/5 rounded-full blur-3xl"></div>
+      
+      {/* Card principal */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        className="relative max-w-lg w-full"
+      >
+        {/* Glow effect */}
+        <div className="absolute -inset-1 bg-gradient-to-r from-[#EE7203] via-[#FF3816] to-[#EE7203] rounded-3xl blur-xl opacity-20"></div>
+        
+        {/* Card content */}
+        <div className="relative bg-gradient-to-br from-[#112C3E] to-[#0C212D] rounded-3xl border-2 border-[#EE7203]/30 p-10 shadow-2xl">
+          
+          {/* Icono con animación */}
+          <motion.div
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+            className="mx-auto w-20 h-20 rounded-2xl bg-gradient-to-br from-[#EE7203] to-[#FF3816] shadow-lg shadow-[#EE7203]/50 grid place-items-center mb-6"
           >
-            {t("coursePlayer.goBack")}
-          </button>
-        </div>
-      </div>
-    );
-  }
+            <FiAlertTriangle size={36} className="text-white" />
+          </motion.div>
 
+          {/* Título */}
+          <motion.h2
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="text-2xl font-black text-white text-center mb-3"
+          >
+            {t("coursePlayer.noAccessTitle")}
+          </motion.h2>
+
+          {/* Descripción */}
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="text-base text-white/70 text-center leading-relaxed mb-8"
+          >
+            {t("coursePlayer.noAccessDescription")}
+          </motion.p>
+
+          {/* Línea decorativa */}
+          <div className="w-full h-px bg-gradient-to-r from-transparent via-[#EE7203]/30 to-transparent mb-8"></div>
+
+          {/* Botón de acción */}
+          <motion.button
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => router.push("/dashboard")}
+            className="w-full bg-gradient-to-r from-[#EE7203] via-[#FF3816] to-[#EE7203] bg-size-200 bg-pos-0 hover:bg-pos-100 text-white font-bold text-base py-4 rounded-xl shadow-lg shadow-[#EE7203]/30 transition-all duration-500 flex items-center justify-center gap-3 group"
+            style={{ backgroundSize: '200% 100%' }}
+          >
+            <FiChevronLeft className="group-hover:-translate-x-1 transition-transform" />
+            <span>{t("coursePlayer.goBack")}</span>
+          </motion.button>
+
+          {/* Mensaje adicional */}
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            className="text-xs text-white/50 text-center mt-6"
+          >
+            Si crees que esto es un error, contacta con soporte
+          </motion.p>
+        </div>
+
+        {/* Badge decorativo */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.7 }}
+          className="absolute -bottom-4 -right-4 bg-[#0C212D] border-2 border-[#EE7203] rounded-full px-4 py-2 shadow-xl"
+        >
+        </motion.div>
+      </motion.div>
+    </div>
+  );
+}
 
 
 
@@ -2772,10 +2897,10 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
                       </div>
                     </div>
                     <article className="prose prose-lg prose-slate max-w-none prose-headings:text-[#0C212D] prose-headings:font-black prose-a:text-[#EE7203] prose-a:font-semibold prose-strong:text-[#0C212D] prose-strong:font-bold prose-p:leading-relaxed prose-p:text-slate-700">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {activeLesson.theory}
-                      </ReactMarkdown>
-                    </article>
+  <MarkdownWYSIWYG>
+    {activeLesson.theory}
+  </MarkdownWYSIWYG>
+</article>
                   </div>
                 </motion.div>
               )}
