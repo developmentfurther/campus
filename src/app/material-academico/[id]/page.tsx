@@ -240,10 +240,11 @@ useEffect(() => {
           vocabulary = block;
           break;
         case "exercise":
-          if (block.exercise) {
-            ejercicios.push(block.exercise);
-          }
-          break;
+  if (Array.isArray(block.exercises)) {
+    ejercicios.push(...block.exercises);
+  }
+  break;
+
       }
     });
   } else {
@@ -612,6 +613,37 @@ function buildCourseStructure(units: any[]) {
       type: l.type || "video",
     })),
   }));
+}
+
+function getExercisePrompt(ex: Exercise): string {
+  switch (ex.type) {
+    case "multiple_choice":
+      return ex.question;
+    case "true_false":
+      return ex.statement;
+    case "fill_blank":
+      return ex.sentence;
+    case "text":
+      return ex.instructions;
+    case "reorder":
+      return ex.title;
+    case "matching":
+      return ex.title;
+    case "reading":
+      return ex.text;
+    case "listening":
+      return ex.transcript || "Escucha el audio y responde.";
+    case "speaking":
+      return ex.bullets.join("\n");
+    case "reflection":
+      return ex.prompt;
+    case "sentence_correction":
+      return ex.incorrect;
+    case "verb_table":
+      return ex.title; // o ex.instructions
+    default:
+      return "";
+  }
 }
 
 function computeStats(byLesson: any, totalLessons: number) {
@@ -1657,23 +1689,36 @@ const renderSpeaking = (ex: any) => {
       className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6"
     >
       {/* Header */}
-<motion.div className="flex items-center gap-3 mb-4">
-  <div className="w-10 h-10 rounded-xl bg-blue-600/10 text-blue-600 grid place-items-center text-xl">
-    🧠
-  </div>
-  <div className="flex-1">
-    {/* Título del ejercicio */}
-    <h3 className="text-xl font-semibold text-slate-900">
-      {ex.title || ex.question || ex.statement || ex.prompt || t("coursePlayer.exercise.exercise")}
-    </h3>
-    
-    {/* Instrucciones si existen */}
-    {ex.instructions && (
-      <p className="text-sm text-slate-600 mt-1 leading-relaxed">
+<motion.div className="space-y-3 mb-6">
+  {/* 🎯 TÍTULO DEL EJERCICIO */}
+  {ex.title && (
+    <div className="flex items-center gap-3">
+      <div className="w-10 h-10 rounded-xl bg-blue-600/10 text-blue-600 grid place-items-center text-xl">
+        🧠
+      </div>
+      <h3 className="text-2xl font-bold text-slate-900">
+        {ex.title}
+      </h3>
+    </div>
+  )}
+
+  {/* 📋 INSTRUCCIONES DEL EJERCICIO */}
+  {ex.instructions && (
+    <div className="bg-blue-50 border-l-4 border-blue-500 rounded-r-xl p-4">
+      <p className="text-sm text-blue-900 leading-relaxed font-medium">
         {ex.instructions}
       </p>
-    )}
+    </div>
+  )}
+  {/* 📝 CONSIGNA / ENUNCIADO */}
+{getExercisePrompt(ex) && (
+  <div className="bg-slate-100 border border-slate-300 rounded-xl p-4 mt-3">
+    <p className="text-base font-semibold text-slate-800 whitespace-pre-wrap">
+      {getExercisePrompt(ex)}
+    </p>
   </div>
+)}
+
 </motion.div>
 
 {/* Indicador de tipo */}
@@ -1696,14 +1741,13 @@ const renderSpeaking = (ex: any) => {
             : "bg-slate-50 border-slate-200"
         }`}
       >
-        {/* Título / prompt principal (menos para reading/listening que ya tienen su propio header) */}
-        {ex.type !== "reading" &&
-          ex.type !== "listening" &&
-          (ex.question || ex.prompt || ex.statement) && (
-            <h4 className="font-semibold text-slate-900 mb-4 text-lg">
-              {ex.question || ex.prompt || ex.statement}
-            </h4>
-          )}
+        {/* CONSIGNA UNIVERSAL */}
+{ex.type !== "reading" &&
+  ex.type !== "listening" && (
+    <h4 className="font-semibold text-slate-900 mb-4 text-lg whitespace-pre-wrap">
+      {getExercisePrompt(ex)}
+    </h4>
+)}
 
         {/* 🔀 Selección de renderer según tipo */}
         {ex.type === "reading" && renderReading(ex)}
@@ -2816,21 +2860,7 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
         </motion.div>
       ))}
 
-      {/* Botón final opcional para marcar lección completa */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.5 }}
-        className="pt-8 border-t-2 border-slate-100"
-      >
-        <button
-          onClick={goNextLesson}
-          className="w-full py-6 rounded-2xl font-black text-lg bg-gradient-to-r from-emerald-500 to-green-500 text-white shadow-2xl hover:shadow-emerald-500/50 hover:scale-105 transition-all flex items-center justify-center gap-3"
-        >
-          <FiCheckCircle size={24} />
-          <span>¡Continuar a la siguiente lección!</span>
-        </button>
-      </motion.div>
+      
     </div>
   </motion.div>
 )}

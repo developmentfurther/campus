@@ -299,8 +299,8 @@ case "description": {
 
 
 case "exercise": {
-  // === Si aún no se eligió el tipo de ejercicio ===
-  if (!block.exercise) {
+  // Si todavía no existe el array de ejercicios, mostrar selector de tipo
+  if (!block.exercises) {
     return (
       <div className="space-y-3">
 
@@ -308,7 +308,6 @@ case "exercise": {
           Selecciona un tipo de ejercicio:
         </p>
 
-        {/* Botones para elegir tipo */}
         <div className="flex flex-wrap gap-2">
           {[
             "multiple_choice",
@@ -329,13 +328,13 @@ case "exercise": {
               onClick={() =>
                 onChange({
                   ...block,
-                  exercise: {
-                    id: `${Date.now()}-${Math.random()
-                      .toString(36)
-                      .slice(2)}`,
-                    type,
-                    ...defaultExerciseForType(type),
-                  },
+                  exercises: [
+                    {
+                      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                      type,
+                      ...defaultExerciseForType(type),
+                    },
+                  ],
                 })
               }
               className="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 rounded text-sm capitalize"
@@ -345,7 +344,6 @@ case "exercise": {
           ))}
         </div>
 
-        {/* Botón eliminar bloque */}
         <button
           type="button"
           onClick={onDelete}
@@ -353,21 +351,19 @@ case "exercise": {
         >
           Eliminar bloque
         </button>
-
       </div>
     );
   }
 
-  // === Si ya se creó un ejercicio, mostrar editor completo ===
+  // Render del editor con múltiples ejercicios
   return (
     <div className="space-y-3">
 
       <Exercises
-        initial={[block.exercise]}
-        onChange={(arr) => onChange({ ...block, exercise: arr[0] })}
+        initial={block.exercises}
+        onChange={(arr) => onChange({ ...block, exercises: arr })}
       />
 
-      {/* Botón eliminar bloque */}
       <button
         type="button"
         onClick={onDelete}
@@ -379,6 +375,7 @@ case "exercise": {
     </div>
   );
 }
+
 
     default:
       return <div>Tipo no soportado.</div>;

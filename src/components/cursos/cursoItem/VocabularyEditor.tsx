@@ -6,24 +6,30 @@ export default function VocabularyEditor({ value, onChange }) {
   const entries = value?.entries || [];
 
   const updateEntry = (idx, patch) => {
-    const newList = [...entries];
-    newList[idx] = { ...newList[idx], ...patch };
-    onChange({ entries: newList });
-  };
+  const newList = [...entries];
+  newList[idx] = { ...newList[idx], ...patch };
+  onChange({ 
+    ...value, 
+    entries: newList 
+  });
+};
+
 
   const addEntry = () => {
     onChange({
-      entries: [
-        ...entries,
-        { term: "", translation: "", example: "" },
-      ],
-    });
+  ...value,
+  entries: [
+    ...entries,
+    { term: "", translation: "", example: "" },
+  ],
+});
   };
 
   const removeEntry = (idx) => {
     onChange({
-      entries: entries.filter((_, i) => i !== idx),
-    });
+  ...value,
+  entries: entries.filter((_, i) => i !== idx),
+});
   };
 
   return (

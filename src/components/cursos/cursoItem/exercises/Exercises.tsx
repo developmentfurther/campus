@@ -893,30 +893,51 @@ if (!ex.instructions || !ex.instructions.trim()) return false;
 
   // ===== Ayudantes de UI =====
   const typeLabel = (t: Exercise['type']): string =>
-    ({
-      multiple_choice: "Múltiple",
-      true_false: "Verdadero/Falso",
-      fill_blank: "Rellenar espacios",
-      text: "Párrafo",
-      reorder: "Reordenar",
-      matching: "Emparejar",
-    }[t] || t);
+  ({
+    multiple_choice: "Múltiple",
+    true_false: "Verdadero/Falso",
+    fill_blank: "Rellenar espacios",
+    text: "Párrafo",
+    reorder: "Reordenar",
+    matching: "Emparejar",
+    reading: "Reading",
+    listening: "Listening",
+    speaking: "Speaking",
+    reflection: "Reflexión",
+    sentence_correction: "Corrección",
+    verb_table: "Verb Table",
+  }[t] || t);
 
   const getTabTitle = (ex: Exercise, idx: number): string => {
-    if (ex.type === "multiple_choice")
-      return firstLine(ex.question) || `Múltiple ${idx + 1}`;
-    if (ex.type === "true_false")
-      return firstLine(ex.statement) || `Verdadero/Falso ${idx + 1}`;
-    if (ex.type === "fill_blank")
-      return firstLine(ex.title || ex.sentence) || `Rellenar ${idx + 1}`;
-    if (ex.type === "text")
-      return firstLine(ex.title || ex.instructions) || `Párrafo ${idx + 1}`;
-    if (ex.type === "reorder")
-      return firstLine(ex.title) || `Reordenar ${idx + 1}`;
-    if (ex.type === "matching")
-      return firstLine(ex.title) || `Emparejar ${idx + 1}`;
-    return `Ejercicio ${idx + 1}`;
-  };
+  if (ex.type === "multiple_choice")
+    return firstLine(ex.question) || `Múltiple ${idx + 1}`;
+  if (ex.type === "true_false")
+    return firstLine(ex.statement) || `Verdadero/Falso ${idx + 1}`;
+  if (ex.type === "fill_blank")
+    return firstLine(ex.title || ex.sentence) || `Rellenar ${idx + 1}`;
+  if (ex.type === "text")
+    return firstLine(ex.title || ex.instructions) || `Párrafo ${idx + 1}`;
+  if (ex.type === "reorder")
+    return firstLine(ex.title) || `Reordenar ${idx + 1}`;
+  if (ex.type === "matching")
+    return firstLine(ex.title) || `Emparejar ${idx + 1}`;
+  
+  // Nuevos tipos
+  if (ex.type === "reading")
+    return firstLine(ex.title) || `Reading ${idx + 1}`;
+  if (ex.type === "listening")
+    return firstLine(ex.title) || `Listening ${idx + 1}`;
+  if (ex.type === "speaking")
+    return firstLine(ex.title) || `Speaking ${idx + 1}`;
+  if (ex.type === "reflection")
+    return firstLine(ex.title) || `Reflexión ${idx + 1}`;
+  if (ex.type === "sentence_correction")
+    return firstLine(ex.title) || `Corrección ${idx + 1}`;
+  if (ex.type === "verb_table")
+    return firstLine(ex.title) || `Verb Table ${idx + 1}`;
+    
+  return `Ejercicio ${idx + 1}`;
+};
 
   // ===== Renderizadores =====
   const renderMultipleChoice = (ex: MultipleChoiceExercise) => (
@@ -939,6 +960,16 @@ if (!ex.instructions || !ex.instructions.trim()) return false;
   onChange={(e) => updateFieldImmediate(ex.id, { instructions: e.target.value })}
 />
 
+      <textarea
+        rows={3}
+        className="w-full border rounded px-3 py-2"
+        style={{ whiteSpace: "pre-wrap" }}
+        placeholder="Pregunta (ej., ¿Cuál es la respuesta correcta?)"
+        value={ex.question ?? ""}
+        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+          updateFieldImmediate(ex.id, { question: e.target.value })
+        }
+      />
       <div className="space-y-2">
         {ex.options.map((opt, i) => (
           <div key={i} className="flex gap-2 items-center">
@@ -1156,24 +1187,25 @@ const renderVerbTable = (ex: VerbTableExercise) => {
   return (
     <div className="space-y-4">
       {/* Título */}
-      <textarea
-        rows={2}
-        className="w-full border rounded px-3 py-2"
-        placeholder="Instrucciones (ej: Complete the table with the correct verb forms)"
-        value={ex.title}
-        onChange={(e) =>
-          updateFieldImmediate(ex.id, { title: e.target.value })
-        }
-      />
-
+      <input
+  type="text"
+  className="w-full border rounded px-3 py-2 mb-2"
+  placeholder="Título del ejercicio (ej: Verb table - To be)"
+  value={ex.title ?? ""}
+  onChange={(e) =>
+    updateFieldImmediate(ex.id, { title: e.target.value })
+  }
+/>
 
 {/* Instrucciones */}
 <textarea
   rows={2}
   className="w-full border rounded px-3 py-2 mb-4"
   placeholder="Instrucciones del ejercicio"
-  value={ex.instructions}
-  onChange={(e) => updateFieldImmediate(ex.id, { instructions: e.target.value })}
+  value={ex.instructions ?? ""}
+  onChange={(e) =>
+    updateFieldImmediate(ex.id, { instructions: e.target.value })
+  }
 />
 
       {/* Instrucción para el profesor */}
@@ -1406,53 +1438,64 @@ const renderVerbTable = (ex: VerbTableExercise) => {
     </div>
   );
 
-  const renderTrueFalse = (ex: TrueFalseExercise) => (
-    <div className="space-y-2">
-      {/* Enunciado general del ejercicio */}
-<textarea
-  rows={2}
-  className="w-full border rounded px-3 py-2"
-  placeholder="Instrucciones generales (ej: Read the sentences and mark Yes/No...)"
-  value={ex.instructions ?? ""}
-  onChange={(e) =>
-    updateFieldImmediate(ex.id, { instructions: e.target.value })
-  }
-/>
+ const renderTrueFalse = (ex: TrueFalseExercise) => (
+  <div className="space-y-2">
+    {/* Título del ejercicio */}
+    <input
+      type="text"
+      className="w-full border rounded px-3 py-2 mb-2"
+      placeholder="Título del ejercicio"
+      value={ex.title ?? ""}
+      onChange={(e) =>
+        updateFieldImmediate(ex.id, { title: e.target.value })
+      }
+    />
 
+    {/* Instrucciones generales */}
+    <textarea
+      rows={2}
+      className="w-full border rounded px-3 py-2 mb-4"
+      placeholder="Instrucciones generales (ej: Read the sentences and mark True/False...)"
+      value={ex.instructions ?? ""}
+      onChange={(e) =>
+        updateFieldImmediate(ex.id, { instructions: e.target.value })
+      }
+    />
 
-      {/* Enunciado multilínea */}
-      <textarea
-        rows={3}
-        className="w-full border rounded px-3 py-2"
-        style={{ whiteSpace: "pre-wrap" }}
-        placeholder="Enunciado (ej., El cielo es azul.)"
-        value={ex.statement ?? ""}
-        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-          updateFieldImmediate(ex.id, { statement: e.target.value })
-        }
-      />
-      <div className="flex items-center gap-4 mt-1">
-        <label className="flex items-center gap-2">
-          <input
-            type="radio"
-            name={`tf-${ex.id}`}
-            checked={ex.answer === true}
-            onChange={() => updateField(ex.id, { answer: true })}
-          />
-          Verdadero
-        </label>
-        <label className="flex items-center gap-2">
-          <input
-            type="radio"
-            name={`tf-${ex.id}`}
-            checked={ex.answer === false}
-            onChange={() => updateField(ex.id, { answer: false })}
-          />
-          Falso
-        </label>
-      </div>
+    {/* Enunciado multilínea */}
+    <textarea
+      rows={3}
+      className="w-full border rounded px-3 py-2"
+      style={{ whiteSpace: "pre-wrap" }}
+      placeholder="Enunciado (ej., El cielo es azul.)"
+      value={ex.statement ?? ""}
+      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+        updateFieldImmediate(ex.id, { statement: e.target.value })
+      }
+    />
+    
+    <div className="flex items-center gap-4 mt-1">
+      <label className="flex items-center gap-2">
+        <input
+          type="radio"
+          name={`tf-${ex.id}`}
+          checked={ex.answer === true}
+          onChange={() => updateField(ex.id, { answer: true })}
+        />
+        Verdadero
+      </label>
+      <label className="flex items-center gap-2">
+        <input
+          type="radio"
+          name={`tf-${ex.id}`}
+          checked={ex.answer === false}
+          onChange={() => updateField(ex.id, { answer: false })}
+        />
+        Falso
+      </label>
     </div>
-  );
+  </div>
+);
 
   const renderReorder = (ex: ReorderExercise) => (
     <div className="space-y-3">
