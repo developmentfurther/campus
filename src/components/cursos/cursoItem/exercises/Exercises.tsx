@@ -13,6 +13,8 @@ import React, {
 
 export interface ExerciseBase {
   id: string;
+  title: string; 
+  instructions: string;  
 }
 
 /* ===============================
@@ -28,14 +30,12 @@ interface MultipleChoiceExercise extends ExerciseBase {
 
 export interface TrueFalseExercise extends ExerciseBase {
   type: "true_false";
-  instructions?: string;
   statement: string;
   answer: boolean;
 }
 
 export interface FillBlankExercise extends ExerciseBase {
   type: "fill_blank";
-  title: string;
   sentence: string;
   answers: string[];
   hintWords: string;
@@ -43,20 +43,17 @@ export interface FillBlankExercise extends ExerciseBase {
 
 export interface TextExercise extends ExerciseBase {
   type: "text";
-  prompt: string;
   maxLength: number;
 }
 
 export interface ReorderExercise extends ExerciseBase {
   type: "reorder";
-  title: string;
   items: string[];
   correctOrder: number[];
 }
 
 export interface MatchingExercise extends ExerciseBase {
   type: "matching";
-  title: string;
   pairs: { left: string; right: string }[];
 }
 
@@ -98,7 +95,6 @@ type ComprehensionQuestion =
 // 📖 Reading: texto + preguntas de comprensión
 export interface ReadingExercise extends ExerciseBase {
   type: "reading";
-  title: string;
   text: string; // texto a leer
   questions: ComprehensionQuestion[]; // MC o True/False
 }
@@ -107,7 +103,6 @@ export interface ReadingExercise extends ExerciseBase {
 // 🎧 Listening: audio + preguntas de comprensión
 export interface ListeningExercise extends ExerciseBase {
   type: "listening";
-  title: string;
   audioUrl: string;             // URL del audio (storage, https, etc.)
   questions: ComprehensionQuestion[];
   transcript?: string;          // opcional: texto del audio si lo quieren
@@ -116,7 +111,6 @@ export interface ListeningExercise extends ExerciseBase {
 // 🗣️ Speaking: bullets con prompts para hablar
 export interface SpeakingExercise extends ExerciseBase {
   type: "speaking";
-  title: string;
   bullets: string[];  // cada ítem = un bullet/prompt
   notes?: string;     // campo extra opcional de notas/instrucciones
 }
@@ -124,7 +118,6 @@ export interface SpeakingExercise extends ExerciseBase {
 // 💭 Reflection: texto + 3 ideas del alumno
 export interface ReflectionExercise extends ExerciseBase {
   type: "reflection";
-  title: string;
   prompt: string;     // consigna de reflexión
   ideasCount: number; // normalmente 3 (puedes setear por defecto en el editor)
 }
@@ -140,7 +133,6 @@ export interface SentenceCorrectionExercise extends ExerciseBase {
 
 export interface VerbTableExercise extends ExerciseBase {
   type: "verb_table";
-  title: string;
   rows: {
     subject: string;
     positive: string;
@@ -216,6 +208,9 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
     if (!ex || !ex.type) return false;
     switch (ex.type) {
       case "multiple_choice": {
+        if (!ex.title || !ex.title.trim()) return false;
+if (!ex.instructions || !ex.instructions.trim()) return false;
+
         if (!ex.question || String(ex.question).trim() === "") return false;
         if (!Array.isArray(ex.options) || ex.options.length < 2) return false;
         const opts = ex.options.map((o) => (o ?? "").toString().trim());
@@ -227,10 +222,16 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
         return true;
       }
       case "true_false": {
+        if (!ex.title || !ex.title.trim()) return false;
+if (!ex.instructions || !ex.instructions.trim()) return false;
+
         if (!ex.statement || String(ex.statement).trim() === "") return false;
         return typeof ex.answer === "boolean";
       }
       case "fill_blank": {
+        if (!ex.title || !ex.title.trim()) return false;
+if (!ex.instructions || !ex.instructions.trim()) return false;
+
         if (
           !ex.sentence ||
           typeof ex.sentence !== "string" ||
@@ -246,8 +247,14 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
         return true;
       }
       case "text":
-        return !!(ex.prompt && String(ex.prompt).trim().length > 0);
+        if (!ex.title || !ex.title.trim()) return false;
+if (!ex.instructions || !ex.instructions.trim()) return false;
+
+        return true;
       case "reorder": {
+        if (!ex.title || !ex.title.trim()) return false;
+if (!ex.instructions || !ex.instructions.trim()) return false;
+
         if (!ex.title || String(ex.title).trim() === "") return false;
         if (!Array.isArray(ex.items) || ex.items.length < 2) return false;
         const nonEmptyItems = ex.items.filter(
@@ -267,7 +274,10 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
         return validIndices;
       }
       case "matching": {
-        if (!ex.title || String(ex.title).trim() === "") return false;
+        if (!ex.title || !ex.title.trim()) return false;
+if (!ex.instructions || !ex.instructions.trim()) return false;
+
+      
         if (!Array.isArray(ex.pairs) || ex.pairs.length < 1) return false;
         const ok = ex.pairs.every(
           (p) =>
@@ -282,7 +292,10 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
          📖 READING — texto + preguntas
       ==================================*/
       case "reading": {
-        if (!ex.title || ex.title.trim() === "") return false;
+        if (!ex.title || !ex.title.trim()) return false;
+if (!ex.instructions || !ex.instructions.trim()) return false;
+
+       
         if (!ex.text || ex.text.trim() === "") return false;
 
         // Validación de preguntas de comprensión
@@ -323,7 +336,9 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
          🎧 LISTENING — audio + preguntas
       ==================================*/
       case "listening": {
-        if (!ex.title || ex.title.trim() === "") return false;
+        if (!ex.title || !ex.title.trim()) return false;
+if (!ex.instructions || !ex.instructions.trim()) return false;
+
         if (!ex.audioUrl) return false; // basta con que exista, no exigir trim al editar
 
 
@@ -369,7 +384,9 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
          🗣️ SPEAKING — bullets de prompts
       ==================================*/
       case "speaking": {
-        if (!ex.title || ex.title.trim() === "") return false;
+        if (!ex.title || !ex.title.trim()) return false;
+if (!ex.instructions || !ex.instructions.trim()) return false;
+
 
         if (!Array.isArray(ex.bullets) || ex.bullets.length === 0)
           return false;
@@ -384,7 +401,9 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
          💭 REFLECTION — prompt + ideas
       ==================================*/
       case "reflection": {
-        if (!ex.title || ex.title.trim() === "") return false;
+        if (!ex.title || !ex.title.trim()) return false;
+if (!ex.instructions || !ex.instructions.trim()) return false;
+
         if (!ex.prompt || ex.prompt.trim() === "") return false;
 
         // Min: 1 idea, usualmente 3
@@ -398,6 +417,9 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
          ✏️ SENTENCE CORRECTION
       ==================================*/
       case "sentence_correction": {
+        if (!ex.title || !ex.title.trim()) return false;
+if (!ex.instructions || !ex.instructions.trim()) return false;
+
         if (!ex.incorrect || ex.incorrect.trim() === "") return false;
 
         if (
@@ -414,7 +436,9 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
       }
 
      case "verb_table": {
-  if (!ex.title || ex.title.trim() === "") return false;
+  if (!ex.title || !ex.title.trim()) return false;
+if (!ex.instructions || !ex.instructions.trim()) return false;
+
   if (!Array.isArray(ex.rows) || ex.rows.length === 0) return false;
 
   // Validar que todas las filas tengan subject
@@ -486,6 +510,8 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
         base = {
           id,
           type,
+          title: "",              
+          instructions: "",   
           question: "",
           options: ["", ""],
           correctIndex: 0,
@@ -496,6 +522,8 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
         base = {
           id,
           type,
+          title: "",             
+          instructions: "",  
           statement: "",
           answer: true,
         };
@@ -506,6 +534,7 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
           id,
           type,
           title: "",
+          instructions: "",
           sentence: "",
           answers: [],
           hintWords: "",
@@ -516,7 +545,8 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
         base = {
           id,
           type,
-          prompt: "",
+          title: "",
+          instructions: "",
           maxLength: 500,
         };
         break;
@@ -526,6 +556,7 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
           id,
           type,
           title: "",
+          instructions: "",
           items: [],
           correctOrder: [],
         };
@@ -536,6 +567,7 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
           id,
           type,
           title: "",
+          instructions: "",
           pairs: [{ left: "", right: "" }],
         };
         break;
@@ -548,6 +580,7 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
           id,
           type,
           title: "",
+          instructions: "",
           text: "",
           questions: [
             {
@@ -571,6 +604,7 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
           id,
           type,
           title: "",
+          instructions: "",
           audioUrl: "",
           questions: [
             {
@@ -592,6 +626,7 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
           id,
           type,
           title: "",
+          instructions: "",
           bullets: [""],
           notes: "",
         };
@@ -605,6 +640,7 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
           id,
           type,
           title: "",
+          instructions: "", 
           prompt: "",
           ideasCount: 3, // default = 3 ideas
         };
@@ -617,6 +653,8 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
         base = {
           id,
           type,
+          title: "",
+          instructions: "",
           incorrect: "",
           correctAnswers: [""],
         };
@@ -627,6 +665,7 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
     id,
     type: "verb_table",
     title: "",
+    instructions: "",
     rows: [
       { subject: "I", positive: "am", negative: "am not" }
     ],
@@ -871,7 +910,7 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
     if (ex.type === "fill_blank")
       return firstLine(ex.title || ex.sentence) || `Rellenar ${idx + 1}`;
     if (ex.type === "text")
-      return firstLine(ex.prompt) || `Párrafo ${idx + 1}`;
+      return firstLine(ex.title || ex.instructions) || `Párrafo ${idx + 1}`;
     if (ex.type === "reorder")
       return firstLine(ex.title) || `Reordenar ${idx + 1}`;
     if (ex.type === "matching")
@@ -882,17 +921,24 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
   // ===== Renderizadores =====
   const renderMultipleChoice = (ex: MultipleChoiceExercise) => (
     <div className="space-y-3">
-      {/* Instrucciones multilínea */}
-      <textarea
-        rows={3}
-        className="w-full border rounded px-3 py-2"
-        style={{ whiteSpace: "pre-wrap" }}
-        placeholder="Instrucciones / pregunta (ej., ¿Cuál es el USP más específico?)"
-        value={ex.question ?? ""}
-        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-          updateFieldImmediate(ex.id, { question: e.target.value })
-        }
-      />
+      {/* Título */}
+<input
+  type="text"
+  className="w-full border rounded px-3 py-2 mb-2"
+  placeholder="Título del ejercicio"
+  value={ex.title}
+  onChange={(e) => updateFieldImmediate(ex.id, { title: e.target.value })}
+/>
+
+{/* Instrucciones */}
+<textarea
+  rows={2}
+  className="w-full border rounded px-3 py-2 mb-4"
+  placeholder="Instrucciones del ejercicio"
+  value={ex.instructions}
+  onChange={(e) => updateFieldImmediate(ex.id, { instructions: e.target.value })}
+/>
+
       <div className="space-y-2">
         {ex.options.map((opt, i) => (
           <div key={i} className="flex gap-2 items-center">
@@ -985,6 +1031,16 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
             updateFieldImmediate(ex.id, { title: e.target.value })
           }
         />
+
+{/* Instrucciones */}
+<textarea
+  rows={2}
+  className="w-full border rounded px-3 py-2 mb-4"
+  placeholder="Instrucciones del ejercicio"
+  value={ex.instructions}
+  onChange={(e) => updateFieldImmediate(ex.id, { instructions: e.target.value })}
+/>
+
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-start">
           <input
@@ -1109,6 +1165,16 @@ const renderVerbTable = (ex: VerbTableExercise) => {
           updateFieldImmediate(ex.id, { title: e.target.value })
         }
       />
+
+
+{/* Instrucciones */}
+<textarea
+  rows={2}
+  className="w-full border rounded px-3 py-2 mb-4"
+  placeholder="Instrucciones del ejercicio"
+  value={ex.instructions}
+  onChange={(e) => updateFieldImmediate(ex.id, { instructions: e.target.value })}
+/>
 
       {/* Instrucción para el profesor */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
@@ -1305,17 +1371,25 @@ const renderVerbTable = (ex: VerbTableExercise) => {
 
   const renderText = (ex: TextExercise) => (
     <div className="space-y-2">
-      {/* Indicación multilínea */}
-      <textarea
-        rows={3}
-        className="w-full border rounded px-3 py-2"
-        style={{ whiteSpace: "pre-wrap" }}
-        placeholder="Instrucciones / indicación (ej., Escribe un párrafo sobre tu rutina matutina)"
-        value={ex.prompt ?? ""}
-        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-          updateFieldImmediate(ex.id, { prompt: e.target.value })
-        }
-      />
+
+      {/* Título */}
+<input
+  type="text"
+  className="w-full border rounded px-3 py-2 mb-2"
+  placeholder="Título del ejercicio"
+  value={ex.title}
+  onChange={(e) => updateFieldImmediate(ex.id, { title: e.target.value })}
+/>
+
+{/* Instrucciones */}
+<textarea
+  rows={2}
+  className="w-full border rounded px-3 py-2 mb-4"
+  placeholder="Instrucciones del ejercicio"
+  value={ex.instructions}
+  onChange={(e) => updateFieldImmediate(ex.id, { instructions: e.target.value })}
+/>
+
       <div className="flex items-center gap-2">
         <label className="text-sm text-slate-600">Máx. caracteres</label>
         <input
@@ -1391,6 +1465,16 @@ const renderVerbTable = (ex: VerbTableExercise) => {
         value={ex.title ?? ""}
         onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => updateFieldImmediate(ex.id, { title: e.target.value })}
       />
+
+{/* Instrucciones */}
+<textarea
+  rows={2}
+  className="w-full border rounded px-3 py-2 mb-4"
+  placeholder="Instrucciones del ejercicio"
+  value={ex.instructions}
+  onChange={(e) => updateFieldImmediate(ex.id, { instructions: e.target.value })}
+/>
+
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Columna izquierda: Elementos */}
@@ -1625,6 +1709,17 @@ const renderVerbTable = (ex: VerbTableExercise) => {
         onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => updateFieldImmediate(ex.id, { title: e.target.value })}
       />
 
+
+{/* Instrucciones */}
+<textarea
+  rows={2}
+  className="w-full border rounded px-3 py-2 mb-4"
+  placeholder="Instrucciones del ejercicio"
+  value={ex.instructions}
+  onChange={(e) => updateFieldImmediate(ex.id, { instructions: e.target.value })}
+/>
+
+
       <div className="text-xs text-slate-600">Pares</div>
       <div className="space-y-2">
         {(ex.pairs || []).map((pair, idx) => (
@@ -1794,6 +1889,15 @@ const renderVerbTable = (ex: VerbTableExercise) => {
         value={ex.title}
         onChange={(e) => update({ title: e.target.value })}
       />
+{/* Instrucciones */}
+<textarea
+  rows={2}
+  className="w-full border rounded px-3 py-2 mb-4"
+  placeholder="Instrucciones del ejercicio"
+  value={ex.instructions}
+  onChange={(e) => updateFieldImmediate(ex.id, { instructions: e.target.value })}
+/>
+
 
       {/* ======= Texto de lectura ======= */}
       <textarea
@@ -2066,6 +2170,15 @@ const toggleKind = (qid: string, newKind: "mc" | "tf" | "open") => {
         onChange={(e) => update({ title: e.target.value })}
       />
 
+{/* Instrucciones */}
+<textarea
+  rows={2}
+  className="w-full border rounded px-3 py-2 mb-4"
+  placeholder="Instrucciones del ejercicio"
+  value={ex.instructions}
+  onChange={(e) => updateFieldImmediate(ex.id, { instructions: e.target.value })}
+/>
+
       {/* ======= URL de audio ======= */}
       <div>
         <div className="text-sm font-medium text-slate-700 mb-1">
@@ -2314,6 +2427,16 @@ const renderSpeaking = (ex: SpeakingExercise) => {
         onChange={(e) => update({ title: e.target.value })}
       />
 
+{/* Instrucciones */}
+<textarea
+  rows={2}
+  className="w-full border rounded px-3 py-2 mb-4"
+  placeholder="Instrucciones del ejercicio"
+  value={ex.instructions}
+  onChange={(e) => updateFieldImmediate(ex.id, { instructions: e.target.value })}
+/>
+
+
       {/* ======= Bullets ======= */}
       <div className="space-y-3">
         <div className="text-sm font-medium text-slate-700">
@@ -2454,6 +2577,24 @@ const renderSentenceCorrection = (ex: SentenceCorrectionExercise) => {
 
   return (
     <div className="space-y-4">
+
+{/* Título */}
+<input
+  type="text"
+  className="w-full border rounded px-3 py-2 mb-2"
+  placeholder="Título del ejercicio"
+  value={ex.title}
+  onChange={(e) => updateFieldImmediate(ex.id, { title: e.target.value })}
+/>
+
+{/* Instrucciones */}
+<textarea
+  rows={2}
+  className="w-full border rounded px-3 py-2 mb-4"
+  placeholder="Instrucciones del ejercicio"
+  value={ex.instructions}
+  onChange={(e) => updateFieldImmediate(ex.id, { instructions: e.target.value })}
+/>
 
       {/* ======= Frase incorrecta ======= */}
       <div>

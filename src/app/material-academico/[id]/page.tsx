@@ -1657,20 +1657,31 @@ const renderSpeaking = (ex: any) => {
       className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6"
     >
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="flex items-center gap-3 mb-1"
-      >
-        <div className="w-10 h-10 rounded-xl bg-blue-600/10 text-blue-600 grid place-items-center text-xl">
-          🧠
-        </div>
-        <div>
-          <h3 className="text-xl font-semibold text-slate-900">{t("coursePlayer.exercise.exercise")}</h3>
-          
-        </div>
-      </motion.div>
+<motion.div className="flex items-center gap-3 mb-4">
+  <div className="w-10 h-10 rounded-xl bg-blue-600/10 text-blue-600 grid place-items-center text-xl">
+    🧠
+  </div>
+  <div className="flex-1">
+    {/* Título del ejercicio */}
+    <h3 className="text-xl font-semibold text-slate-900">
+      {ex.title || ex.question || ex.statement || ex.prompt || t("coursePlayer.exercise.exercise")}
+    </h3>
+    
+    {/* Instrucciones si existen */}
+    {ex.instructions && (
+      <p className="text-sm text-slate-600 mt-1 leading-relaxed">
+        {ex.instructions}
+      </p>
+    )}
+  </div>
+</motion.div>
+
+{/* Indicador de tipo */}
+<div className="flex items-center gap-2 mb-4">
+  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+    {ex.type.replace(/_/g, ' ').toUpperCase()}
+  </span>
+</div>
 
       {/* Card del ejercicio */}
       <motion.div
@@ -2752,67 +2763,77 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
 
               {/* EJERCICIOS */}
               {activeTab === "exercises" && 
-               Array.isArray(activeLesson?.ejercicios) &&
-               activeLesson.ejercicios.length > 0 && (
-                <motion.div
-                  key="exercises"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  transition={{ duration: 0.4 }}
-                  className="p-10 space-y-8"
-                >
-                  <div className="max-w-4xl mx-auto">
-                    {/* Header con contador */}
-                    <div className="mb-8 flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#112C3E] to-[#0C212D] flex items-center justify-center shadow-lg">
-                          <span className="text-3xl">🧠</span>
-                        </div>
-                        <div>
-                          <h2 className="text-3xl font-black text-[#0C212D]"> {t("coursePlayer.tabs.exercisesTitle")}</h2>
-                          <p className="text-slate-600 font-medium">{t("coursePlayer.tabs.exercisesSubtitle")}</p>
-                        </div>
-                      </div>
-                      <div className="px-6 py-3 bg-gradient-to-r from-[#0C212D] to-[#112C3E] text-white rounded-2xl shadow-lg">
-                        <span className="text-2xl font-black">{currentExercise + 1}</span>
-                        <span className="text-slate-300 font-medium"> / {activeLesson.ejercicios.length}</span>
-                      </div>
-                    </div>
+ Array.isArray(activeLesson?.ejercicios) &&
+ activeLesson.ejercicios.length > 0 && (
+  <motion.div
+    key="exercises"
+    initial={{ opacity: 0, x: -20 }}
+    animate={{ opacity: 1, x: 0 }}
+    exit={{ opacity: 0, x: 20 }}
+    transition={{ duration: 0.4 }}
+    className="p-10 space-y-8"
+  >
+    <div className="max-w-4xl mx-auto space-y-8">
+      
+      {/* Header con contador TOTAL */}
+      <div className="mb-8 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#112C3E] to-[#0C212D] flex items-center justify-center shadow-lg">
+            <span className="text-3xl">🧠</span>
+          </div>
+          <div>
+            <h2 className="text-3xl font-black text-[#0C212D]">
+              {t("coursePlayer.tabs.exercisesTitle")}
+            </h2>
+            <p className="text-slate-600 font-medium">
+              {t("coursePlayer.tabs.exercisesSubtitle")}
+            </p>
+          </div>
+        </div>
+        <div className="px-6 py-3 bg-gradient-to-r from-[#0C212D] to-[#112C3E] text-white rounded-2xl shadow-lg">
+          <span className="text-2xl font-black">{activeLesson.ejercicios.length}</span>
+          <span className="text-slate-300 font-medium"> ejercicios</span>
+        </div>
+      </div>
 
-                    {/* Exercise Runner */}
-                    <ExerciseRunner
-                      ejercicios={[activeLesson.ejercicios[currentExercise]]}
-                      lessonKey={activeLesson.key}
-                      exerciseIndex={currentExercise}
-                      batchId={userProfile?.batchId}
-                      userKey={userProfile?.userKey}
-                      courseId={courseId}
-                      onSubmit={() => {}}
-                    />
+      {/* 🔥 TODOS LOS EJERCICIOS EN CASCADA */}
+      {activeLesson.ejercicios.map((_, exerciseIndex) => (
+        <motion.div
+          key={exerciseIndex}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: exerciseIndex * 0.1 }}
+        >
+          <ExerciseRunner
+            ejercicios={[activeLesson.ejercicios[exerciseIndex]]}
+            lessonKey={activeLesson.key}
+            exerciseIndex={exerciseIndex}
+            batchId={userProfile?.batchId}
+            userKey={userProfile?.userKey}
+            courseId={courseId}
+            onSubmit={() => {}}
+          />
+        </motion.div>
+      ))}
 
-                    {/* Navigation buttons */}
-                    <div className="flex justify-between items-center pt-8 mt-8 border-t-2 border-slate-100">
-                      <button
-                        onClick={prevExercise}
-                        disabled={currentExercise === 0}
-                        className="group px-8 py-4 rounded-2xl bg-white border-2 border-slate-200 hover:border-[#0C212D] text-[#0C212D] disabled:opacity-30 disabled:cursor-not-allowed text-sm font-bold transition-all hover:shadow-xl disabled:hover:shadow-none flex items-center gap-3"
-                      >
-                        <FiChevronLeft className="group-hover:-translate-x-1 transition-transform" />
-                        {t("coursePlayer.exercise.exercisePrev")}
-                      </button>
-                      <button
-                        onClick={nextExercise}
-                        disabled={currentExercise >= activeLesson.ejercicios.length - 1}
-                        className="group px-8 py-4 rounded-2xl bg-gradient-to-r from-[#EE7203] to-[#FF3816] hover:shadow-2xl hover:shadow-[#EE7203]/40 text-white font-bold text-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:scale-105 disabled:hover:scale-100 flex items-center gap-3"
-                      >
-                        {t("coursePlayer.exercise.exerciseNext")}
-                        <FiChevronRight className="group-hover:translate-x-1 transition-transform" />
-                      </button>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
+      {/* Botón final opcional para marcar lección completa */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.5 }}
+        className="pt-8 border-t-2 border-slate-100"
+      >
+        <button
+          onClick={goNextLesson}
+          className="w-full py-6 rounded-2xl font-black text-lg bg-gradient-to-r from-emerald-500 to-green-500 text-white shadow-2xl hover:shadow-emerald-500/50 hover:scale-105 transition-all flex items-center justify-center gap-3"
+        >
+          <FiCheckCircle size={24} />
+          <span>¡Continuar a la siguiente lección!</span>
+        </button>
+      </motion.div>
+    </div>
+  </motion.div>
+)}
             </div>
           </motion.div>
         )}
