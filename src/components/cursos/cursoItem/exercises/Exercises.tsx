@@ -205,275 +205,124 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
 
   // ===== Validación por tipo =====
   const validateExercise = (ex: Exercise): boolean => {
-    if (!ex || !ex.type) return false;
-    switch (ex.type) {
-      case "multiple_choice": {
-        if (!ex.title || !ex.title.trim()) return false;
-if (!ex.instructions || !ex.instructions.trim()) return false;
+  if (!ex || !ex.type) return false;
 
-        if (!ex.question || String(ex.question).trim() === "") return false;
-        if (!Array.isArray(ex.options) || ex.options.length < 2) return false;
-        const opts = ex.options.map((o) => (o ?? "").toString().trim());
-        if (opts.filter((o) => o !== "").length < 2) return false;
-        const idx = Number(ex.correctIndex);
-        if (!Number.isInteger(idx) || idx < 0 || idx >= opts.length)
-          return false;
-        if (opts[idx] === "") return false;
-        return true;
-      }
-      case "true_false": {
-        if (!ex.title || !ex.title.trim()) return false;
-if (!ex.instructions || !ex.instructions.trim()) return false;
+  switch (ex.type) {
+    case "multiple_choice": {
+      if (!ex.question || ex.question.trim() === "") return false;
 
-        if (!ex.statement || String(ex.statement).trim() === "") return false;
-        return typeof ex.answer === "boolean";
-      }
-      case "fill_blank": {
-        if (!ex.title || !ex.title.trim()) return false;
-if (!ex.instructions || !ex.instructions.trim()) return false;
+      const opts = (ex.options || []).map(o => o.trim());
+      const nonEmpty = opts.filter(o => o !== "");
 
-        if (
-          !ex.sentence ||
-          typeof ex.sentence !== "string" ||
-          !ex.sentence.includes("***")
-        )
-          return false;
-        const blanks = (ex.sentence.match(/\*\*\*/g) || []).length;
-        if (blanks === 0) return false;
-        if (!Array.isArray(ex.answers) || ex.answers.length !== blanks)
-          return false;
-        if (ex.answers.some((a) => (a ?? "").toString().trim() === ""))
-          return false;
-        return true;
-      }
-      case "text":
-        if (!ex.title || !ex.title.trim()) return false;
-if (!ex.instructions || !ex.instructions.trim()) return false;
+      if (nonEmpty.length < 2) return false;
 
-        return true;
-      case "reorder": {
-        if (!ex.title || !ex.title.trim()) return false;
-if (!ex.instructions || !ex.instructions.trim()) return false;
+      const idx = Number(ex.correctIndex);
+      if (!Number.isInteger(idx)) return false;
+      if (idx < 0 || idx >= opts.length) return false;
+      if (opts[idx] === "") return false;
 
-        if (!ex.title || String(ex.title).trim() === "") return false;
-        if (!Array.isArray(ex.items) || ex.items.length < 2) return false;
-        const nonEmptyItems = ex.items.filter(
-          (item) => item && String(item).trim() !== ""
-        );
-        if (nonEmptyItems.length < 2) return false;
-        if (!Array.isArray(ex.correctOrder) || ex.correctOrder.length < 2)
-          return false;
-        const validIndices = ex.correctOrder.every(
-          (i) =>
-            Number.isInteger(i) &&
-            i >= 0 &&
-            i < ex.items.length &&
-            ex.items[i] &&
-            String(ex.items[i]).trim() !== ""
-        );
-        return validIndices;
-      }
-      case "matching": {
-        if (!ex.title || !ex.title.trim()) return false;
-if (!ex.instructions || !ex.instructions.trim()) return false;
-
-      
-        if (!Array.isArray(ex.pairs) || ex.pairs.length < 1) return false;
-        const ok = ex.pairs.every(
-          (p) =>
-            p &&
-            String(p.left || "").trim() !== "" &&
-            String(p.right || "").trim() !== ""
-        );
-        return ok;
-      }
-
-            /* ===============================
-         📖 READING — texto + preguntas
-      ==================================*/
-      case "reading": {
-        if (!ex.title || !ex.title.trim()) return false;
-if (!ex.instructions || !ex.instructions.trim()) return false;
-
-       
-        if (!ex.text || ex.text.trim() === "") return false;
-
-        // Validación de preguntas de comprensión
-        if (!Array.isArray(ex.questions) || ex.questions.length === 0)
-          return false;
-
-        for (const q of ex.questions) {
-          if (!q.prompt || q.prompt.trim() === "") return false;
-
-          if (q.kind === "mc") {
-            if (!Array.isArray(q.options) || q.options.length < 2) return false;
-            const opts = q.options.map((o) => o.trim());
-            if (opts.filter((o) => o !== "").length < 2) return false;
-            if (
-              !Number.isInteger(q.correctIndex) ||
-              q.correctIndex < 0 ||
-              q.correctIndex >= opts.length
-            )
-              return false;
-          }
-
-          if (q.kind === "tf") {
-            if (typeof q.answer !== "boolean") return false;
-          }
-            if (q.kind === "open") {
-  if (!q.prompt || q.prompt.trim() === "") return false;
-  continue; // ✅ Seguir validando las demás preguntas
-}
-
-        }
-
-        return true;
-      }
-
-     
-
-      /* ===============================
-         🎧 LISTENING — audio + preguntas
-      ==================================*/
-      case "listening": {
-        if (!ex.title || !ex.title.trim()) return false;
-if (!ex.instructions || !ex.instructions.trim()) return false;
-
-        if (!ex.audioUrl) return false; // basta con que exista, no exigir trim al editar
-
-
-        if (!Array.isArray(ex.questions) || ex.questions.length === 0) return false;
-        
-
-        for (const q of ex.questions) {
-          if (!q.prompt || q.prompt.trim() === "") return false;
-
-          if (q.kind === "mc") {
-            if (!Array.isArray(q.options) || q.options.length < 2) return false;
-            const opts = q.options.map((o) => o.trim());
-            if (opts.filter((o) => o !== "").length < 2) return false;
-            if (
-              !Number.isInteger(q.correctIndex) ||
-              q.correctIndex < 0 ||
-              q.correctIndex >= opts.length
-            )
-              return false;
-          }
-
-          if (q.kind === "tf") {
-            if (typeof q.answer !== "boolean") return false;
-          }
-
-          if (q.kind === "open") {
-  if (!q.prompt || q.prompt.trim() === "") return false;
-
-  // Estas dos son opcionales → siempre válidas
-  // q.placeholder
-  // q.maxLength
-
-  continue; // 👈 NO return — deja seguir validando las demás preguntas
-}
-
-        }
-        
-
-        return true;
-      }
-
-      /* ===============================
-         🗣️ SPEAKING — bullets de prompts
-      ==================================*/
-      case "speaking": {
-        if (!ex.title || !ex.title.trim()) return false;
-if (!ex.instructions || !ex.instructions.trim()) return false;
-
-
-        if (!Array.isArray(ex.bullets) || ex.bullets.length === 0)
-          return false;
-
-        const valid = ex.bullets.some((b) => b.trim() !== "");
-        if (!valid) return false;
-
-        return true;
-      }
-
-      /* ===============================
-         💭 REFLECTION — prompt + ideas
-      ==================================*/
-      case "reflection": {
-        if (!ex.title || !ex.title.trim()) return false;
-if (!ex.instructions || !ex.instructions.trim()) return false;
-
-        if (!ex.prompt || ex.prompt.trim() === "") return false;
-
-        // Min: 1 idea, usualmente 3
-        if (!Number.isInteger(ex.ideasCount) || ex.ideasCount < 1)
-          return false;
-
-        return true;
-      }
-
-      /* ===============================
-         ✏️ SENTENCE CORRECTION
-      ==================================*/
-      case "sentence_correction": {
-        if (!ex.title || !ex.title.trim()) return false;
-if (!ex.instructions || !ex.instructions.trim()) return false;
-
-        if (!ex.incorrect || ex.incorrect.trim() === "") return false;
-
-        if (
-          !Array.isArray(ex.correctAnswers) ||
-          ex.correctAnswers.length === 0
-        )
-          return false;
-
-        const allNonEmpty = ex.correctAnswers.every(
-          (a) => a.trim() !== ""
-        );
-
-        return allNonEmpty;
-      }
-
-     case "verb_table": {
-  if (!ex.title || !ex.title.trim()) return false;
-if (!ex.instructions || !ex.instructions.trim()) return false;
-
-  if (!Array.isArray(ex.rows) || ex.rows.length === 0) return false;
-
-  // Validar que todas las filas tengan subject
-  const validRows = ex.rows.every(r => r.subject.trim() !== "");
-  if (!validRows) return false;
-
-  // Validar que haya al menos un blank
-  if (!Array.isArray(ex.blanks) || ex.blanks.length === 0) return false;
-
-  // Validar que cada blank tenga su respuesta correcta
-  const validBlanks = ex.blanks.every(b => {
-    const key = `${b.rowIndex}-${b.column}`;
-    return ex.correct?.[key]?.trim() !== "";
-  });
-
-  return validBlanks;
-}
-
-
-      default:
-        return false;
+      return true;
     }
-  };
+
+    case "true_false":
+      return ex.statement && ex.statement.trim() !== "" && typeof ex.answer === "boolean";
+
+    case "fill_blank": {
+      if (!ex.sentence || typeof ex.sentence !== "string") return false;
+
+      const blanks = (ex.sentence.match(/\*\*\*/g) || []).length;
+      if (blanks === 0) return false;
+
+      if (!Array.isArray(ex.answers)) return false;
+      if (ex.answers.length !== blanks) return false;
+
+      // Permitir respuestas vacías mientras editan
+      return true;
+    }
+
+    case "text":
+      return true; // nada estrictamente requerido
+
+    case "reorder": {
+      const nonEmpty = (ex.items || []).filter(i => i.trim() !== "");
+      return nonEmpty.length >= 2; // no requiere correctOrder completo
+    }
+
+    case "matching": {
+      const pairs = ex.pairs || [];
+      if (pairs.length === 0) return false;
+
+      // Debe haber al menos un par válido
+      const atLeastOne = pairs.some(
+        p => p.left.trim() !== "" && p.right.trim() !== ""
+      );
+      return atLeastOne;
+    }
+
+    case "reading": {
+      if (!ex.text || ex.text.trim() === "") return false;
+
+      // Si no hay preguntas, igual permitir
+      if (!ex.questions || ex.questions.length === 0) return true;
+
+      return ex.questions.every(q => q.prompt.trim() !== "");
+    }
+
+    case "listening": {
+      if (!ex.audioUrl) return false;
+
+      if (!ex.questions || ex.questions.length === 0) return true;
+
+      return ex.questions.every(q => q.prompt.trim() !== "");
+    }
+
+    case "speaking": {
+      const bullets = ex.bullets || [];
+      if (bullets.length === 0) return false;
+
+      // al menos uno no vacío
+      return bullets.some(b => b.trim() !== "");
+    }
+
+    case "reflection":
+      return ex.prompt.trim() !== "" && ex.ideasCount >= 1;
+
+    case "sentence_correction":
+      return ex.incorrect.trim() !== "" &&
+        Array.isArray(ex.correctAnswers) &&
+        ex.correctAnswers.length > 0;
+
+    case "verb_table": {
+      const rows = ex.rows || [];
+      if (rows.length === 0) return false;
+
+      // Debe haber al menos un subject válido
+      return rows.some(r => r.subject.trim() !== "");
+    }
+
+    default:
+      return false;
+  }
+};
+
 
   // ===== Actualización de snapshot con debounce (revalidación) =====
-  const updateSnapshot = useCallback(() => {
-    if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
-    updateTimeoutRef.current = setTimeout(() => {
+  // ✅ Validar solo el ejercicio que cambió
+const updateSnapshot = useCallback((changedId?: string) => {
+  if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+  updateTimeoutRef.current = setTimeout(() => {
+    if (changedId) {
+      const ex = exercisesRef.current.find(e => e.id === changedId);
+      if (ex) validationsRef.current[changedId] = validateExercise(ex);
+    } else {
+      // Solo si es necesario validar todo
       exercisesRef.current.forEach((e) => {
         validationsRef.current[e.id] = validateExercise(e);
       });
-      setSnapshot([...exercisesRef.current]);
-    }, 300);
-  }, []);
-
+    }
+    setSnapshot([...exercisesRef.current]);
+  }, 300);
+}, []);
   // ===== Actualización inmediata de snapshot (cambios estructurales) =====
   const forceSnapshot = useCallback(() => {
     if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);

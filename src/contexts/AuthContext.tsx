@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useMemo } from "react";
+import React, { createContext, useContext, useEffect, useState, useMemo, useRef } from "react";
 import { onAuthStateChanged, User, signOut } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import {
@@ -47,6 +47,17 @@ interface AuthContextType {
   reloadData?: () => Promise<void>;
   loadMisCursos?: (uid: string) => Promise<void>;
   loadAllCursos?: () => Promise<void>;
+
+ // 🎬 Video del Dashboard (login)
+  hasSeenWelcomeVideo: boolean;
+  markWelcomeVideoAsSeen: () => Promise<void>;
+  loadingVideoStatus: boolean;
+
+  // 🤖 Video del Chatbot (nuevo)
+  hasSeenChatbotVideo: boolean;
+  markChatbotVideoAsSeen: () => Promise<void>;
+  loadingChatbotVideoStatus: boolean;
+
 
   saveCourseProgress?: (
     uid: string,
@@ -103,7 +114,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [userProfile, setUserProfile] = useState<any | null>(null);
   const [anuncios, setAnuncios] = useState<any[]>([]);
   const [loadingAnuncios, setLoadingAnuncios] = useState(true);
+ 
+  // 🎬 Estados para video del dashboard
+  const [hasSeenWelcomeVideo, setHasSeenWelcomeVideo] = useState(false);
+  const [loadingVideoStatus, setLoadingVideoStatus] = useState(true);
 
+  // 🤖 Estados para video del chatbot (NUEVO)
+  const [hasSeenChatbotVideo, setHasSeenChatbotVideo] = useState(false);
+  const [loadingChatbotVideoStatus, setLoadingChatbotVideoStatus] = useState(true);
 
   const [profesores, setProfesores] = useState<any[]>([]);
   const [loadingProfesores, setLoadingProfesores] = useState(false);
@@ -139,9 +157,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  /* ==========================================================
-     🔹 Cargar alumnos (para admin o profesor) => Lee todos los documentos en la coleccion alumnos
-     ========================================================== */
+
 /* ==========================================================
    🔹 Cargar alumnos (VERSIÓN CORREGIDA)
    ========================================================== */
@@ -229,7 +245,7 @@ const loadAlumnos = async () => {
   }
 };
 
-  async function loadRecentActivity(uid: string, profile: any, cursos: any[]) {
+async function loadRecentActivity(uid: string, profile: any, cursos: any[]) {
   setLoadingActivity(true);
 
   const final: any[] = [];
@@ -314,9 +330,89 @@ const loadAlumnos = async () => {
   setLoadingActivity(false);
 }
 
-  /* ==========================================================
-     🔹 Cargar cursos del alumno logueado
-     ========================================================== */
+// 🎬 Marcar video del dashboard como visto (tu función existente)
+  const markWelcomeVideoAsSeen = async () => {
+    if (!user || !userProfile?.batchId || !userProfile?.userKey) {
+      console.error("❌ No se puede marcar video dashboard: faltan datos");
+      return;
+    }
+
+    try {
+      const batchRef = doc(db, "alumnos", userProfile.batchId);
+      const snap = await getDoc(batchRef);
+      
+      if (!snap.exists()) throw new Error("Batch no existe");
+
+      const batchData = snap.data();
+      const userData = batchData[userProfile.userKey] || {};
+
+      await setDoc(
+        batchRef,
+        {
+          [userProfile.userKey]: {
+            ...userData,
+            hasSeenWelcomeVideo: true,
+            welcomeVideoSeenAt: new Date().toISOString(),
+          },
+        },
+        { merge: true }
+      );
+
+      setHasSeenWelcomeVideo(true);
+      setUserProfile({
+        ...userProfile,
+        hasSeenWelcomeVideo: true,
+        welcomeVideoSeenAt: new Date().toISOString(),
+      });
+
+      console.log("✅ Video dashboard marcado como visto");
+    } catch (err) {
+      console.error("❌ Error al marcar video dashboard:", err);
+      toast.error("Error al guardar el progreso del video");
+    }
+  };
+
+  // 🤖 Marcar video del CHATBOT como visto (NUEVA FUNCIÓN)
+  const markChatbotVideoAsSeen = async () => {
+    if (!user || !userProfile?.batchId || !userProfile?.userKey) {
+      console.error("❌ No se puede marcar video chatbot: faltan datos");
+      return;
+    }
+
+    try {
+      const batchRef = doc(db, "alumnos", userProfile.batchId);
+      const snap = await getDoc(batchRef);
+      
+      if (!snap.exists()) throw new Error("Batch no existe");
+
+      const batchData = snap.data();
+      const userData = batchData[userProfile.userKey] || {};
+
+      await setDoc(
+        batchRef,
+        {
+          [userProfile.userKey]: {
+            ...userData,
+            hasSeenChatbotVideo: true, // 👈 Campo diferente
+            chatbotVideoSeenAt: new Date().toISOString(),
+          },
+        },
+        { merge: true }
+      );
+
+      setHasSeenChatbotVideo(true);
+      setUserProfile({
+        ...userProfile,
+        hasSeenChatbotVideo: true,
+        chatbotVideoSeenAt: new Date().toISOString(),
+      });
+
+      console.log("✅ Video chatbot marcado como visto");
+    } catch (err) {
+      console.error("❌ Error al marcar video chatbot:", err);
+      toast.error("Error al guardar el progreso del video");
+    }
+  };
   /* ==========================================================
    🔹 Cargar cursos + progreso real del alumno
    ========================================================== */
@@ -326,7 +422,6 @@ const loadMisCursos = async (uid: string) => {
   try {
     const profile = await fetchUserFromBatchesByUid(uid);
     if (!profile) {
-      console.warn("⚠️ No se encontró perfil en batches");
       setMisCursos([]);
       return;
     }
@@ -348,25 +443,25 @@ const loadMisCursos = async (uid: string) => {
     const cursosIds = alumno?.cursosAdquiridos || [];
     const progreso = alumno?.progreso || {};
 
-    // ⚠️ Importante: permitir gaming incluso si no tiene cursos
     if (!Array.isArray(cursosIds) || cursosIds.length === 0) {
-      setMisCursos([]);  // alumno nuevo sin cursos
+      setMisCursos([]);
       return;
     }
 
-    // Obtener todos los cursos
+    // 🔥 OPTIMIZACIÓN: Traer TODOS los cursos de una vez
     const snapCursos = await getDocs(collection(db, "cursos"));
-    const allCursos = snapCursos.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const allCursosMap = new Map(
+      snapCursos.docs.map((d) => [d.id, { id: d.id, ...d.data() }])
+    );
 
     const cursosAlumno: any[] = [];
 
+    // 🔥 Filtrar solo los cursos del alumno SIN lecturas adicionales
     for (const id of cursosIds) {
-      const cursoSnap = await getDoc(doc(db, "cursos", id));
-      if (!cursoSnap.exists()) continue;
+      const curso = allCursosMap.get(id);
+      if (!curso) continue;
 
-      const curso = { id, ...cursoSnap.data() };
       const prog = progreso?.[id]?.byLesson || {};
-
       const { totalLessons, completedCount, progressPercent } =
         getCourseProgressStats(prog, curso.unidades || curso.lecciones || []);
 
@@ -379,7 +474,6 @@ const loadMisCursos = async (uid: string) => {
       });
     }
 
-    // ✔️ Establecer SOLO una vez
     setMisCursos(cursosAlumno);
 
   } catch (err) {
@@ -664,9 +758,11 @@ const getCourseProgress = async (uid: string, courseId: string) => {
   /* ==========================================================
      🔹 Listener de Auth
      ========================================================== */
-     useEffect(() => {
+ useEffect(() => {
   const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
     setLoading(true);
+    setLoadingVideoStatus(true); // 👈 Dashboard
+      setLoadingChatbotVideoStatus(true); // 👈 Chatbot
 
     try {
       if (firebaseUser) {
@@ -690,56 +786,67 @@ const getCourseProgress = async (uid: string, courseId: string) => {
             console.error("❌ Error: No se pudo crear el usuario en batch");
             toast.error("Error al crear perfil de usuario");
             setLoading(false);
+            setLoadingVideoStatus(false); // 👈 NUEVO
+            setLoadingChatbotVideoStatus(false); 
             return;
           }
         }
 
         // 🔥 PASO 4: Obtener datos completos del batch
-        // 🔥 PASO 4: Obtener datos completos del batch
-if (profile?.batchId && profile?.userKey) {
-  const batchRef = doc(db, "alumnos", profile.batchId);
-  const snap = await getDoc(batchRef);
+        if (profile?.batchId && profile?.userKey) {
+          const batchRef = doc(db, "alumnos", profile.batchId);
+          const snap = await getDoc(batchRef);
 
-  if (snap.exists()) {
-    const data = snap.data()[profile.userKey] || {};
+          if (snap.exists()) {
+            const data = snap.data()[profile.userKey] || {};
 
-    // 🔥 Unificar datos del usuario
-    profile = { ...profile, ...data };
+            // 🔥 Unificar datos del usuario
+            profile = { ...profile, ...data };
 
-    // ⚠️ Si es PROFESOR, inicializar idiomas si no existen
-    if (profile.role === "profesor") {
-      profile.idiomasProfesor = Array.isArray(data.idiomasProfesor)
-        ? data.idiomasProfesor
-        : [];
+            // 🎬 Cargar estado del video DASHBOARD
+              const dashboardVideoSeen = data.hasSeenWelcomeVideo === true;
+              setHasSeenWelcomeVideo(dashboardVideoSeen);
+              console.log(`📹 Video dashboard: ${dashboardVideoSeen ? "Visto" : "No visto"}`);
 
-      // 👇 NO aplicar lógica de idioma del alumno
-      setLang("en"); // o idioma por defecto global
-    }
-  }
-}
+              // 🤖 Cargar estado del video CHATBOT (NUEVO)
+              const chatbotVideoSeen = data.hasSeenChatbotVideo === true;
+              setHasSeenChatbotVideo(chatbotVideoSeen);
+              console.log(`💬 Video chatbot: ${chatbotVideoSeen ? "Visto" : "No visto"}`);
 
+            // ⚠️ Si es PROFESOR, inicializar idiomas si no existen
+            if (profile.role === "profesor") {
+              profile.idiomasProfesor = Array.isArray(data.idiomasProfesor)
+                ? data.idiomasProfesor
+                : [];
 
+              // 👇 NO aplicar lógica de idioma del alumno
+              setLang("en"); // o idioma por defecto global
+            }
+          }
+        }
+
+        // 🔥 PASO 5: Configurar idioma según rol
         if (profile.role === "profesor") {
-  // 🔥 NO usar idiomas de alumno
-  setUserProfile(profile);
-} else {
-  // 🔥 Alumno sí usa learningLanguage
-  const resolvedLanguage =
-    profile?.learningLanguage ||
-    profile?.language ||
-    profile?.idioma ||
-    "en";
+          // 🔥 NO usar idiomas de alumno
+          setUserProfile(profile);
+        } else {
+          // 🔥 Alumno sí usa learningLanguage
+          const resolvedLanguage =
+            profile?.learningLanguage ||
+            profile?.language ||
+            profile?.idioma ||
+            "en";
 
-  profile = {
-    ...profile,
-    learningLanguage: resolvedLanguage,
-    language: resolvedLanguage,
-    idioma: resolvedLanguage,
-  };
+          profile = {
+            ...profile,
+            learningLanguage: resolvedLanguage,
+            language: resolvedLanguage,
+            idioma: resolvedLanguage,
+          };
 
-  setUserProfile(profile);
-  setLang(resolvedLanguage);
-}
+          setUserProfile(profile);
+          setLang(resolvedLanguage);
+        }
 
         // 🔥 PASO 6: Determinar rol
         const resolvedRole = profile?.role || "alumno";
@@ -750,35 +857,44 @@ if (profile?.batchId && profile?.userKey) {
 
         // 🔥 PASO 8: Cargar datos según rol
         if (resolvedRole === "alumno") {
-  await loadMisCursos(firebaseUser.uid);
-  await loadAnuncios();
-}
+          await loadMisCursos(firebaseUser.uid);
+          await loadAnuncios();
+        }
 
-if (resolvedRole === "profesor") {
-  await loadAllCursos();
-  await loadProfesores();
-  await loadAnuncios();
-}
+        if (resolvedRole === "profesor") {
+          await loadAllCursos();
+          await loadProfesores();
+          await loadAnuncios();
+        }
 
-if (resolvedRole === "admin") {
-  await loadAlumnos();
-  await loadAllCursos();
-  await loadProfesores();
-  await loadAnuncios();
-}
+        if (resolvedRole === "admin") {
+          await loadAlumnos();
+          await loadAllCursos();
+          await loadProfesores();
+          await loadAnuncios();
+        }
 
+        // ✅ Marcar que terminó de cargar el estado del video
+        setLoadingVideoStatus(false); // 👈 NUEVO
+        setLoadingChatbotVideoStatus(false); // 👈 Chatbot
 
       } else {
-        // Usuario no logueado
-        setUser(null);
-        setRole(null);
-        setMisCursos([]);
-        setUserProfile(null);
-        setLang("en");
+          setUser(null);
+          setRole(null);
+          setMisCursos([]);
+          setUserProfile(null);
+          setHasSeenWelcomeVideo(false);
+          setHasSeenChatbotVideo(false); // 👈 NUEVO
+          setLang("en");
+          setLoadingVideoStatus(false);
+          setLoadingChatbotVideoStatus(false); // 👈 NUEVO
+          
       }
     } catch (error) {
       console.error("❌ Error en onAuthStateChanged:", error);
       toast.error("Error al cargar datos del usuario");
+      setLoadingVideoStatus(false); // 👈 NUEVO
+      setLoadingChatbotVideoStatus(false); // 👈 NUEVO
     } finally {
       setLoading(false);
       setAuthReady(true);
@@ -791,26 +907,16 @@ if (resolvedRole === "admin") {
 /* ==========================================================
    🔥 Paso 3 — Cargar actividad cuando TODO esté listo
 ========================================================== */
+// ✅ Agregar flag para evitar re-ejecución
+const activityLoadedRef = useRef(false);
+
 useEffect(() => {
-  console.log("DEBUG → dependencia cambió", {
-    authReady,
-    user: !!user,
-    userProfile: !!userProfile,
-    role,
-    misCursos: misCursos.length,
-    loadingCursos
-  });
+  if (!authReady || !user || !userProfile?.batchId) return;
+  if (role !== "alumno" || loadingCursos) return;
+  if (activityLoadedRef.current) return; // 👈 CRÍTICO
 
-  if (!authReady) return;
-  if (!user) return;
-  if (!userProfile?.batchId || !userProfile?.userKey) return;
-  if (role !== "alumno") return;
-  if (loadingCursos) return;
-
-  console.log("➡️ Ejecutando loadRecentActivity()");
-
+  activityLoadedRef.current = true;
   void loadRecentActivity(user.uid, userProfile, misCursos);
-
 }, [authReady, user, userProfile, role, misCursos, loadingCursos]);
 
 
@@ -850,6 +956,16 @@ const value = useMemo(
     anuncios,
     loadingAnuncios,
     loadAnuncios,
+     
+    // 🎬 Video Dashboard
+      hasSeenWelcomeVideo,
+      markWelcomeVideoAsSeen,
+      loadingVideoStatus,
+
+      // 🤖 Video Chatbot (NUEVO)
+      hasSeenChatbotVideo,
+      markChatbotVideoAsSeen,
+      loadingChatbotVideoStatus,
 
 
     saveCourseProgress,

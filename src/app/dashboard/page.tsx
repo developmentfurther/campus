@@ -3,8 +3,8 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { useDashboardUI } from "@/stores/useDashboardUI";
 import LoaderUi from "@/components/ui/LoaderUi";
+import WelcomeVideoModal from "@/components/ui/WelcomeVideoModal";
 
 import AdminDashboard from "@/components/dashboards/admin/AdminDashboard";
 import ProfesorDashboard from "@/components/dashboards/profesor/ProfesorDashboard";
@@ -19,32 +19,45 @@ export default function DashboardPage() {
     if (authReady && !user) router.replace("/login");
   }, [authReady, user, router]);
 
-if (loggingOut) {
-  return <LoaderUi />; // ⬅️ loader durante logout
-}
+  if (loggingOut) {
+    return <LoaderUi />;
+  }
 
- if (!authReady || loading) {
-  return <LoaderUi />; // ⬅️ loader normal de autenticación
-}
+  if (!authReady || loading) {
+    return <LoaderUi />;
+  }
 
-  if (!user)
+  if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center text-gray-500">
         No hay usuario autenticado.
       </div>
     );
+  }
 
-  // 🔹 Según el rol, renderiza el dashboard adecuado
-if (role === "admin") return <AdminDashboard />;
-if (role === "profesor") return <ProfesorDashboard />;
-if (role === "alumno") return <AlumnoDashboard />;
+  // 🎬 Función para renderizar el dashboard según el rol
+  const renderDashboard = () => {
+    if (role === "admin") return <AdminDashboard />;
+    if (role === "profesor") return <ProfesorDashboard />;
+    if (role === "alumno") return <AlumnoDashboard />;
+    
+    return (
+      <div className="min-h-screen flex items-center justify-center text-red-400">
+        Rol no reconocido.
+      </div>
+    );
+  };
 
   return (
-    <div className="min-h-screen flex items-center justify-center text-red-400">
-      Rol no reconocido.
-    </div>
+    <>
+      {/* 🎥 Modal de video de bienvenida - SE MUESTRA PARA TODOS LOS ROLES */}
+      <WelcomeVideoModal 
+        videoUrl="https://player.vimeo.com/video/1145283643" // 👈 Reemplaza con tu video
+        autoShow={true} 
+      />
+      
+      {/* 📊 Dashboard específico según rol */}
+      {renderDashboard()}
+    </>
   );
 }
-
-
-

@@ -188,8 +188,11 @@ export default function CoursePlayerPage() {
 /* =========================================================
    🔹 Normalizar unidades (ahora soporta contentTimeline)
    ========================================================= */
-useEffect(() => {
-  if (!curso) return;
+/* =========================================================
+   🔹 Normalizar unidades (OPTIMIZADO con useMemo)
+   ========================================================= */
+const normalizedUnits = useMemo(() => {
+  if (!curso) return [];
 
   console.log("📦 Normalizando curso (raw):", curso);
 
@@ -210,19 +213,19 @@ useEffect(() => {
       }));
 
   timeline.forEach((item: any, idxTimeline: number) => {
-  if (item.type !== "unit") return;
+    if (item.type !== "unit") return;
 
-  const u =
-    (curso.unidades || []).find((uu: any) => uu.id === item.refId) ||
-    (curso.unidades || [])[idxTimeline];
+    const u =
+      (curso.unidades || []).find((uu: any) => uu.id === item.refId) ||
+      (curso.unidades || [])[idxTimeline];
 
-  if (!u) return;
+    if (!u) return;
 
-  const unitId = u.id || `unit-${idxTimeline + 1}`;
+    const unitId = u.id || `unit-${idxTimeline + 1}`;
 
-  // Procesar lecciones...
-  const lessons = (u.lecciones || []).map((l: any, idxL: number) => {
-      const lessonId = l.id || `lesson-${idxU + 1}-${idxL + 1}`;
+    // Procesar lecciones...
+    const lessons = (u.lecciones || []).map((l: any, idxL: number) => {
+      const lessonId = l.id || `lesson-${idxTimeline + 1}-${idxL + 1}`;
 
       // Detectar si es estructura nueva (blocks) o legacy
       const isNewStructure = Array.isArray(l.blocks) && l.blocks.length > 0;
@@ -293,97 +296,97 @@ useEffect(() => {
       };
     });
 
-  // Introducción
-  if (u.urlVideo || u.descripcion) {
-    lessons.unshift({
-      key: buildKey(unitId, "intro"),
-      id: "intro",
-      unitId,
-      title: t("coursePlayer.sidebar.introduction"),
+    // Introducción
+    if (u.urlVideo || u.descripcion) {
+      lessons.unshift({
+        key: buildKey(unitId, "intro"),
+        id: "intro",
+        unitId,
+        title: t("coursePlayer.sidebar.introduction"),
+        description: u.descripcion || "",
+        videoUrl: u.introVideo || "",
+        ejercicios: [],
+        pdfUrl: "",
+        theory: ""
+      });
+    }
+
+    normalized.push({
+      id: unitId,
+      title: u.titulo || `Unidad ${idxTimeline + 1}`,
       description: u.descripcion || "",
-      videoUrl: u.introVideo || "",
-      ejercicios: [],
-      pdfUrl: "",
-      theory: ""
+      lessons,
+    });
+  });
+
+  // FINAL EXAM
+  if (timeline.some(i => i.type === "final_exam") && curso.examenFinal) {
+    const ex = curso.examenFinal;
+    normalized.push({
+      id: "final_exam",
+      title: "Final Exam",
+      lessons: [
+        {
+          key: buildKey("final_exam", "exam"),
+          id: "exam",
+          unitId: "final_exam",
+          title: ex.introTexto || "Final Exam",
+          description: ex.introTexto || "",
+          theory: ex.introTexto || "",
+          ejercicios: ex.ejercicios || [],
+          videoUrl: ex.videoUrl || "",
+          pdfUrl: "",
+        }
+      ]
     });
   }
 
-  normalized.push({
-    id: unitId,
-    title: u.titulo || `Unidad ${idxTimeline + 1}`,
-    description: u.descripcion || "",
-    lessons,
-  });
-});
-// FINAL EXAM
-if (timeline.some(i => i.type === "final_exam") && curso.examenFinal) {
-  const ex = curso.examenFinal;
-  normalized.push({
-    id: "final_exam",
-    title: "Final Exam",
-    lessons: [
-      {
-        key: buildKey("final_exam", "exam"),
-        id: "exam",
-        unitId: "final_exam",
-        title: ex.introTexto || "Final Exam",
-        description: ex.introTexto || "",
-        theory: ex.introTexto || "",
-        ejercicios: ex.ejercicios || [],
-        videoUrl: ex.videoUrl || "",
-        pdfUrl: "",
-      }
-    ]
-  });
-}
-if (timeline.some(i => i.type === "project") && curso.capstone) {
-  const cap = curso.capstone;
+  // CAPSTONE PROJECT
+  if (timeline.some(i => i.type === "project") && curso.capstone) {
+    const cap = curso.capstone;
+    normalized.push({
+      id: "project",
+      title: "Capstone Project",
+      lessons: [
+        {
+          key: buildKey("project", "cap1"),
+          id: "cap1",
+          unitId: "project",
+          title: "Capstone Project",
+          description: cap.instrucciones || "",
+          theory: cap.instrucciones || "",
+          videoUrl: cap.videoUrl || "",
+          ejercicios: [],
+          pdfUrl: ""
+        }
+      ]
+    });
+  }
 
-  normalized.push({
-    id: "project",
-    title: "Capstone Project",
-    lessons: [
-      {
-        key: buildKey("project", "cap1"),
-        id: "cap1",
-        unitId: "project",
-        title: "Capstone Project",
-        description: cap.instrucciones || "",
-        theory: cap.instrucciones || "",
-        videoUrl: cap.videoUrl || "",
-        ejercicios: [],
-        pdfUrl: ""
-      }
-    ]
-  });
-}
-if (timeline.some(i => i.type === "closing") &&
-   (curso.textoFinalCurso || curso.textoFinalCursoVideoUrl)) 
-{
-  normalized.push({
-    id: "closing",
-    title: "Closing Section",
-    lessons: [
-      {
-        key: buildKey("closing", "end"),
-        id: "end",
-        unitId: "closing",
-        title: "Closing Section",
-        description: curso.textoFinalCurso || "",
-        theory: curso.textoFinalCurso || "",
-        videoUrl: curso.textoFinalCursoVideoUrl || "",
-        ejercicios: [],
-        pdfUrl: ""
-      }
-    ]
-  });
-}
+  // CLOSING
+  if (timeline.some(i => i.type === "closing") &&
+     (curso.textoFinalCurso || curso.textoFinalCursoVideoUrl)) 
+  {
+    normalized.push({
+      id: "closing",
+      title: "Closing Section",
+      lessons: [
+        {
+          key: buildKey("closing", "end"),
+          id: "end",
+          unitId: "closing",
+          title: "Closing Section",
+          description: curso.textoFinalCurso || "",
+          theory: curso.textoFinalCurso || "",
+          videoUrl: curso.textoFinalCursoVideoUrl || "",
+          ejercicios: [],
+          pdfUrl: ""
+        }
+      ]
+    });
+  }
 
-
-
-  // ⚠️ IMPORTANTE:
-  // Si estamos en modo LEGACY (sin contentTimeline) y hay cierre de curso,
-  // seguimos creando el "closing-course" como antes.
+  // ⚠️ LEGACY: Si no hay contentTimeline y hay cierre de curso
   const hasClosingTimelineItem = hasTimeline &&
     (curso as any).contentTimeline?.some((it: any) => it.type === "closing");
 
@@ -406,38 +409,75 @@ if (timeline.some(i => i.type === "closing") &&
   }
 
   console.log("✅ Unidades normalizadas (final):", normalized);
-  setUnits(normalized);
-  if (normalized.length > 0) setExpandedUnits({ 0: true });
-}, [curso, t]);
+  return normalized;
+}, [curso]); // 👈 Solo depende de 'curso', NO de 't'
+
+// 🔥 Efecto separado para setear units y expandir primera unidad
+useEffect(() => {
+  setUnits(normalizedUnits);
+  if (normalizedUnits.length > 0) {
+    setExpandedUnits({ 0: true });
+  }
+}, [normalizedUnits]);
 
 
 /* =========================================================
-   🔹 Cargar progreso del curso desde AuthContext
+   🔹 Cargar progreso del curso (OPTIMIZADO - solo 1 vez)
    ========================================================= */
+const progressLoadedRef = useRef(false);
+const progressCacheRef = useRef<Record<string, any>>({});
+
 useEffect(() => {
   async function loadProgress() {
     if (!user?.uid || !courseId || !getCourseProgress) return;
 
-    console.log("📚 Cargando progreso del curso desde contexto...");
-    const data = await getCourseProgress(user.uid, courseId);
+    // 🔥 Si ya cargamos progreso para este curso, no volver a traerlo
+    const cacheKey = `${user.uid}-${courseId}`;
+    if (progressLoadedRef.current && progressCacheRef.current[cacheKey]) {
+      console.log("✅ Usando progreso en caché");
+      setProgress(progressCacheRef.current[cacheKey]);
+      return;
+    }
 
-    if (data?.byLesson) {
-      // ✅ Normalizamos todas las keys para evitar duplicados en memoria
-const normalized: Record<string, any> = {};
-Object.entries(data.byLesson || {}).forEach(([key, val]) => {
-  normalized[key] = val; // NO TOCAR KEYS
-});
-setProgress(normalized);
+    console.log("📚 Cargando progreso del curso desde Firestore...");
+    
+    try {
+      const data = await getCourseProgress(user.uid, courseId);
 
-    } else {
-      console.log("⚠️ No hay progreso previo guardado.");
+      if (data?.byLesson) {
+        // ✅ Normalizamos todas las keys para evitar duplicados en memoria
+        const normalized: Record<string, any> = {};
+        Object.entries(data.byLesson || {}).forEach(([key, val]) => {
+          normalized[key] = val; // NO TOCAR KEYS
+        });
+
+        // 🔥 Guardar en caché y marcar como cargado
+        progressCacheRef.current[cacheKey] = normalized;
+        progressLoadedRef.current = true;
+        setProgress(normalized);
+        
+        console.log("✅ Progreso cargado y cacheado:", Object.keys(normalized).length, "lecciones");
+      } else {
+        console.log("⚠️ No hay progreso previo guardado.");
+        setProgress({});
+        progressLoadedRef.current = true;
+      }
+    } catch (err) {
+      console.error("❌ Error cargando progreso:", err);
       setProgress({});
     }
   }
 
   loadProgress();
-}, [user?.uid, courseId, getCourseProgress]);
+}, [user?.uid, courseId]); // 👈 SOLO estas dependencias
 
+// 🔥 Limpiar caché cuando el usuario cambia de curso
+useEffect(() => {
+  return () => {
+    progressLoadedRef.current = false;
+    // No limpiamos progressCacheRef para mantener caché entre navegaciones
+  };
+}, [courseId]);
 
 
 
@@ -654,6 +694,18 @@ function makeKey(exId: string, qId?: string) {
   return qId ? `${exId}::${qId}` : exId;
 }
 
+// 1️⃣ Primero, calcula el estado de la lección actual
+const currentLessonStatus = useMemo(() => {
+  if (!activeLesson?.key) return 'not_started';
+  
+  const lessonProgress = progress[activeLesson.key];
+  
+  if (lessonProgress?.videoEnded || lessonProgress?.exSubmitted || lessonProgress?.exPassed) {
+    return 'completed';
+  }
+  
+  return 'in_progress';
+}, [activeLesson?.key, progress]);
 
   /* =========================================================
    🧱 Helpers de progreso y Firestore
@@ -1802,7 +1854,7 @@ const renderSpeaking = (ex: any) => {
 {ex.type !== "reading" &&
   ex.type !== "listening" && (
     <h4 className="font-semibold text-slate-900 mb-4 text-lg whitespace-pre-wrap">
-      {getExercisePrompt(ex)}
+      {/* {getExercisePrompt(ex)} */}
     </h4>
 )}
 
@@ -1954,7 +2006,7 @@ const renderSpeaking = (ex: any) => {
       : "bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white hover:shadow-2xl hover:shadow-[#EE7203]/40 "
   }`}
 >
-        {submitted ? "Intento registrado" : "Comprobar respuestas"}
+        {submitted ? "Attempt recorded" : "Check answers"}
       </motion.button>
 
       {/* Feedback numérico */}
@@ -2166,7 +2218,6 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
       // Logo (imagen en esquina derecha)
       const imgWidth = 40;
       const imgHeight = 25;
-      
       doc.addImage(
         FURTHER_LOGO_BASE64,
         "PNG",
@@ -2753,10 +2804,24 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
                   </p>
                 )}
               </div>
-              <div className="flex items-center gap-2 bg-gradient-to-r from-[#EE7203] to-[#FF3816] px-5 py-2.5 rounded-2xl shadow-lg">
-                <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                <span className="text-white font-bold text-sm">{t("coursePlayer.sidebar.inProgress")}</span>
-              </div>
+              
+<div className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl shadow-lg ${
+  currentLessonStatus === 'completed'
+    ? 'bg-gradient-to-r from-emerald-500 to-green-500'
+    : 'bg-gradient-to-r from-[#EE7203] to-[#FF3816]'
+}`}>
+  <div className={`w-2 h-2 rounded-full ${
+    currentLessonStatus === 'completed'
+      ? 'bg-white'
+      : 'bg-white animate-pulse'
+  }`}></div>
+  <span className="text-white font-bold text-sm">
+    {currentLessonStatus === 'completed' 
+      ? t("coursePlayer.sidebar.completed") 
+      : t("coursePlayer.sidebar.inProgress")
+    }
+  </span>
+</div>
             </div>
           </div>
         </motion.div>

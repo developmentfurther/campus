@@ -10,6 +10,7 @@ import MessageBubble from "./MessageBubble";
 import TypingIndicator from "./TypingIndicator";
 import Image from "next/image";
 import { useI18n } from "@/contexts/I18nContext";
+import ChatbotVideoModal from "@/components/ui/ChatbotVideoModal";
 
 
 /* =============================================
@@ -62,9 +63,21 @@ interface Message {
 }
 
 export default function ChatBox() {
-  const { userProfile, user } = useAuth();
+  const { userProfile, user, hasSeenWelcomeVideo, loadingVideoStatus } = useAuth();
   const { t } = useI18n();
 
+
+  // 🔥 DEBUG: Ver estado del video
+  useEffect(() => {
+    console.log("🎬 ChatBox - Estado del video:", {
+      user: !!user,
+      userProfile: !!userProfile,
+      hasSeenWelcomeVideo,
+      loadingVideoStatus,
+      batchId: userProfile?.batchId,
+      userKey: userProfile?.userKey,
+    });
+  }, [user, userProfile, hasSeenWelcomeVideo, loadingVideoStatus]); 
 
   const rawLang = userProfile?.learningLanguage?.toLowerCase() || "en";
   const language = languageKeyMap[rawLang] ?? "english";
@@ -379,6 +392,13 @@ Please try again.
      UI Final - OPTIMIZADO
   ============================================= */
   return (
+    <>
+
+     <ChatbotVideoModal
+        videoUrl="https://www.youtube.com/embed/TU_VIDEO_ID_AQUI" // 👈 Cambia por tu video real
+        autoShow={true}
+        videoType="youtube"
+      />
     <div className="w-full max-w-4xl mx-auto flex flex-col h-[85vh]">
       
       {/* Main container */}
@@ -493,5 +513,8 @@ Please try again.
 
       </div>
     </div>
+    </>
+
+    
   );
 }
