@@ -11,16 +11,24 @@ interface Correction {
   position: number;
 }
 
+interface Pronunciation {
+  score: number;
+  feedback: string;
+  commonIssues?: string[];
+}
+
 interface MessageBubbleProps {
   role: "user" | "assistant";
   content: string;
   corrections?: Correction[];
+  pronunciation?: Pronunciation;
 }
 
 export default function MessageBubble({
   role,
   content,
   corrections = [],
+  pronunciation,
 }: MessageBubbleProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
@@ -226,6 +234,64 @@ export default function MessageBubble({
     return typeof window !== 'undefined' ? createPortal(tooltip, document.body) : null;
   };
 
+  // Renderizar score de pronunciación
+  const renderPronunciationScore = () => {
+    if (!pronunciation) return null;
+
+    const getScoreColor = (score: number) => {
+      if (score >= 8) return "text-green-500";
+      if (score >= 6) return "text-yellow-500";
+      return "text-red-500";
+    };
+
+    const getScoreLabel = (score: number) => {
+      if (score >= 8) return "Excellent";
+      if (score >= 6) return "Good";
+      return "Needs practice";
+    };
+
+    return (
+      <div className="mt-3 pt-3 border-t border-white/20">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-lg"></span>
+          <span className="text-xs font-bold uppercase opacity-90">Pronunciation</span>
+        </div>
+        
+        <div className="bg-white/10 rounded-lg p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs">Score:</span>
+            <div className="flex items-center gap-2">
+              <span className={`text-lg font-bold ${getScoreColor(pronunciation.score)}`}>
+                {pronunciation.score}/10
+              </span>
+              <span className="text-xs opacity-70">({getScoreLabel(pronunciation.score)})</span>
+            </div>
+          </div>
+          
+          {pronunciation.feedback && (
+            <p className="text-xs leading-relaxed opacity-90">
+              {pronunciation.feedback}
+            </p>
+          )}
+
+          {pronunciation.commonIssues && pronunciation.commonIssues.length > 0 && (
+            <div className="mt-2 pt-2 border-t border-white/10">
+              <span className="text-xs font-semibold opacity-90">Focus on:</span>
+              <ul className="mt-1 space-y-1">
+                {pronunciation.commonIssues.map((issue, idx) => (
+                  <li key={idx} className="text-xs opacity-80 flex items-start gap-1">
+                    <span>•</span>
+                    <span>{issue}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       <div
@@ -243,6 +309,7 @@ export default function MessageBubble({
           )}
         >
           {renderContentWithCorrections()}
+          {renderPronunciationScore()}
         </div>
       </div>
 

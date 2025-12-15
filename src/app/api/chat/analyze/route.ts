@@ -2,14 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic"; // ⬅️ MUY IMPORTANTE
+export const dynamic = "force-dynamic";
 
-const MODEL_ID = "gpt-5-mini";
+const MODEL_ID = "gpt-4o-mini";
 
-/**
- * ⚠️ NO instanciar OpenAI a nivel global
- * Esto evita que el build falle si la env no está cargada aún
- */
 function getOpenAI() {
   const apiKey = process.env.OPENAI_API_KEY;
 
@@ -68,7 +64,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ corrections: [] });
     }
 
-    const openai = getOpenAI(); // ⬅️ se instancia SOLO en runtime
+    const openai = getOpenAI();
 
     const prompt = ANALYSIS_PROMPT
       .replace(/{{LEVEL}}/g, level || "B1")
@@ -79,7 +75,8 @@ export async function POST(req: NextRequest) {
       model: MODEL_ID,
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
-      temperature: 1,
+      temperature: 0.3,
+      max_tokens: 500
     });
 
     const text = result.choices[0]?.message?.content || "";

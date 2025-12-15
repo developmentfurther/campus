@@ -83,7 +83,7 @@ export default function GamingHub() {
 
   sentenceBuilder: {
     title: t("gaming.games.sentenceBuilder.title"),
-    description: t("gaming.games.sentenceBuilder.description"),
+    description: "Arrange the words to build a correct sentence.",
     icon: <FiEdit className="text-white text-4xl" />,
     howToPlay: [
       t("howToPlay.arrangeOrder"),
