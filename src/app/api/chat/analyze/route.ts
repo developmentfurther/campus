@@ -2,10 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic"; // ⬅️ MUY IMPORTANTE
 
-const apiKey = process.env.OPENAI_API_KEY;
-const openai = new OpenAI({ apiKey });
 const MODEL_ID = "gpt-5-mini";
+
+/**
+ * ⚠️ NO instanciar OpenAI a nivel global
+ * Esto evita que el build falle si la env no está cargada aún
+ */
+function getOpenAI() {
+  const apiKey = process.env.OPENAI_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("OPENAI_API_KEY is not defined");
+  }
+
+  return new OpenAI({ apiKey });
+}
 
 const ANALYSIS_PROMPT = `
 You are a language error detection system.
@@ -50,12 +63,16 @@ export async function POST(req: NextRequest) {
   try {
     const { message, level, language } = await req.json();
 
+    // 🛑 Guard clauses (evita llamadas innecesarias)
     if (!message || message.trim().length < 3) {
       return NextResponse.json({ corrections: [] });
     }
 
-    const prompt = ANALYSIS_PROMPT.replace(/{{LEVEL}}/g, level)
-      .replace(/{{LANGUAGE}}/g, language)
+    const openai = getOpenAI(); // ⬅️ se instancia SOLO en runtime
+
+    const prompt = ANALYSIS_PROMPT
+      .replace(/{{LEVEL}}/g, level || "B1")
+      .replace(/{{LANGUAGE}}/g, language || "English")
       .replace("{{MESSAGE}}", message);
 
     const result = await openai.chat.completions.create({
@@ -67,16 +84,20 @@ export async function POST(req: NextRequest) {
 
     const text = result.choices[0]?.message?.content || "";
 
-    let parsed;
+    let parsed: any;
     try {
       parsed = JSON.parse(text);
     } catch {
+      console.warn("⚠️ Invalid JSON from OpenAI:", text);
       return NextResponse.json({ corrections: [] });
     }
 
-    // Calcular posiciones de cada error
+    // 📍 Calcular posición real de cada error
     const corrections = (parsed.corrections || []).map((corr: any) => {
-      const position = message.toLowerCase().indexOf(corr.error.toLowerCase());
+      const position = message
+        .toLowerCase()
+        .indexOf((corr.error || "").toLowerCase());
+
       return {
         ...corr,
         position: position >= 0 ? position : 0,
