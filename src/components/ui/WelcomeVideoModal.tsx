@@ -138,11 +138,12 @@ export default function WelcomeVideoModal({
             </div>
             <div>
               <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                ¡Bienvenido al Campus Virtual! 
+                Welcome to the Virtual Campus!
                 <Sparkles className="w-5 h-5 text-yellow-300" />
               </h2>
               <p className="text-sm text-gray-300 mt-0.5">
-                Descubre cómo aprovechar todas las funcionalidades
+                Discover how to make the most of all the features
+
               </p>
             </div>
           </div>
@@ -153,7 +154,7 @@ export default function WelcomeVideoModal({
             style={{
               background: "rgba(255, 255, 255, 0.1)",
             }}
-            aria-label="Cerrar"
+            aria-label="Close"
           >
             <X className="w-6 h-6" strokeWidth={2.5} />
           </button>
@@ -176,7 +177,7 @@ export default function WelcomeVideoModal({
               className="absolute inset-0 w-full h-full"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
-              title="Video de bienvenida"
+              title="Welcome video"
             />
           )}
         </div>
@@ -199,12 +200,13 @@ export default function WelcomeVideoModal({
                   <CheckCircle2 className="w-5 h-5" style={{ color: COLORS.orange }} />
                 </div>
                 <span className="font-semibold" style={{ color: COLORS.darkBlue }}>
-                  ¡Video completado exitosamente!
+                  Video completed successfully!
                 </span>
               </>
             ) : (
               <span className="font-medium text-gray-700">
-                Aprende cómo usar todas las funciones del campus
+                Learn how to use all the campus features
+
               </span>
             )}
           </div>
@@ -220,7 +222,7 @@ export default function WelcomeVideoModal({
                   border: `2px solid ${COLORS.darkBlue}30`,
                 }}
               >
-                Saltar por ahora
+                Skip for now
               </button>
             )}
             
@@ -233,7 +235,7 @@ export default function WelcomeVideoModal({
                   : COLORS.darkBlue,
               }}
             >
-              {videoEnded ? "¡Comencemos! 🚀" : "Cerrar"}
+              {videoEnded ? "Let’s get started! 🚀" : "Close"}
             </button>
           </div>
         </div>

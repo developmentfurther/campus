@@ -3443,13 +3443,13 @@ function EnhancedCourseIntro({
           </div>
         </div>
       </aside>
-      {/* 📚 MODAL DE VIDEO DEL COURSE PLAYER (NUEVO)
+       {/* 📚 MODAL DE VIDEO DEL COURSE PLAYER (NUEVO) */}
       <CoursePlayerVideoModal
         videoUrl="https://player.vimeo.com/video/1146041029" // 👈 Reemplaza con tu video
         courseTitle={curso?.titulo || "Material Académico"} // 👈 Usa el título del curso actual
         autoShow={true}
         videoType="youtube" // o "vimeo" / "direct"
-      /> */}
+      /> 
       <MobileMenu
   curso={curso}
   units={units}

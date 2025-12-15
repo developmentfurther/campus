@@ -21,7 +21,7 @@ interface CoursePlayerVideoModalProps {
 
 export default function CoursePlayerVideoModal({
   videoUrl = "https://www.youtube.com/embed/dQw4w9WgXcQ", // 👈 Reemplaza con tu video
-  courseTitle = "Material Académico",
+  courseTitle = "Academic Material",
   autoShow = true,
   videoType = "youtube",
 }: CoursePlayerVideoModalProps) {
@@ -146,7 +146,7 @@ export default function CoursePlayerVideoModal({
                 {courseTitle}
               </h2>
               <p className="text-sm text-gray-300 mt-0.5">
-                Aprende cómo navegar y aprovechar este material académico
+                Learn how to navigate and make the most of this academic material
               </p>
             </div>
           </div>
@@ -157,7 +157,7 @@ export default function CoursePlayerVideoModal({
             style={{
               background: "rgba(255, 255, 255, 0.1)",
             }}
-            aria-label="Cerrar"
+            aria-label="Close"
           >
             <X className="w-6 h-6" strokeWidth={2.5} />
           </button>
@@ -178,7 +178,8 @@ export default function CoursePlayerVideoModal({
               className="absolute inset-0 w-full h-full"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
-              title="Video del material académico"
+              title="Academic material video"
+              
             />
           )}
         </div>
@@ -201,12 +202,14 @@ export default function CoursePlayerVideoModal({
                   <CheckCircle2 className="w-5 h-5" style={{ color: COLORS.orange }} />
                 </div>
                 <span className="font-semibold" style={{ color: COLORS.darkBlue }}>
-                  ¡Video completado exitosamente!
+                  Video completed successfully!
+
                 </span>
               </>
             ) : (
               <span className="font-medium text-gray-700">
-                Conoce todas las funcionalidades del material académico
+                Discover all the features of the academic material
+
               </span>
             )}
           </div>
@@ -222,7 +225,8 @@ export default function CoursePlayerVideoModal({
                   border: `2px solid ${COLORS.darkBlue}30`,
                 }}
               >
-                Saltar por ahora
+                Skip for now
+
               </button>
             )}
 
@@ -235,7 +239,7 @@ export default function CoursePlayerVideoModal({
                   : COLORS.darkBlue,
               }}
             >
-              {videoEnded ? "¡Comencemos! 🚀" : "Cerrar"}
+              {videoEnded ? "Let’s get started! 🚀" : "Close"}
             </button>
           </div>
         </div>

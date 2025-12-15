@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { FiBookOpen, FiClock, FiAward, FiArrowRight, FiTrendingUp, FiStar } from "react-icons/fi";
+import { FiBookOpen, FiAward, FiArrowRight, FiStar } from "react-icons/fi";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/contexts/I18nContext";
 
@@ -99,14 +99,12 @@ export default function AlumnoCoursesPage() {
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
             {misCursos.map((c, index) => (
-              
               <CourseCard 
                 key={c.id} 
                 course={c} 
                 index={index}
                 router={router}
                 t={t}
-                
               />
             ))}
           </div>
@@ -117,16 +115,6 @@ export default function AlumnoCoursesPage() {
 }
 
 function CourseCard({ course, index, router, t }) {
-    // 🔥 LOGS PARA DEBUG
-  console.log("DEBUG COURSE:", course);
-  console.log("DEBUG learningRef:", course.learningRef);
-  console.log("DEBUG categoria:", course.categoria);
-  console.log("DEBUG nivel:", course.nivel);
-  const totalDuration = course.unidades?.reduce(
-    (acc: number, u: any) => acc + (u.duracion || 0),
-    0
-  );
-
   // Colores alternados para cada card
   const colorSchemes = [
     { from: '#0C212D', to: '#112C3E', accent: '#EE7203' },
@@ -167,7 +155,7 @@ function CourseCard({ course, index, router, t }) {
       </div>
 
       {/* Content */}
-      <div className="relative p-8 flex flex-col h-full min-h-[380px]">
+      <div className="relative p-8 flex flex-col h-full min-h-[340px]">
         
         {/* Header */}
         <div className="mb-6">
@@ -184,7 +172,7 @@ function CourseCard({ course, index, router, t }) {
             
             <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/10 backdrop-blur-sm">
               <FiStar className="text-[#FFD700]" size={12} />
-              <span className="text-white text-xs font-semibold">4.8</span>
+              <span className="text-white text-xs font-semibold">5</span>
             </div>
           </div>
 
@@ -193,7 +181,7 @@ function CourseCard({ course, index, router, t }) {
           </h2>
         </div>
 
-        {/* Stats Grid */}
+        {/* Stats Grid - SIN DURACIÓN */}
         <div className="grid grid-cols-2 gap-3 mb-6 flex-grow mt-6">
           <StatBubble
             icon={<FiBookOpen size={16} />}
@@ -202,23 +190,16 @@ function CourseCard({ course, index, router, t }) {
             accent={scheme.accent}
           />
           <StatBubble
-            icon={<FiClock size={16} />}
-            label={t("courses.duration")}
-            value={`${totalDuration}m`}
-            accent={scheme.accent}
-          />
-          <StatBubble
             icon={<FiAward size={16} />}
             label={t("courses.level")}
             value={course.nivel || t("courses.noLevel")}
             accent={scheme.accent}
-            fullWidth
           />
         </div>
 
         {/* CTA Button */}
         <button
-           onClick={() => window.open(`/material-academico/${course.id}`, "_blank")}
+          onClick={() => window.open(`/material-academico/${course.id}`, "_blank")}
           className="relative w-full py-4 px-6 rounded-xl font-bold text-sm flex items-center justify-center gap-3 overflow-hidden transition-all duration-300 group-hover:gap-4 bg-white text-[#0C212D] hover:shadow-2xl"
         >
           <span className="absolute inset-0 bg-gradient-to-r from-[#EE7203] to-[#FF3816] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></span>
@@ -232,9 +213,9 @@ function CourseCard({ course, index, router, t }) {
   );
 }
 
-function StatBubble({ icon, label, value, accent, fullWidth = false }) {
+function StatBubble({ icon, label, value, accent }) {
   return (
-    <div className={`${fullWidth ? "col-span-2" : ""} bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/10 hover:bg-white/15 transition-colors duration-300`}>
+    <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/10 hover:bg-white/15 transition-colors duration-300">
       <div className="flex items-center gap-3">
         <div 
           className="p-2 rounded-lg"
@@ -250,24 +231,6 @@ function StatBubble({ icon, label, value, accent, fullWidth = false }) {
             {value}
           </p>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function StatItem({ icon, label, value, fullWidth = false }) {
-  return (
-    <div className={`flex items-center gap-3 ${fullWidth ? "col-span-2" : ""}`}>
-      <div className="p-2 rounded-lg" style={{ backgroundColor: "#f8f9fa" }}>
-        <div style={{ color: "#112C3E" }}>{icon}</div>
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
-          {label}
-        </p>
-        <p className="font-semibold truncate" style={{ color: "#112C3E" }}>
-          {value}
-        </p>
       </div>
     </div>
   );
