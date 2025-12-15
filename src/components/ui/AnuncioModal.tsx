@@ -46,7 +46,7 @@ export default function AnuncioModal({ mode, anuncio, onClose, onSaved }) {
         toast.success("Announcement updated.");
       }
 
-      onSaved(); // 👈 ya no llamamos onClose aquí
+      onSaved(); // 
     } catch (err) {
       console.error(err);
       toast.error("Error saving announcement.");

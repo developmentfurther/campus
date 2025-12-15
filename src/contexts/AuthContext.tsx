@@ -935,26 +935,25 @@ const getCourseProgress = async (uid: string, courseId: string) => {
         setLoadingChatbotVideoStatus(false); // 👈 Chatbot
         setLoadingCoursePlayerVideoStatus(false); // 👈 NUEVO
 
-      } else {
+            } else {
           setUser(null);
           setRole(null);
           setMisCursos([]);
           setUserProfile(null);
           setHasSeenWelcomeVideo(false);
-          setHasSeenChatbotVideo(false); // 👈 NUEVO
+          setHasSeenChatbotVideo(false);
+          setHasSeenCoursePlayerVideo(false); // 👈 AGREGADO
           setLang("en");
-          setLoadingVideoStatus(false);
-          setLoadingChatbotVideoStatus(false); // 👈 NUEVO
-          setLoadingCoursePlayerVideoStatus(false); // 👈 NUEVO
           
       }
     } catch (error) {
       console.error("❌ Error en onAuthStateChanged:", error);
       toast.error("Error al cargar datos del usuario");
-      setLoadingVideoStatus(false); // 👈 NUEVO
-      setLoadingChatbotVideoStatus(false); // 👈 NUEVO
-      setLoadingCoursePlayerVideoStatus(false);
     } finally {
+      // ✅ MOVER TODOS LOS setLoading...Status AQUÍ
+      setLoadingVideoStatus(false);
+      setLoadingChatbotVideoStatus(false);
+      setLoadingCoursePlayerVideoStatus(false);
       setLoading(false);
       setAuthReady(true);
     }
@@ -1043,8 +1042,8 @@ const value = useMemo(
     loadingChatSessions,
     loadChatSessions,
     recentActivity,
-loadingActivity,
-reloadActivity: () => {
+    loadingActivity,
+    reloadActivity: () => {
   if (!user || !userProfile) return;
   return loadRecentActivity(user.uid, userProfile, misCursos);
 },

@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from "openai";
 
 export const runtime = "nodejs";
 
-const apiKey = process.env.GEMINI_API_KEY;
-const genAI = new GoogleGenerativeAI(apiKey!);
-const MODEL_ID = "gemini-2.5-flash";
+const apiKey = process.env.OPENAI_API_KEY;
+const openai = new OpenAI({ apiKey });
+const MODEL_ID = "gpt-5-mini";
 
 const ANALYSIS_PROMPT = `
 You are a language error detection system.
@@ -17,7 +17,6 @@ Target language: {{LANGUAGE}}.
 IMPORTANT:
 - If {{LANGUAGE}} = "Spanish", use only Rioplatense/Argentinian Spanish.
 - If {{LANGUAGE}} = "Portuguese", use only Brazilian Portuguese (PT-BR).
-
 
 CRITICAL RULES:
 1. Only detect REAL errors that affect communication
@@ -55,31 +54,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ corrections: [] });
     }
 
-    const model = genAI.getGenerativeModel({
-      model: MODEL_ID,
-      generationConfig: {
-        temperature: 0.3,
-        responseMimeType: "application/json",
-      },
-    });
-
-    const prompt = ANALYSIS_PROMPT
-      .replace(/{{LEVEL}}/g, level)
+    const prompt = ANALYSIS_PROMPT.replace(/{{LEVEL}}/g, level)
       .replace(/{{LANGUAGE}}/g, language)
       .replace("{{MESSAGE}}", message);
 
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    const result = await openai.chat.completions.create({
+      model: MODEL_ID,
+      messages: [{ role: "user", content: prompt }],
+      response_format: { type: "json_object" },
+      temperature: 1,
+    });
+
+    const text = result.choices[0]?.message?.content || "";
 
     let parsed;
     try {
       parsed = JSON.parse(text);
     } catch {
-      // Si falla el parsing, devolver sin correcciones
       return NextResponse.json({ corrections: [] });
     }
 
-    // Calcular posiciones de cada error en el mensaje original
+    // Calcular posiciones de cada error
     const corrections = (parsed.corrections || []).map((corr: any) => {
       const position = message.toLowerCase().indexOf(corr.error.toLowerCase());
       return {
@@ -89,7 +84,6 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ corrections });
-
   } catch (err) {
     console.error("🔥 Error analyzing corrections:", err);
     return NextResponse.json({ corrections: [] });

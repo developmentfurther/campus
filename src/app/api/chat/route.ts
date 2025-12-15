@@ -1,17 +1,17 @@
 import { NextRequest } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from "openai";
 import { retry } from "@/lib/retry";
 
 export const runtime = "nodejs";
 
-const apiKey = process.env.GEMINI_API_KEY;
+const apiKey = process.env.OPENAI_API_KEY;
 
 if (!apiKey) {
-  console.error("❌ Missing GEMINI_API_KEY in .env");
+  console.error("❌ Missing OPENAI_API_KEY in .env");
 }
 
-const genAI = new GoogleGenerativeAI(apiKey!);
-const MODEL_ID = "gemini-2.5-flash";
+const openai = new OpenAI({ apiKey });
+const MODEL_ID = "gpt-5-mini";
 
 const SYSTEM_PROMPT = `
 You are a professional language tutor for Further Campus.
@@ -104,32 +104,37 @@ export async function POST(req: NextRequest) {
   try {
     const { messages, level, language } = await req.json();
 
-    const model = genAI.getGenerativeModel({
-      model: MODEL_ID,
-      systemInstruction: SYSTEM_PROMPT
-        .replace(/{{LEVEL}}/g, level)
-        .replace(/{{LANGUAGE}}/g, language),
-    });
+    const systemPrompt = SYSTEM_PROMPT
+      .replace(/{{LEVEL}}/g, level)
+      .replace(/{{LANGUAGE}}/g, language);
 
-    const history = messages.map((m: any) => ({
-      role: m.role === "user" ? "user" : "model",
-      parts: [{ text: sanitize(m.content) }],
-    }));
+    const openaiMessages = [
+      { role: "system" as const, content: systemPrompt },
+      ...messages.map((m: any) => ({
+        role: m.role === "user" ? ("user" as const) : ("assistant" as const),
+        content: sanitize(m.content),
+      })),
+    ];
 
-    // Streaming de respuesta
-    const result = await retry(
-      () => model.generateContentStream({ contents: history }),
+    // Streaming con OpenAI
+    const stream = await retry(
+      () =>
+        openai.chat.completions.create({
+          model: MODEL_ID,
+          messages: openaiMessages,
+          stream: true,
+        }),
       3,
       300
     );
 
     const encoder = new TextEncoder();
 
-    const stream = new ReadableStream({
+    const readableStream = new ReadableStream({
       async start(controller) {
         try {
-          for await (const chunk of result.stream) {
-            const text = chunk.text();
+          for await (const chunk of stream) {
+            const text = chunk.choices[0]?.delta?.content || "";
             if (text) controller.enqueue(encoder.encode(text));
           }
         } catch (err) {
@@ -142,13 +147,12 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return new Response(stream, {
+    return new Response(readableStream, {
       headers: {
         "Content-Type": "text/plain; charset=utf-8",
         "Cache-Control": "no-cache",
       },
     });
-
   } catch (err) {
     console.error("🔥 FATAL STREAM ERROR:", err);
     return new Response("The tutor is momentarily unavailable.", {
