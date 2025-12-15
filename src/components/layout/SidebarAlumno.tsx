@@ -53,10 +53,11 @@ export default function SidebarAlumno() {
 
   const menuPersonal = [
     { id: "perfil", label: t("sidebar.profile"), icon: <FiUser size={20} /> },
+    { id: "podcast", label: "Podcast", icon: <FiUser size={20} /> },
   ];
 
   return (
-    <aside className="hidden lg:flex w-72 bg-white border-r border-gray-100 flex-col h-screen relative overflow-hidden">
+    <aside className="hidden lg:flex w-72 z-[9999] bg-white border-r border-gray-100 flex-col h-screen relative overflow-hidden">
 
       {/* Decorative background elements */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-[#EE7203] opacity-5 rounded-full blur-3xl -translate-y-16 translate-x-16"></div>

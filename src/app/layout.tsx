@@ -6,11 +6,14 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { I18nProvider } from "@/contexts/I18nContext";
 import { UsersProvider } from '@/contexts/UserContext';
 
+// 👇 1. Importar el componente
+import { GlobalPodcast } from '@/components/podcast/GlobalPodcast'; 
+
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Further Campus – Tu espacio para aprender, practicar y certificar tu inglés',
-  description: 'Further Campus es la plataforma educativa oficial de Further Corporate: accedé a tus cursos, progresos, lecciones interactivas, exámenes automáticos, certificaciones y un nuevo módulo de gaming para aprender inglés de forma dinámica y a tu ritmo.',
+  title: 'Further Campus – Tu espacio para aprender',
+  description: 'Further Campus plataforma educativa...',
 };
 
 export default function RootLayout({
@@ -20,13 +23,23 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body className={inter.className}>
+      <body className={`${inter.className} relative`}> {/* Agregué relative por seguridad */}
         <I18nProvider>
-        <AuthProvider>
-          <UsersProvider>
-            <main className="min-h-screen bg-gray-50">{children}</main>
-          </UsersProvider>
-        </AuthProvider>
+          <AuthProvider>
+            <UsersProvider>
+              
+              <main className="min-h-screen bg-gray-50">
+                {children}
+              </main>
+
+              {/* 👇 2. Aquí va el reproductor. 
+                  Al estar fuera del children, pero dentro de los providers,
+                  persiste en toda la app y tiene acceso al contexto si fuera necesario. 
+              */}
+              <GlobalPodcast />
+
+            </UsersProvider>
+          </AuthProvider>
         </I18nProvider>
       </body>
     </html>

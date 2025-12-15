@@ -12,6 +12,7 @@ import ChatBox from "@/components/chat/ChatBox";
 import ChatHistoryList from "@/components/chat/history/ChatHistoryList";
 import ChatHistorySession from "@/components/chat/history/ChatHistorySession"; 
 import AlumnoInfo from "./AlumnoInfo";
+import PodcastSection from "@/components/podcast/PodcastSection";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function AlumnoDashboard() {
@@ -45,6 +46,9 @@ export default function AlumnoDashboard() {
 
     case "infoimportante":
       return <AlumnoInfo userEmail={user?.email || ""} />;
+
+      case "podcast":
+        return <PodcastSection/>;
 
 
     default:

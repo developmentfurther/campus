@@ -71,7 +71,7 @@ export default function GamingHub() {
 
   emojiIdioms: {
     title: t("gaming.games.emojiIdioms.title"),
-    description: "Decode the idiom using emojis and clues.",
+    description: t("gaming.games.emojiIdioms.instructions"),
     icon: <FiBookOpen className="text-white text-4xl" />,
     howToPlay: [
       t("howToPlay.decodeEmojis"),
@@ -83,7 +83,7 @@ export default function GamingHub() {
 
   sentenceBuilder: {
     title: t("gaming.games.sentenceBuilder.title"),
-    description: "Arrange the words to build a correct sentence.",
+    description: t("gaming.games.sentenceBuilder.instructions"),
     icon: <FiEdit className="text-white text-4xl" />,
     howToPlay: [
       t("howToPlay.arrangeOrder"),
