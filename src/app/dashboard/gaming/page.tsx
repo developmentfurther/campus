@@ -47,7 +47,7 @@ export default function GamingHub() {
 
   wordScramble: {
     title: t("gaming.games.wordScramble.title"),
-    description: t("gaming.games.wordScramble.description"),
+    description: "Arrange the words to build a correct sentence.",
     icon: <FiZap className="text-white text-4xl" />,
     howToPlay: [
       t("howToPlay.unscramble"),
@@ -71,7 +71,7 @@ export default function GamingHub() {
 
   emojiIdioms: {
     title: t("gaming.games.emojiIdioms.title"),
-    description: t("gaming.games.emojiIdioms.description"),
+    description: "Decode the idiom using emojis and clues.",
     icon: <FiBookOpen className="text-white text-4xl" />,
     howToPlay: [
       t("howToPlay.decodeEmojis"),
