@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { FiArrowLeft } from "react-icons/fi";
 import { useI18n } from "@/contexts/I18nContext";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function GamingLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -19,20 +20,20 @@ export default function GamingLayout({ children }: { children: React.ReactNode }
     flex items-center
   "
 >
-  {/* Botón volver */}
-  <button
-  onClick={() => router.push('/dashboard')}
-  className="
-    flex items-center gap-2 
-    text-[#0C212D] font-semibold
-    hover:text-[#EE7203] 
-    transition-colors 
-    text-sm z-20
-  "
->
-  <FiArrowLeft className="text-[#EE7203]" />
-  {t('gaming.backToHub')}
-</button>
+  {/* BOTÓN VOLVER INSTANTÁNEO */}
+        <button
+          onClick={() => router.replace("/dashboard")}
+          className="
+            flex items-center gap-2 
+            text-[#0C212D] font-semibold
+            hover:text-[#EE7203] 
+            transition-colors 
+            text-sm z-20
+          "
+        >
+          <FiArrowLeft className="text-[#EE7203]" />
+          {t("gaming.backToHub")}
+        </button>
 
 
   {/* Título centrado */}

@@ -395,7 +395,7 @@ Please try again.
     <>
 
      <ChatbotVideoModal
-        videoUrl="https://www.youtube.com/embed/TU_VIDEO_ID_AQUI" // 👈 Cambia por tu video real
+        videoUrl="https://player.vimeo.com/video/1146041754" // 👈 Cambia por tu video real
         autoShow={true}
         videoType="youtube"
       />

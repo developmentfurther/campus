@@ -1,5 +1,19 @@
 {
   "common": {},
+   "chatbotModal": {
+    "title": "Welcome to Mr Further’s Chatbot!",
+    "subtitle": "Learn how to use the virtual tutor to practice languages",
+    "close": "Close",
+    "ready": "Ready to practice! 🎉",
+    "discover": "Discover how the chatbot can help you improve your language skills",
+    "skip": "Skip tutorial",
+    "start": "Let’s start practicing! 💬",
+    "videoTitle": "Chatbot tutorial video"
+  },
+  "exercises": {
+    "attemptRegistered": "Attempt recorded",
+    "checkAnswers": "Check answers"
+  },
   "information": {
     "header": {
       "badge": "Further English",
@@ -174,6 +188,19 @@
     "cta": {
       "continueNext": "Continue to next lesson",
       "excellentWork": "Excellent work!"
+    },
+    "intro": {
+      "welcomeToUnit": "Welcome to the unit",
+      "aboutThisUnit": "About this unit",
+      "lessonsInUnit": "Lessons in this unit",
+      "completedLessons": "Completed lessons",
+      "estimatedTime": "Estimated time",
+      "whatYouWillLearn": "What you will learn",
+      "andMore": "and {{count}} more",
+      "readyToStart": "Ready to start?",
+      "clickNextLesson": "Move on to the next lesson to begin your learning journey.",
+      "startFirstLesson": "Start the first lesson",
+      "remainingSections": "Remaining sections"
     }
   },
   "howToPlay": {
@@ -443,39 +470,65 @@
         "typeAnswer",
         "learnIdioms"
       ],
-      "title": "Emoji Idioms",
-      "description": "Interpret idioms using only emojis.",
-      "alreadyPlayedTitle": "You already played today 🎮",
-  "alreadyPlayedText": "Come back tomorrow to keep practicing.",
-  
-  "initialHint": "Initial hint",
-  "inputPlaceholder": "Type the idiom...",
+   "badge": "Emoji Idioms",
+  "title": "Guess the Idiom",
+  "instructions": "Discover the idiom or expression using emojis as clues.",
+
+  "inputPlaceholder": "Type the idiom here...",
+
+  "hint": "Hint",
   "check": "Check",
+  "next": "Next exercise",
 
-  "correct": "✔ Correct!",
-  "incorrect": "❌ Incorrect",
-
+  "correct": "Correct!",
   "answer": "Answer",
-  "tryAgain": "Keep trying… use the hints 👍",
 
-  "hints": "Hints",
-  "hintWords": "📏 Words: {{count}}",
-  "hintFirst": "🔤 First word: \"{{first}}\"",
-  "hintLast": "🔡 Last word: \"{{last}}\"",
-  "hintReveal": "🧩 In position: {{reveal}}"
+  "attempts": "Attempts",
+
+  "completedIn": "You solved it in {{count}} attempt",
+  "completedIn_plural": "You solved it in {{count}} attempts",
+
+  "hints": {
+    "wordCount": "{{count}} word",
+    "wordCount_plural": "{{count}} words",
+    "startsWith": "Starts with: {{letters}}",
+    "firstWord": "First word: \"{{word}}\""
+  }
     },
     "sentenceBuilder": {
-      "title": "Sentence Builder",
-      "description": "Drag the words to form the correct sentence.",
-       "instructions": "Drag the words to build the correct sentence.",
+       "howToPlay": [
+        "arrangeOrder",
+        "dragDrop",
+        "followGrammar",
+        "perfectSentences"
+      ],
+  "title": "Sentence Builder",
+  "instructions": "Drag the words to build the correct sentence.",
+
+  "buildArea": "Build your sentence here",
+  "dragHere": "Drag words here...",
+  "availableWords": "Available words",
+  "allUsed": "All words used!",
+
+  "check": "Check",
+  "correct": "CORRECT!",
+  "incorrect": "TRY AGAIN!",
+  "perfectMessage": "Perfect! You built the sentence correctly!",
+  "tryAgainMessage": "Not quite right. Give it another try!",
+
+  "newSentence": "New sentence",
+
+  "wordsInSentence": "Words in sentence",
+  "available": "Available",
+
+  "tip": "Tip",
+  "tipMessage": "Drag words to reorder them, or click to move between areas",
+
   "checking": "Checking today’s attempts...",
   "alreadyPlayedTitle": "You already played Sentence Builder today 🎮",
-  "alreadyPlayedText": "You have 1 attempt per day. Come back tomorrow ✨",
-  "check": "Check",
-  "correct": "🎉 Correct!",
-  "incorrect": "❌ Incorrect. Try again.",
-  "newSentence": "New sentence"
-    },
+  "alreadyPlayedText": "You have 1 attempt per day. Come back tomorrow ✨"
+},
+
     "errorFinder": {
       "howToPlay": [
         "readCarefully",

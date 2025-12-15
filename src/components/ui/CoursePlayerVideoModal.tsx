@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { X, PlayCircle, CheckCircle2, MessageSquare } from "lucide-react";
-import { useI18n } from "@/contexts/I18nContext";
+import { X, PlayCircle, CheckCircle2, BookOpen } from "lucide-react";
 
 // 🎨 Paleta corporativa
 const COLORS = {
@@ -13,48 +12,46 @@ const COLORS = {
   mediumBlue: "#112C3E",
 };
 
-interface ChatbotVideoModalProps {
+interface CoursePlayerVideoModalProps {
   videoUrl?: string;
+  courseTitle?: string; // 👈 Título del curso actual
   autoShow?: boolean;
   videoType?: "youtube" | "vimeo" | "direct";
 }
 
-export default function ChatbotVideoModal({
-  videoUrl = "https://www.youtube.com/embed/dQw4w9WgXcQ", // 👈 Cambia por tu video del chatbot
+export default function CoursePlayerVideoModal({
+  videoUrl = "https://www.youtube.com/embed/dQw4w9WgXcQ", // 👈 Reemplaza con tu video
+  courseTitle = "Material Académico",
   autoShow = true,
   videoType = "youtube",
-}: ChatbotVideoModalProps) {
-  const { t } = useI18n();
-  const { hasSeenChatbotVideo, markChatbotVideoAsSeen, loadingChatbotVideoStatus, user } = useAuth();
+}: CoursePlayerVideoModalProps) {
+  const {
+    hasSeenCoursePlayerVideo,
+    markCoursePlayerVideoAsSeen,
+    loadingCoursePlayerVideoStatus,
+    user,
+  } = useAuth();
+
   const [isOpen, setIsOpen] = useState(false);
   const [videoEnded, setVideoEnded] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
 
-  // Mostrar modal automáticamente si no ha visto el video del CHATBOT
+  // Mostrar modal automáticamente si no ha visto el video
   useEffect(() => {
-    console.log("🤖 Chatbot Modal - Estado:", {
-      loadingChatbotVideoStatus,
-      user: !!user,
-      hasSeenChatbotVideo,
-      autoShow,
-    });
-
-    if (!loadingChatbotVideoStatus && user && !hasSeenChatbotVideo && autoShow) {
-      const timer = setTimeout(() => {
-        console.log("✅ Mostrando modal del chatbot");
-        setIsOpen(true);
-      }, 500);
+    if (!loadingCoursePlayerVideoStatus && user && !hasSeenCoursePlayerVideo && autoShow) {
+      const timer = setTimeout(() => setIsOpen(true), 500);
       return () => clearTimeout(timer);
     }
-  }, [loadingChatbotVideoStatus, hasSeenChatbotVideo, user, autoShow]);
+  }, [loadingCoursePlayerVideoStatus, hasSeenCoursePlayerVideo, user, autoShow]);
 
   const handleClose = async () => {
     setIsClosing(true);
-    
-    if (!hasSeenChatbotVideo) {
-      await markChatbotVideoAsSeen();
+
+    // Siempre marcar como visto al cerrar
+    if (!hasSeenCoursePlayerVideo) {
+      await markCoursePlayerVideoAsSeen();
     }
-    
+
     setTimeout(() => {
       setIsOpen(false);
       setIsClosing(false);
@@ -66,21 +63,22 @@ export default function ChatbotVideoModal({
   };
 
   const handleSkip = async () => {
-    await markChatbotVideoAsSeen();
+    await markCoursePlayerVideoAsSeen();
     handleClose();
   };
 
   // Marcar como visto después de 30 segundos
   useEffect(() => {
-    if (isOpen && !hasSeenChatbotVideo) {
+    if (isOpen && !hasSeenCoursePlayerVideo) {
       const timer = setTimeout(() => {
         setVideoEnded(true);
-      }, 30000);
+      }, 53000);
 
       return () => clearTimeout(timer);
     }
-  }, [isOpen, hasSeenChatbotVideo]);
+  }, [isOpen, hasSeenCoursePlayerVideo]);
 
+  // Función para obtener la URL de embed correcta
   const getEmbedUrl = () => {
     if (videoType === "youtube") {
       if (videoUrl.includes("youtube.com/watch?v=")) {
@@ -93,7 +91,7 @@ export default function ChatbotVideoModal({
       }
       return `${videoUrl}?enablejsapi=1&rel=0&modestbranding=1`;
     }
-    
+
     if (videoType === "vimeo") {
       if (videoUrl.includes("vimeo.com/")) {
         const videoId = videoUrl.split("vimeo.com/")[1].split("?")[0];
@@ -101,11 +99,11 @@ export default function ChatbotVideoModal({
       }
       return videoUrl;
     }
-    
+
     return videoUrl;
   };
 
-  if (!isOpen || loadingChatbotVideoStatus) return null;
+  if (!isOpen || loadingCoursePlayerVideoStatus) return null;
 
   return (
     <div
@@ -127,7 +125,7 @@ export default function ChatbotVideoModal({
           boxShadow: `0 20px 40px ${COLORS.darkBlue}50`,
         }}
       >
-        {/* Header específico del CHATBOT */}
+        {/* Header con gradiente corporativo */}
         <div
           className="relative px-8 py-5 flex items-center justify-between"
           style={{
@@ -135,31 +133,31 @@ export default function ChatbotVideoModal({
           }}
         >
           <div className="flex items-center gap-4">
-            <div 
+            <div
               className="p-2.5 rounded-xl"
-              style={{ 
+              style={{
                 background: COLORS.orange,
               }}
             >
-              <MessageSquare className="w-7 h-7 text-white" strokeWidth={2.5} />
+              <BookOpen className="w-7 h-7 text-white" strokeWidth={2.5} />
             </div>
             <div>
               <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                {t("chatbotModal.title")}
+                {courseTitle}
               </h2>
               <p className="text-sm text-gray-300 mt-0.5">
-                {t("chatbotModal.subtitle")}
+                Aprende cómo navegar y aprovechar este material académico
               </p>
             </div>
           </div>
-          
+
           <button
             onClick={handleClose}
             className="p-2.5 rounded-xl transition-colors text-white hover:bg-white/10"
             style={{
               background: "rgba(255, 255, 255, 0.1)",
             }}
-            aria-label={t("chatbotModal.close")}
+            aria-label="Cerrar"
           >
             <X className="w-6 h-6" strokeWidth={2.5} />
           </button>
@@ -180,13 +178,13 @@ export default function ChatbotVideoModal({
               className="absolute inset-0 w-full h-full"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
-              title={t("chatbotModal.videoTitle")}
+              title="Video del material académico"
             />
           )}
         </div>
 
         {/* Footer */}
-        <div 
+        <div
           className="px-8 py-5 flex items-center justify-between"
           style={{
             background: "#f9fafb",
@@ -196,19 +194,19 @@ export default function ChatbotVideoModal({
           <div className="flex items-center gap-3 text-sm">
             {videoEnded ? (
               <>
-                <div 
+                <div
                   className="p-1.5 rounded-lg"
                   style={{ background: `${COLORS.orange}15` }}
                 >
                   <CheckCircle2 className="w-5 h-5" style={{ color: COLORS.orange }} />
                 </div>
                 <span className="font-semibold" style={{ color: COLORS.darkBlue }}>
-                  {t("chatbotModal.ready")}
+                  ¡Video completado exitosamente!
                 </span>
               </>
             ) : (
               <span className="font-medium text-gray-700">
-                {t("chatbotModal.discover")}
+                Conoce todas las funcionalidades del material académico
               </span>
             )}
           </div>
@@ -224,10 +222,10 @@ export default function ChatbotVideoModal({
                   border: `2px solid ${COLORS.darkBlue}30`,
                 }}
               >
-                {t("chatbotModal.skip")}
+                Saltar por ahora
               </button>
             )}
-            
+
             <button
               onClick={handleClose}
               className="px-8 py-2.5 rounded-xl text-sm font-bold text-white transition-colors"
@@ -237,7 +235,7 @@ export default function ChatbotVideoModal({
                   : COLORS.darkBlue,
               }}
             >
-              {videoEnded ? t("chatbotModal.start") : t("chatbotModal.close")}
+              {videoEnded ? "¡Comencemos! 🚀" : "Cerrar"}
             </button>
           </div>
         </div>

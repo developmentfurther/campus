@@ -58,6 +58,11 @@ interface AuthContextType {
   markChatbotVideoAsSeen: () => Promise<void>;
   loadingChatbotVideoStatus: boolean;
 
+  // 📚 Video del Course Player (NUEVO)
+  hasSeenCoursePlayerVideo: boolean;
+  markCoursePlayerVideoAsSeen: () => Promise<void>;
+  loadingCoursePlayerVideoStatus: boolean;
+
 
   saveCourseProgress?: (
     uid: string,
@@ -122,6 +127,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   // 🤖 Estados para video del chatbot (NUEVO)
   const [hasSeenChatbotVideo, setHasSeenChatbotVideo] = useState(false);
   const [loadingChatbotVideoStatus, setLoadingChatbotVideoStatus] = useState(true);
+
+  // 📚 Estados para video del COURSE PLAYER (NUEVO)
+  const [hasSeenCoursePlayerVideo, setHasSeenCoursePlayerVideo] = useState(false);
+  const [loadingCoursePlayerVideoStatus, setLoadingCoursePlayerVideoStatus] = useState(true);
 
   const [profesores, setProfesores] = useState<any[]>([]);
   const [loadingProfesores, setLoadingProfesores] = useState(false);
@@ -410,6 +419,48 @@ async function loadRecentActivity(uid: string, profile: any, cursos: any[]) {
       console.log("✅ Video chatbot marcado como visto");
     } catch (err) {
       console.error("❌ Error al marcar video chatbot:", err);
+      toast.error("Error al guardar el progreso del video");
+    }
+  };
+
+  // 📚 Marcar video del COURSE PLAYER como visto (NUEVA FUNCIÓN)
+  const markCoursePlayerVideoAsSeen = async () => {
+    if (!user || !userProfile?.batchId || !userProfile?.userKey) {
+      console.error("❌ No se puede marcar video course player: faltan datos");
+      return;
+    }
+
+    try {
+      const batchRef = doc(db, "alumnos", userProfile.batchId);
+      const snap = await getDoc(batchRef);
+      
+      if (!snap.exists()) throw new Error("Batch no existe");
+
+      const batchData = snap.data();
+      const userData = batchData[userProfile.userKey] || {};
+
+      await setDoc(
+        batchRef,
+        {
+          [userProfile.userKey]: {
+            ...userData,
+            hasSeenCoursePlayerVideo: true, // 👈 Campo específico
+            coursePlayerVideoSeenAt: new Date().toISOString(),
+          },
+        },
+        { merge: true }
+      );
+
+      setHasSeenCoursePlayerVideo(true);
+      setUserProfile({
+        ...userProfile,
+        hasSeenCoursePlayerVideo: true,
+        coursePlayerVideoSeenAt: new Date().toISOString(),
+      });
+
+      console.log("✅ Video course player marcado como visto");
+    } catch (err) {
+      console.error("❌ Error al marcar video course player:", err);
       toast.error("Error al guardar el progreso del video");
     }
   };
@@ -763,6 +814,7 @@ const getCourseProgress = async (uid: string, courseId: string) => {
     setLoading(true);
     setLoadingVideoStatus(true); // 👈 Dashboard
       setLoadingChatbotVideoStatus(true); // 👈 Chatbot
+      setLoadingCoursePlayerVideoStatus(true); // 👈 Material academico
 
     try {
       if (firebaseUser) {
@@ -812,6 +864,10 @@ const getCourseProgress = async (uid: string, courseId: string) => {
               const chatbotVideoSeen = data.hasSeenChatbotVideo === true;
               setHasSeenChatbotVideo(chatbotVideoSeen);
               console.log(`💬 Video chatbot: ${chatbotVideoSeen ? "Visto" : "No visto"}`);
+              // 📚 Cargar estado del video COURSE PLAYER (NUEVO)
+            const coursePlayerVideoSeen = data.hasSeenCoursePlayerVideo === true;
+            setHasSeenCoursePlayerVideo(coursePlayerVideoSeen);
+            console.log(`📖 Video course player: ${coursePlayerVideoSeen ? "Visto" : "No visto"}`);
 
             // ⚠️ Si es PROFESOR, inicializar idiomas si no existen
             if (profile.role === "profesor") {
@@ -877,6 +933,7 @@ const getCourseProgress = async (uid: string, courseId: string) => {
         // ✅ Marcar que terminó de cargar el estado del video
         setLoadingVideoStatus(false); // 👈 NUEVO
         setLoadingChatbotVideoStatus(false); // 👈 Chatbot
+        setLoadingCoursePlayerVideoStatus(false); // 👈 NUEVO
 
       } else {
           setUser(null);
@@ -888,6 +945,7 @@ const getCourseProgress = async (uid: string, courseId: string) => {
           setLang("en");
           setLoadingVideoStatus(false);
           setLoadingChatbotVideoStatus(false); // 👈 NUEVO
+          setLoadingCoursePlayerVideoStatus(false); // 👈 NUEVO
           
       }
     } catch (error) {
@@ -895,6 +953,7 @@ const getCourseProgress = async (uid: string, courseId: string) => {
       toast.error("Error al cargar datos del usuario");
       setLoadingVideoStatus(false); // 👈 NUEVO
       setLoadingChatbotVideoStatus(false); // 👈 NUEVO
+      setLoadingCoursePlayerVideoStatus(false);
     } finally {
       setLoading(false);
       setAuthReady(true);
@@ -966,6 +1025,11 @@ const value = useMemo(
       hasSeenChatbotVideo,
       markChatbotVideoAsSeen,
       loadingChatbotVideoStatus,
+
+      // 📚 Video Course Player (NUEVO)
+      hasSeenCoursePlayerVideo,
+      markCoursePlayerVideoAsSeen,
+      loadingCoursePlayerVideoStatus,
 
 
     saveCourseProgress,

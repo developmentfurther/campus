@@ -1,5 +1,19 @@
 {
   "common": {},
+  "chatbotModal": {
+    "title": "¡Bienvenido al Chatbot de Mr Further!",
+    "subtitle": "Aprende a usar el tutor virtual para practicar idiomas",
+    "close": "Cerrar",
+    "ready": "¡Listo para practicar! 🎉",
+    "discover": "Descubre cómo el chatbot puede ayudarte a mejorar tu idioma",
+    "skip": "Saltar tutorial",
+    "start": "¡Empecemos a practicar! 💬",
+    "videoTitle": "Video tutorial del chatbot"
+  },
+  "exercises": {
+    "attemptRegistered": "Intento registrado",
+    "checkAnswers": "Comprobar respuestas"
+  },
   "information": {
     "header": {
       "badge": "Further English",
@@ -173,6 +187,19 @@
     "cta": {
       "continueNext": "Continuar a la siguiente lección",
       "excellentWork": "¡Excelente trabajo!"
+    },
+    "intro": {
+      "welcomeToUnit": "Bienvenido a la unidad",
+      "aboutThisUnit": "Sobre esta unidad",
+      "lessonsInUnit": "Lecciones en esta unidad",
+      "completedLessons": "Lecciones completadas",
+      "estimatedTime": "Tiempo estimado",
+      "whatYouWillLearn": "Qué vas a aprender",
+      "andMore": "y {{count}} más",
+      "readyToStart": "¿Listo para empezar?",
+      "clickNextLesson": "Avanzá a la siguiente lección para comenzar tu recorrido de aprendizaje.",
+      "startFirstLesson": "Empezar la primera lección",
+      "remainingSections": "Secciones restantes"
     }
   },
 
@@ -431,33 +458,39 @@
         "hint2": "Pista final: es un sustantivo común"
     },
     "emojiIdioms": {
-      "howToPlay": [
-        "decodeEmojis",
-        "thinkCultural",
-        "typeAnswer",
-        "learnIdioms"
-      ],
-      "title": "Emoji Idioms",
-      "description": "Interpretá idioms usando solo emojis.",
-      "alreadyPlayedTitle": "Ya jugaste hoy 🎮",
-  "alreadyPlayedText": "Volvé mañana para seguir practicando.",
-  
-  "initialHint": "Pista inicial",
-  "inputPlaceholder": "Escribe el idiom...",
+  "howToPlay": [
+    "decodeEmojis",
+    "thinkCultural",
+    "typeAnswer",
+    "learnIdioms"
+  ],
+
+  "badge": "Emoji Idioms",
+  "title": "Adivina el modismo",
+  "instructions": "Descubre el modismo o la expresión usando los emojis como pistas.",
+
+  "inputPlaceholder": "Escribe el modismo aquí...",
+
+  "hint": "Pista",
   "check": "Comprobar",
+  "next": "Siguiente ejercicio",
 
-  "correct": "✔ ¡Correcto!",
-  "incorrect": "❌ No es correcto",
-
+  "correct": "¡Correcto!",
   "answer": "Respuesta",
-  "tryAgain": "Seguí intentando… usá las pistas 👍",
 
-  "hints": "Pistas",
-  "hintWords": "📏 Palabras: {{count}}",
-  "hintFirst": "🔤 Primera palabra: \"{{first}}\"",
-  "hintLast": "🔡 Última palabra: \"{{last}}\"",
-  "hintReveal": "🧩 En posición: {{reveal}}"
-    },
+  "attempts": "Intentos",
+
+  "completedIn": "Lo resolviste en {{count}} intento",
+  "completedIn_plural": "Lo resolviste en {{count}} intentos",
+
+  "hints": {
+    "wordCount": "{{count}} palabra",
+    "wordCount_plural": "{{count}} palabras",
+    "startsWith": "Empieza con: {{letters}}",
+    "firstWord": "Primera palabra: \"{{word}}\""
+  }
+},
+
     "sentenceBuilder": {
        "howToPlay": [
         "arrangeOrder",
@@ -465,17 +498,33 @@
         "followGrammar",
         "perfectSentences"
       ],
-      "title": "Sentence Builder",
-      "description": "Arrastrá palabras para formar la oración correcta.",
-      "instructions": "Arrastrá las palabras para formar la oración correcta.",
-  "checking": "Verificando intentos de hoy...",
-  "alreadyPlayedTitle": "Ya jugaste hoy Sentence Builder 🎮",
-  "alreadyPlayedText": "Tenés 1 intento por día. Volvé mañana ✨",
+  "title": "Constructor de oraciones",
+  "instructions": "Arrastra las palabras para construir la oración correcta.",
+
+  "buildArea": "Construye tu oración aquí",
+  "dragHere": "Arrastra las palabras aquí...",
+  "availableWords": "Palabras disponibles",
+  "allUsed": "¡Todas las palabras fueron usadas!",
+
   "check": "Comprobar",
-  "correct": "🎉 ¡Correcto!",
-  "incorrect": "❌ Incorrecto. Intentá otra vez.",
-  "newSentence": "Nueva oración"
-    },
+  "correct": "¡CORRECTO!",
+  "incorrect": "¡INTENTA DE NUEVO!",
+  "perfectMessage": "¡Perfecto! Construiste la oración correctamente.",
+  "tryAgainMessage": "No está del todo bien. ¡Inténtalo otra vez!",
+
+  "newSentence": "Nueva oración",
+
+  "wordsInSentence": "Palabras en la oración",
+  "available": "Disponibles",
+
+  "tip": "Consejo",
+  "tipMessage": "Arrastra las palabras para reordenarlas o haz clic para moverlas entre áreas",
+
+  "checking": "Verificando intentos de hoy...",
+  "alreadyPlayedTitle": "Ya jugaste a Sentence Builder hoy 🎮",
+  "alreadyPlayedText": "Tienes 1 intento por día. Vuelve mañana ✨"
+},
+
     "errorFinder": {
       "howToPlay": [
         "readCarefully",

@@ -250,7 +250,7 @@ export default function WordScramble() {
           >
             <div className="inline-flex items-center gap-3 bg-gradient-to-r from-emerald-500 to-green-500 px-8 py-4 rounded-2xl shadow-2xl">
               <FiCheck size={28} className="text-white" />
-              <span className="text-white text-xl font-black">¡CORRECTO!</span>
+              <span className="text-white text-xl font-black">{t("gaming.games.wordScramble.correct")}!</span>
             </div>
 
             <p className="text-emerald-400 text-xl md:text-2xl font-bold">

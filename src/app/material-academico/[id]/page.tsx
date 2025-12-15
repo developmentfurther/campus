@@ -37,6 +37,7 @@ import { useI18n } from "@/contexts/I18nContext";
 import MobileMenu from "@/components/ui/MobileMenu";
 import LoaderUi from "@/components/ui/LoaderUi";
 import MarkdownWYSIWYG from "@/components/cursos/cursoItem/blocks/MarkdownWYSIWYG";
+import CoursePlayerVideoModal from "@/components/ui/CoursePlayerVideoModal"; 
 
 
 
@@ -184,10 +185,9 @@ export default function CoursePlayerPage() {
     }
     fetchCourse();
   }, [firestore, courseId]);
+  
 
-/* =========================================================
-   🔹 Normalizar unidades (ahora soporta contentTimeline)
-   ========================================================= */
+
 /* =========================================================
    🔹 Normalizar unidades (OPTIMIZADO con useMemo)
    ========================================================= */
@@ -298,18 +298,22 @@ const normalizedUnits = useMemo(() => {
 
     // Introducción
     if (u.urlVideo || u.descripcion) {
-      lessons.unshift({
-        key: buildKey(unitId, "intro"),
-        id: "intro",
-        unitId,
-        title: t("coursePlayer.sidebar.introduction"),
-        description: u.descripcion || "",
-        videoUrl: u.introVideo || "",
-        ejercicios: [],
-        pdfUrl: "",
-        theory: ""
-      });
-    }
+  lessons.unshift({
+    key: buildKey(unitId, "intro"),
+    id: "intro",
+    unitId,
+    title: t("coursePlayer.sidebar.introduction"),
+    description: u.descripcion || "",
+    videoUrl: u.introVideo || "",
+    ejercicios: [],
+    pdfUrl: "",
+    theory: "",
+    // 🆕 Agregamos el resumen de la unidad
+    unitSummary: u.titulo || "",
+    lessonsCount: (u.lecciones || []).length,
+  });
+}
+
 
     normalized.push({
       id: unitId,
@@ -510,6 +514,27 @@ useEffect(() => {
 }, [activeLesson]);
 
 
+  // 🔹 Resetear scroll al cambiar de lección
+// 🔹 Resetear scroll y tab al cambiar de lección
+useEffect(() => {
+  const mainElement = document.querySelector('main.overflow-y-auto');
+  if (mainElement) {
+    mainElement.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  
+  // 👇 AGREGAR ESTO: Resetear tab automáticamente
+  if (activeLesson) {
+    // Prioridad: theory > vocabulary > exercises
+    if (activeLesson.theory) {
+      setActiveTab("theory");
+    } else if (activeLesson.vocabulary) {
+      setActiveTab("vocabulary");
+    } else if (Array.isArray(activeLesson.ejercicios) && activeLesson.ejercicios.length > 0) {
+      setActiveTab("exercises");
+    }
+  }
+}, [activeU, activeL, activeLesson]); 
+
 function normalizeVimeo(url: string) {
   // ya viene embed
   if (url.includes("player.vimeo.com")) return url;
@@ -650,19 +675,18 @@ const goNextLesson = async () => {
   const currentIdx = indexOfLesson(activeU, activeL);
   const currentLesson = flatLessons[currentIdx];
 
-  if (currentLesson?.key && user?.uid && saveCourseProgress) {
-    try {
-      // 🔹 Normalizamos la key antes de guardar
-const normalizedKey = currentLesson.key
-  .replace("closing-course", "closing") // unificamos el cierre del curso
-  .replace("closing::", "closing-course::"); // aseguramos consistencia
-
-await saveCourseProgress(user.uid, courseId, {
-  [normalizedKey]: { videoEnded: true },
-});
-
-
-      // actualizamos estado local (para que el check se marque sin recargar)
+  // 1️⃣ NAVEGACIÓN INSTANTÁNEA (sin esperar Firebase)
+  const nextIdx = currentIdx + 1;
+  if (nextIdx < flatLessons.length) {
+    const next = flatLessons[nextIdx];
+    
+    // 🟢 Actualizar UI INMEDIATAMENTE
+    setActiveU(next.uIdx);
+    setActiveL(next.lIdx);
+    setExpandedUnits((p) => ({ ...p, [next.uIdx]: true }));
+    
+    // 🎯 Actualizar progreso local ANTES de Firebase
+    if (currentLesson?.key && activeLesson?.id !== "intro") {
       setProgress((prev) => ({
         ...prev,
         [currentLesson.key]: {
@@ -670,23 +694,29 @@ await saveCourseProgress(user.uid, courseId, {
           videoEnded: true,
         },
       }));
-
-      console.log("✅ Progreso guardado para:", currentLesson.key);
-    } catch (err) {
-      console.error("❌ Error guardando progreso:", err);
     }
-  }
-
-  const nextIdx = currentIdx + 1;
-  if (nextIdx < flatLessons.length) {
-    const next = flatLessons[nextIdx];
-    setActiveU(next.uIdx);
-    setActiveL(next.lIdx);
-    setExpandedUnits((p) => ({ ...p, [next.uIdx]: true }));
+    
     toast.success("➡️ Avanzaste a la siguiente lección");
   } else {
     toast.success("🎉 ¡Curso completado!");
     router.push("/dashboard");
+  }
+
+  // 2️⃣ GUARDADO EN FIREBASE (en segundo plano, sin bloquear)
+  if (
+    currentLesson?.key &&
+    activeLesson?.id !== "intro" &&
+    user?.uid &&
+    saveCourseProgress
+  ) {
+    // 🔥 NO USAR AWAIT - deja que corra en paralelo
+    saveCourseProgress(user.uid, courseId, {
+      [currentLesson.key]: { videoEnded: true },
+    }).catch((err) => {
+      console.error("❌ Error guardando progreso (silent):", err);
+      // Opcional: podrías revertir el cambio local si falla
+      // pero generalmente es mejor dejarlo así (optimistic)
+    });
   }
 };
 
@@ -2620,9 +2650,186 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
   );
 }
 
+// Componente de introducción mejorada
+function EnhancedCourseIntro({ 
+  activeLesson, 
+  units, 
+  activeU, 
+  progress, 
+  goNextLesson,
+  t 
+}) {
+  if (!activeLesson || activeLesson.id !== "intro") return null;
+
+  const currentUnit = units[activeU];
+  const completedLessons = currentUnit?.lessons
+  ?.filter(l => l.id !== "intro") // ⬅️ excluir intro
+  ?.filter(l => 
+    progress[l.key]?.videoEnded || progress[l.key]?.exSubmitted
+  ).length || 0;
+
+
+  const totalLessons = (currentUnit?.lessons?.length || 1) - 1;
+  const estimatedHours = Math.ceil((totalLessons * 15) / 60);
+
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6}}
+      className="space-y-6"
+    >
+      <div className="bg-gradient-to-br from-white to-slate-50 rounded-3xl shadow-xl border-2 border-[#EE7203]/20 overflow-hidden">
+        
+        {/* Header decorativo */}
+        <div className="bg-gradient-to-r from-[#0C212D] to-[#112C3E] p-8 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-[#EE7203]/10 rounded-full blur-3xl"></div>
+          <div className="relative flex items-center gap-4">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#EE7203] to-[#FF3816] flex items-center justify-center shadow-lg">
+              <span className="text-4xl">🎯</span>
+            </div>
+            <div>
+              <p className="text-[#EE7203] text-sm font-bold uppercase tracking-wider mb-1">
+                {t("coursePlayer.intro.welcomeToUnit")}
+              </p>
+              <h2 className="text-3xl font-black text-white">
+                {activeLesson.unitSummary || currentUnit?.title}
+              </h2>
+            </div>
+          </div>
+        </div>
+
+        {/* Contenido */}
+        <div className="p-8 space-y-6">
+          
+          {/* Descripción de la unidad */}
+          {activeLesson?.description && (
+            <div className="bg-blue-50 border-l-4 border-blue-500 rounded-r-2xl p-6">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center flex-shrink-0 mt-1">
+                  <span className="text-xl">📖</span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-black text-blue-900 mb-2">
+                    {t("coursePlayer.intro.aboutThisUnit")}
+                  </h3>
+                  <p className="text-blue-800 leading-relaxed">
+                    {activeLesson.description}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Grid de estadísticas */}
+          <div className="grid md:grid-cols-3 gap-4">
+            {/* Lecciones */}
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200 rounded-2xl p-6">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-500 flex items-center justify-center">
+                  <span className="text-2xl">📚</span>
+                </div>
+                <div className="text-4xl font-black text-purple-900">
+                  {totalLessons}
+                </div>
+              </div>
+              <p className="text-sm font-bold text-purple-700">
+                {t("coursePlayer.intro.lessonsInUnit")}
+              </p>
+            </div>
+
+            {/* Progreso */}
+            <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-2 border-emerald-200 rounded-2xl p-6">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center">
+                  <span className="text-2xl">✅</span>
+                </div>
+                <div className="text-4xl font-black text-emerald-900">
+                  {completedLessons}
+                </div>
+              </div>
+              <p className="text-sm font-bold text-emerald-700">
+                {t("coursePlayer.intro.completedLessons")}
+              </p>
+            </div>
+
+            {/* Secciones restantes */}
+<div className="bg-gradient-to-br from-orange-50 to-orange-100 border-2 border-orange-200 rounded-2xl p-6">
+  <div className="flex items-center gap-3 mb-3">
+    <div className="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center">
+      <span className="text-2xl">📋</span>
+    </div>
+    <div className="text-4xl font-black text-orange-900">
+      {totalLessons - completedLessons}
+    </div>
+  </div>
+  <p className="text-sm font-bold text-orange-700">
+    {t("coursePlayer.intro.remainingSections")}
+  </p>
+</div>
+          </div>
+
+          {/* Objetivos de aprendizaje */}
+          <div className="bg-gradient-to-br from-slate-50 to-slate-100 border-2 border-slate-200 rounded-2xl p-6">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#0C212D] to-[#112C3E] flex items-center justify-center flex-shrink-0">
+                <span className="text-2xl">🎓</span>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xl font-black text-slate-900 mb-3">
+                  {t("coursePlayer.intro.whatYouWillLearn")}
+                </h3>
+                <div className="space-y-2">
+                  {currentUnit?.lessons?.slice(1, 5).map((lesson, idx) => (
+                    <div key={idx} className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-full bg-[#EE7203] flex items-center justify-center flex-shrink-0">
+                        <span className="text-white text-xs font-bold">{idx + 1}</span>
+                      </div>
+                      <p className="text-slate-700 font-medium">{lesson.title}</p>
+                    </div>
+                  ))}
+                  {(currentUnit?.lessons?.length || 0) > 6 && (
+                    <p className="text-slate-500 text-sm italic ml-9">
+                      {t("coursePlayer.intro.andMore", { 
+                        count: (currentUnit?.lessons?.length || 0) - 5 
+                      })}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* CTA para empezar */}
+          <div className="relative overflow-hidden rounded-2xl">
+            <div className="absolute inset-0 bg-gradient-to-r from-[#EE7203] to-[#FF3816] opacity-10"></div>
+            <div className="relative bg-gradient-to-br from-[#0C212D] to-[#112C3E] p-8 text-center">
+              <h3 className="text-2xl font-black text-white mb-3">
+                {t("coursePlayer.intro.readyToStart")}
+              </h3>
+              <p className="text-slate-300 mb-6 max-w-2xl mx-auto">
+                {t("coursePlayer.intro.clickNextLesson")}
+              </p>
+              <button
+                onClick={goNextLesson}
+                className="group px-8 py-4 bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white font-black text-lg rounded-2xl shadow-lg hover:scale-105 transition-all inline-flex items-center gap-3"
+              >
+                <span>{t("coursePlayer.intro.startFirstLesson")}</span>
+                <FiChevronRight className="group-hover:translate-x-1 transition-transform" size={24} />
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 
   /* =========================================================
-     🔹 UI inicial (básica)
+     🔹 UI inicial 
      ========================================================= */
  return (
  <div className="flex h-screen overflow-hidden bg-gradient-to-br from-gray-50 to-white text-slate-900">
@@ -2779,9 +2986,22 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
       </aside>
     {/* ======================= CONTENIDO PRINCIPAL ======================= */}
     <main className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-slate-50">
-      <div className="max-w-6xl mx-auto px-6 py-12 space-y-10">
+      <div className="max-w-6xl mx-auto px-6 py-6 space-y-10">
        
-        {/* Header Hero con gradiente y animación */}
+        
+        {/* INTRODUCCIÓN ESPECIAL DE LA UNIDAD */}
+<EnhancedCourseIntro
+  activeLesson={activeLesson}
+  units={units}
+  activeU={activeU}
+  progress={progress}
+  goNextLesson={goNextLesson}
+  t={t}
+/>
+
+{activeLesson?.id !== "intro" && (
+  <>
+  {/* Header Hero con gradiente y animación */}
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -2825,8 +3045,7 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
             </div>
           </div>
         </motion.div>
-
-        {/* VIDEO - Diseño cinematográfico */}
+  {/* VIDEO - Diseño cinematográfico */}
         {resolvedVideoUrl && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -2875,6 +3094,8 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
             </div>
           </motion.div>
         )}
+
+
 
         {/* CONTENIDO ACADÉMICO - Cards flotantes con glassmorphism */}
         {(activeLesson?.theory || activeLesson?.vocabulary || 
@@ -3099,6 +3320,9 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
             </div>
           </button>
         </motion.div>
+  </>
+)}
+        
       </div>
     </main>
 
@@ -3160,18 +3384,18 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
         <div className="px-6 pb-6">
           <div className="bg-gradient-to-br from-[#0C212D] to-[#112C3E] rounded-2xl p-5 shadow-xl">
             <div className="grid grid-cols-2 gap-4">
-              <div className="text-center">
-                <div className="text-3xl font-black text-[#EE7203] mb-1">
-                  {Object.values(progress).filter(p => p.videoEnded || p.exSubmitted).length}
-                </div>
+  <div className="text-center">
+    <div className="text-3xl font-black text-[#EE7203] mb-1">
+      {completedCount}
+    </div>
                 <div className="text-[10px] text-white/60 uppercase tracking-wider font-bold">
                   {t("coursePlayer.sidebar.completed")}
                 </div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-black text-[#FF3816] mb-1">
-                  {units.reduce((acc, u) => acc + (u.lessons?.length || 0), 0)}
-                </div>
+  {totalLessons}
+</div>
                 <div className="text-[10px] text-white/60 uppercase tracking-wider font-bold">
                   {t("coursePlayer.sidebar.total")}
                 </div>
@@ -3183,15 +3407,15 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-white/70 font-semibold">{t("coursePlayer.sidebar.progress")}</span>
                 <span className="text-xs text-[#EE7203] font-black">
-                  {Math.round((Object.values(progress).filter(p => p.videoEnded || p.exSubmitted).length / units.reduce((acc, u) => acc + (u.lessons?.length || 0), 0)) * 100)}%
-                </span>
+  {progressPercent}%
+</span>
               </div>
               <div className="h-2 bg-white/10 rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-gradient-to-r from-[#EE7203] to-[#FF3816] rounded-full transition-all duration-500"
                   style={{ 
-                    width: `${(Object.values(progress).filter(p => p.videoEnded || p.exSubmitted).length / units.reduce((acc, u) => acc + (u.lessons?.length || 0), 0)) * 100}%` 
-                  }}
+  width: `${progressPercent}%` 
+}}
                 ></div>
               </div>
             </div>
@@ -3219,6 +3443,13 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
           </div>
         </div>
       </aside>
+      {/* 📚 MODAL DE VIDEO DEL COURSE PLAYER (NUEVO)
+      <CoursePlayerVideoModal
+        videoUrl="https://player.vimeo.com/video/1146041029" // 👈 Reemplaza con tu video
+        courseTitle={curso?.titulo || "Material Académico"} // 👈 Usa el título del curso actual
+        autoShow={true}
+        videoType="youtube" // o "vimeo" / "direct"
+      /> */}
       <MobileMenu
   curso={curso}
   units={units}

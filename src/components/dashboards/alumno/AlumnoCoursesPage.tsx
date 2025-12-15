@@ -218,7 +218,7 @@ function CourseCard({ course, index, router, t }) {
 
         {/* CTA Button */}
         <button
-          onClick={() => router.push(`/material-academico/${course.id}`)}
+           onClick={() => window.open(`/material-academico/${course.id}`, "_blank")}
           className="relative w-full py-4 px-6 rounded-xl font-bold text-sm flex items-center justify-center gap-3 overflow-hidden transition-all duration-300 group-hover:gap-4 bg-white text-[#0C212D] hover:shadow-2xl"
         >
           <span className="absolute inset-0 bg-gradient-to-r from-[#EE7203] to-[#FF3816] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></span>

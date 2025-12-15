@@ -52,7 +52,7 @@ export default function DashboardPage() {
     <>
       {/* 🎥 Modal de video de bienvenida - SE MUESTRA PARA TODOS LOS ROLES */}
       <WelcomeVideoModal 
-        videoUrl="https://player.vimeo.com/video/1145283643" // 👈 Reemplaza con tu video
+        videoUrl="https://player.vimeo.com/video/1146030268" // 👈 Reemplaza con tu video
         autoShow={true} 
       />
       
