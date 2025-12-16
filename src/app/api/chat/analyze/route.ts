@@ -17,24 +17,40 @@ function getOpenAI() {
 }
 
 const ANALYSIS_PROMPT = `
-You are a language error detection system.
+You are an expert language error detection system for language learners.
 
 Analyze the student's message for grammatical, vocabulary, or spelling errors.
 
 Student level: {{LEVEL}}
-Target language: {{LANGUAGE}}.
-IMPORTANT:
-- If {{LANGUAGE}} = "Spanish", use only Rioplatense/Argentinian Spanish.
-- If {{LANGUAGE}} = "Portuguese", use only Brazilian Portuguese (PT-BR).
+Target language: {{LANGUAGE}}
 
-CRITICAL RULES:
-1. Only detect REAL errors that affect communication
-2. Do NOT flag stylistic choices or valid alternatives
-3. For A1-A2: Be more lenient, focus on major errors only
-4. For B1+: Be more precise
-5. Return ONLY valid JSON, no extra text
+IMPORTANT REGIONAL VARIANTS:
+- If {{LANGUAGE}} = "Spanish", use ONLY Rioplatense/Argentinian Spanish conventions
+- If {{LANGUAGE}} = "Portuguese", use ONLY Brazilian Portuguese (PT-BR) conventions
 
-OUTPUT FORMAT (JSON only):
+CRITICAL DETECTION RULES:
+1. ONLY flag ACTUAL errors that impede clear communication
+2. DO NOT flag:
+   - Valid colloquialisms or informal expressions
+   - Stylistic choices (both options are correct)
+   - Minor punctuation unless it creates ambiguity
+   - Regional variants that are correct in context
+   - Typos in proper nouns or names
+
+3. LEVEL-BASED STRICTNESS:
+   - A1-A2: VERY lenient - only major errors (wrong verb tense, missing words, severe grammar)
+   - B1: Moderate - focus on common mistakes and clarity
+   - B2: Standard - catch grammar and vocabulary issues
+   - C1-C2: Strict - high standards for precision
+
+4. For each error, provide:
+   - The EXACT text as it appears (preserve capitalization, spacing)
+   - A natural correction (not overly formal unless needed)
+   - A brief, helpful explanation in the target language
+
+5. If the message is perfectly fine or has no significant errors, return empty array
+
+OUTPUT FORMAT (STRICT JSON ONLY - NO MARKDOWN, NO EXTRA TEXT):
 {
   "corrections": [
     {
@@ -59,8 +75,20 @@ export async function POST(req: NextRequest) {
   try {
     const { message, level, language } = await req.json();
 
-    // 🛑 Guard clauses (evita llamadas innecesarias)
+    // Guard clauses
     if (!message || message.trim().length < 3) {
+      return NextResponse.json({ corrections: [] });
+    }
+
+    // Evitar análisis de mensajes muy cortos o saludos comunes
+    const commonPhrases = [
+      /^(hi|hello|hey|hola|oi|olá|ciao|salut)!?$/i,
+      /^(bye|goodbye|adiós|tchau|ciao|au revoir)!?$/i,
+      /^(thanks|thank you|gracias|obrigado|grazie|merci)!?$/i,
+      /^(yes|no|si|não|oui|non)!?$/i
+    ];
+
+    if (commonPhrases.some(regex => regex.test(message.trim()))) {
       return NextResponse.json({ corrections: [] });
     }
 
@@ -75,8 +103,8 @@ export async function POST(req: NextRequest) {
       model: MODEL_ID,
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
-      temperature: 0.3,
-      max_tokens: 500
+      temperature: 0.2, // Más determinista para análisis consistente
+      max_tokens: 600
     });
 
     const text = result.choices[0]?.message?.content || "";
@@ -89,17 +117,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ corrections: [] });
     }
 
-    // 📍 Calcular posición real de cada error
-    const corrections = (parsed.corrections || []).map((corr: any) => {
-      const position = message
-        .toLowerCase()
-        .indexOf((corr.error || "").toLowerCase());
+    // Calcular posición real de cada error y validar
+    const corrections = (parsed.corrections || [])
+      .map((corr: any) => {
+        const errorLower = (corr.error || "").toLowerCase().trim();
+        const messageLower = message.toLowerCase();
+        
+        const position = messageLower.indexOf(errorLower);
 
-      return {
-        ...corr,
-        position: position >= 0 ? position : 0,
-      };
-    });
+        // Si no encontramos el error exacto, intentar búsqueda más flexible
+        if (position === -1) {
+          console.warn(`⚠️ Error not found in message: "${corr.error}"`);
+          return null;
+        }
+
+        return {
+          ...corr,
+          position: position >= 0 ? position : 0,
+        };
+      })
+      .filter(Boolean); // Remover nulls
 
     return NextResponse.json({ corrections });
   } catch (err) {

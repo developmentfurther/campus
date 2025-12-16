@@ -131,10 +131,12 @@ export default function AlumnoHome() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto p-6 md:p-8 space-y-8">
+        {/* Padding reducido en mobile: p-4 vs p-8 */}
+      <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-6 md:space-y-8 pb-24">
 
         {/* ---------------- HEADER ---------------- */}
-        <header className="relative overflow-hidden bg-gradient-to-br from-[#0C212D] via-[#112C3E] to-[#0C212D] rounded-3xl p-8 md:p-12 text-white shadow-2xl">
+        {/* Padding interno reducido en mobile: p-6 vs p-12 */}
+        <header className="relative overflow-hidden bg-gradient-to-br from-[#0C212D] via-[#112C3E] to-[#0C212D] rounded-2xl md:rounded-3xl p-6 md:p-12 text-white shadow-2xl">
           
           {/* Elementos decorativos */}
           <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-[#EE7203] to-[#FF3816] opacity-10 rounded-full blur-3xl -mr-48 -mt-48"></div>
@@ -151,7 +153,7 @@ export default function AlumnoHome() {
             {/* Left – Saludo + Stats */}
             <div className="flex-1">
 
-              <div className="flex items-center gap-3 mb-6">
+              <div className="flex items-center gap-3 mb-4 md:mb-6">
                 <div className="flex gap-1.5">
                   <div className="w-2 h-2 bg-[#EE7203] rounded-full animate-pulse"></div>
                   <div className="w-2 h-2 bg-[#FF3816] rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
@@ -164,19 +166,20 @@ export default function AlumnoHome() {
                 <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2">
                   <FiCalendar size={18} className="text-[#EE7203]" />
                 </div>
-                <span className="text-sm font-bold tracking-wide">{formattedDate}</span>
+                <span className="text-xs md:text-sm font-bold tracking-wide capitalize">{formattedDate}</span>
               </div>
 
-              <h1 className="text-4xl md:text-6xl font-black mb-4 bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent">
+              {/* Título responsive: text-3xl en mobile, text-6xl en desktop */}
+              <h1 className="text-3xl md:text-6xl font-black mb-4 bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent leading-tight">
                 {t("dashboard.hello", { name: firstName })}
               </h1>
 
-              <p className="text-gray-300 text-lg max-w-2xl leading-relaxed font-medium">
+              <p className="text-gray-300 text-sm md:text-lg max-w-2xl leading-relaxed font-medium">
                 {t("dashboard.welcomeFull")}
               </p>
 
               {/* Mini stats con diseño moderno */}
-              <div className="flex flex-wrap gap-4 mt-10">
+              <div className="flex flex-wrap gap-4 mt-8 md:mt-10">
                 <StatsCard
                   icon={<FiBookOpen size={24} />}
                   value={misCursos.length}
@@ -193,7 +196,7 @@ export default function AlumnoHome() {
             </div>
 
             {/* Right – Idioma / Nivel */}
-            <div className="flex flex-col gap-4 lg:min-w-[240px]">
+            <div className="flex flex-row lg:flex-col gap-4 w-full lg:w-auto lg:min-w-[240px]">
               <ProfileInfoCard
                 title={t("dashboard.language")}
                 value={renderLanguage(userProfile?.learningLanguage)}
@@ -211,15 +214,15 @@ export default function AlumnoHome() {
 
         {/* ---------------- ACCESOS RÁPIDOS ---------------- */}
         <section>
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-1.5 h-12 bg-gradient-to-b from-[#EE7203] to-[#FF3816] rounded-full"></div>
-            <h2 className="text-3xl font-black text-[#0C212D]">
+          <div className="flex items-center gap-3 mb-6 md:mb-8">
+            <div className="w-1.5 h-8 md:h-12 bg-gradient-to-b from-[#EE7203] to-[#FF3816] rounded-full"></div>
+            <h2 className="text-2xl md:text-3xl font-black text-[#0C212D]">
               {t("dashboard.quickTitle")}
             </h2>
             <div className="flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent"></div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {quickLinks.map((link) => (
               <QuickAccessCard key={link.id} link={link} onClick={() => setSection(link.id)} />
             ))}
@@ -242,7 +245,7 @@ export default function AlumnoHome() {
         </section>
 
         {/* ---------------- FOOTER ---------------- */}
-        <footer className="text-center text-xs text-gray-400 pt-12 border-t border-gray-200">
+        <footer className="text-center text-xs text-gray-400 pt-8 md:pt-12 border-t border-gray-200">
           <div className="flex items-center justify-center gap-2 mb-2">
             <div className="w-1 h-1 bg-[#EE7203] rounded-full"></div>
             <div className="w-1 h-1 bg-[#FF3816] rounded-full"></div>
@@ -257,20 +260,21 @@ export default function AlumnoHome() {
 }
 
 /* =====================================================================
-   🔹 Subcomponentes modernos
+   🔹 Subcomponentes modernos (Optimizados para Mobile)
    ===================================================================== */
 
 function StatsCard({ icon, value, label, gradient }) {
   return (
-    <div className={`relative overflow-hidden bg-gradient-to-br ${gradient} rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300 group cursor-pointer min-w-[180px]`}>
+    // Agregado flex-1 para que ocupen ancho completo en mobile si hay espacio
+    <div className={`relative overflow-hidden bg-gradient-to-br ${gradient} rounded-xl md:rounded-2xl p-4 md:p-5 shadow-lg hover:shadow-xl transition-all duration-300 group cursor-pointer flex-1 min-w-[140px] md:min-w-[180px]`}>
       <div className="absolute top-0 right-0 w-24 h-24 bg-white opacity-5 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-500"></div>
-      <div className="relative z-10 flex items-center gap-4">
-        <div className="bg-white/20 backdrop-blur-sm rounded-xl p-3 group-hover:scale-110 transition-transform">
+      <div className="relative z-10 flex items-center gap-3 md:gap-4">
+        <div className="bg-white/20 backdrop-blur-sm rounded-lg md:rounded-xl p-2 md:p-3 group-hover:scale-110 transition-transform">
           {icon}
         </div>
         <div>
-          <p className="text-3xl font-black">{value}</p>
-          <p className="text-xs text-white/80 font-semibold uppercase tracking-wide">{label}</p>
+          <p className="text-2xl md:text-3xl font-black">{value}</p>
+          <p className="text-[10px] md:text-xs text-white/80 font-semibold uppercase tracking-wide">{label}</p>
         </div>
       </div>
     </div>
@@ -279,14 +283,15 @@ function StatsCard({ icon, value, label, gradient }) {
 
 function ProfileInfoCard({ title, value, icon }) {
   return (
-    <div className="relative bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/20 hover:bg-white/15 transition-all duration-300 group overflow-hidden">
+    // Flex-1 para que se alineen bien en mobile
+    <div className="relative bg-white/10 backdrop-blur-md rounded-xl md:rounded-2xl p-4 md:p-5 border border-white/20 hover:bg-white/15 transition-all duration-300 group overflow-hidden flex-1 w-full">
       <div className="absolute top-0 right-0 w-20 h-20 bg-[#EE7203] opacity-5 rounded-full blur-2xl group-hover:opacity-10 transition-opacity"></div>
       <div className="relative z-10">
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex items-center gap-2 mb-2 md:mb-3">
           <div className="text-[#EE7203]">{icon}</div>
-          <p className="text-xs text-gray-300 uppercase tracking-widest font-bold">{title}</p>
+          <p className="text-[10px] md:text-xs text-gray-300 uppercase tracking-widest font-bold">{title}</p>
         </div>
-        <p className="text-xl font-black text-white">{value}</p>
+        <p className="text-base md:text-xl font-black text-white truncate">{value}</p>
       </div>
     </div>
   );
@@ -307,7 +312,7 @@ function QuickAccessCard({ link, onClick }) {
   return (
     <button
       onClick={onClick}
-      className="group relative bg-white rounded-2xl p-7 shadow-sm hover:shadow-2xl transition-all duration-500 border border-gray-100 overflow-hidden cursor-pointer text-left hover:-translate-y-1"
+      className="group relative bg-white rounded-xl md:rounded-2xl p-5 md:p-7 shadow-sm hover:shadow-2xl transition-all duration-500 border border-gray-100 overflow-hidden cursor-pointer text-left hover:-translate-y-1 w-full"
     >
       {/* Gradiente de fondo en hover */}
       <div className={`absolute inset-0 bg-gradient-to-br ${link.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`}></div>
@@ -317,20 +322,21 @@ function QuickAccessCard({ link, onClick }) {
         <div className="absolute top-0 -left-full h-full w-1/2 bg-gradient-to-r from-transparent via-white to-transparent opacity-30 group-hover:left-full transition-all duration-1000"></div>
       </div>
 
-      <div className="relative z-10">
-        <div className={`bg-gradient-to-br ${link.gradient} w-14 h-14 rounded-xl flex items-center justify-center text-2xl text-white mb-5 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300 shadow-lg`}>
+      <div className="relative z-10 flex flex-col h-full">
+        {/* Ajuste de tamaño de icono */}
+        <div className={`bg-gradient-to-br ${link.gradient} w-10 h-10 md:w-14 md:h-14 rounded-lg md:rounded-xl flex items-center justify-center text-lg md:text-2xl text-white mb-3 md:mb-5 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300 shadow-lg`}>
           {link.icon}
         </div>
 
-        <h3 className="font-black text-[#0C212D] text-xl mb-2 group-hover:text-white transition-colors duration-300">
+        <h3 className="font-black text-[#0C212D] text-lg md:text-xl mb-1 md:mb-2 group-hover:text-white transition-colors duration-300">
           {link.title}
         </h3>
 
-        <p className="text-sm text-gray-600 mb-5 group-hover:text-white/90 transition-colors duration-300 leading-relaxed">
+        <p className="text-xs md:text-sm text-gray-600 mb-3 md:mb-5 group-hover:text-white/90 transition-colors duration-300 leading-relaxed flex-1">
           {link.description}
         </p>
 
-        <div className="flex items-center text-[#EE7203] text-sm font-bold group-hover:text-white transition-colors duration-300">
+        <div className="flex items-center text-[#EE7203] text-xs md:text-sm font-bold group-hover:text-white transition-colors duration-300 mt-auto">
           <span className="group-hover:mr-2 transition-all duration-300">Explorar</span>
           <FiArrowRight className="opacity-0 group-hover:opacity-100 transition-all duration-300" />
         </div>
@@ -341,40 +347,40 @@ function QuickAccessCard({ link, onClick }) {
 
 function AnnouncementsSection({ anunciosFiltrados, locale, t }) {
   return (
-    <div className="lg:col-span-2 bg-white rounded-2xl p-7 shadow-sm border border-gray-100 hover:shadow-lg transition-shadow duration-300">
-      <div className="flex items-center justify-between mb-8">
+    <div className="lg:col-span-2 bg-white rounded-xl md:rounded-2xl p-5 md:p-7 shadow-sm border border-gray-100 hover:shadow-lg transition-shadow duration-300">
+      <div className="flex items-center justify-between mb-6 md:mb-8">
         <div className="flex items-center gap-3">
-          <div className="bg-gradient-to-br from-[#EE7203] to-[#FF3816] p-3 rounded-xl shadow-md">
-            <FiBell className="text-white" size={22} />
+          <div className="bg-gradient-to-br from-[#EE7203] to-[#FF3816] p-2 md:p-3 rounded-lg md:rounded-xl shadow-md">
+            <FiBell className="text-white" size={18} />
           </div>
-          <h2 className="text-2xl font-black text-[#0C212D]">
+          <h2 className="text-xl md:text-2xl font-black text-[#0C212D]">
             {t("dashboard.announcements")}
           </h2>
         </div>
-        <span className="bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white text-xs font-black px-4 py-2 rounded-full shadow-md">
+        <span className="bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white text-[10px] md:text-xs font-black px-3 py-1.5 md:px-4 md:py-2 rounded-full shadow-md">
           {anunciosFiltrados.length}
         </span>
       </div>
 
       {anunciosFiltrados.length === 0 ? (
-        <div className="text-center py-16">
-          <div className="bg-gray-100 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-sm">
-            <FiBell className="text-gray-400" size={28} />
+        <div className="text-center py-12 md:py-16">
+          <div className="bg-gray-100 w-16 h-16 md:w-20 md:h-20 rounded-2xl flex items-center justify-center mx-auto mb-4 md:mb-5 shadow-sm">
+            <FiBell className="text-gray-400" size={24} />
           </div>
-          <p className="text-gray-500 font-semibold">{t("dashboard.noAnnouncements")}</p>
+          <p className="text-gray-500 font-semibold text-sm md:text-base">{t("dashboard.noAnnouncements")}</p>
         </div>
       ) : (
-        <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+        <div className="space-y-4 max-h-80 md:max-h-96 overflow-y-auto pr-2">
           {anunciosFiltrados.map((n) => (
             <div
               key={n.id}
-              className="group relative bg-gradient-to-r from-gray-50 to-white border-l-4 border-[#EE7203] rounded-xl p-5 hover:shadow-lg transition-all duration-300 hover:border-[#FF3816] overflow-hidden"
+              className="group relative bg-gradient-to-r from-gray-50 to-white border-l-4 border-[#EE7203] rounded-lg md:rounded-xl p-4 md:p-5 hover:shadow-lg transition-all duration-300 hover:border-[#FF3816] overflow-hidden"
             >
               <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#EE7203] to-[#FF3816] opacity-0 group-hover:opacity-5 rounded-full blur-2xl transition-opacity duration-500"></div>
               <div className="relative z-10">
-                <h3 className="font-black text-[#0C212D] text-lg mb-2">{n.titulo}</h3>
-                <p className="text-sm text-gray-600 mb-3 leading-relaxed">{n.subtitulo}</p>
-                <p className="text-xs text-gray-400 font-semibold">
+                <h3 className="font-black text-[#0C212D] text-base md:text-lg mb-1 md:mb-2">{n.titulo}</h3>
+                <p className="text-xs md:text-sm text-gray-600 mb-2 md:mb-3 leading-relaxed">{n.subtitulo}</p>
+                <p className="text-[10px] md:text-xs text-gray-400 font-semibold">
                   {n.creadoEn?.toDate?.().toLocaleDateString(locale, {
                     day: "numeric",
                     month: "long",
@@ -392,38 +398,38 @@ function AnnouncementsSection({ anunciosFiltrados, locale, t }) {
 
 function ActivitySection({ recentActivity, timeAgo, t }) {
   return (
-    <div className="bg-white rounded-2xl p-7 shadow-sm border border-gray-100 hover:shadow-lg transition-shadow duration-300">
-      <div className="flex items-center gap-3 mb-8">
-        <div className="bg-gradient-to-br from-[#0C212D] to-[#112C3E] p-3 rounded-xl shadow-md">
-          <FiActivity className="text-white" size={22} />
+    <div className="bg-white rounded-xl md:rounded-2xl p-5 md:p-7 shadow-sm border border-gray-100 hover:shadow-lg transition-shadow duration-300">
+      <div className="flex items-center gap-3 mb-6 md:mb-8">
+        <div className="bg-gradient-to-br from-[#0C212D] to-[#112C3E] p-2 md:p-3 rounded-lg md:rounded-xl shadow-md">
+          <FiActivity className="text-white" size={18} />
         </div>
-        <h2 className="text-2xl font-black text-[#0C212D]">
+        <h2 className="text-xl md:text-2xl font-black text-[#0C212D]">
           {t("dashboard.activity")}
         </h2>
       </div>
 
       {recentActivity.length === 0 ? (
-        <div className="text-center py-16">
-          <div className="bg-gray-100 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-sm">
-            <FiActivity className="text-gray-400" size={28} />
+        <div className="text-center py-12 md:py-16">
+          <div className="bg-gray-100 w-16 h-16 md:w-20 md:h-20 rounded-2xl flex items-center justify-center mx-auto mb-4 md:mb-5 shadow-sm">
+            <FiActivity className="text-gray-400" size={24} />
           </div>
           <p className="text-gray-500 text-sm font-semibold">{t("dashboard.noActivity")}</p>
         </div>
       ) : (
-        <ul className="space-y-5 max-h-96 overflow-y-auto pr-2">
+        <ul className="space-y-4 md:space-y-5 max-h-80 md:max-h-96 overflow-y-auto pr-2">
           {recentActivity.map((a, i) => (
             <li
               key={i}
-              className="relative border-l-2 border-gray-200 pl-5 pb-5 hover:border-[#EE7203] transition-colors duration-300 group"
+              className="relative border-l-2 border-gray-200 pl-4 md:pl-5 pb-4 md:pb-5 hover:border-[#EE7203] transition-colors duration-300 group"
             >
               <div className="absolute left-0 top-0 w-2 h-2 bg-[#EE7203] rounded-full -translate-x-[5px] group-hover:scale-150 transition-transform"></div>
               <p 
-                className="text-sm text-[#0C212D] mb-2 font-semibold leading-relaxed" 
+                className="text-xs md:text-sm text-[#0C212D] mb-1 md:mb-2 font-semibold leading-relaxed" 
                 dangerouslySetInnerHTML={{
                   __html: renderActivityMessage(a, t)
                 }}
               />
-              <span className="text-xs text-gray-400 font-bold">{timeAgo(a.date)}</span>
+              <span className="text-[10px] md:text-xs text-gray-400 font-bold">{timeAgo(a.date)}</span>
             </li>
           ))}
         </ul>

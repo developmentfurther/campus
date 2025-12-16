@@ -9,12 +9,12 @@ import {
   FiAward,
   FiUser,
   FiLogOut,
-  FiCalendar,
+  FiClock,
   FiMessageSquare,
   FiTarget,
-  FiClock,
   FiZap,
   FiInfo,
+  FiHeadphones, // 1. Importamos el icono de audífonos
 } from "react-icons/fi";
 import { useI18n } from "@/contexts/I18nContext";
 
@@ -51,9 +51,18 @@ export default function SidebarAlumno() {
     },
   ];
 
+  // 2. Nueva sección dedicada para Multimedia / Podcast
+  const menuMedia = [
+    { 
+      id: "podcast", 
+      label: "Podcast", 
+      icon: <FiHeadphones size={20} /> // Icono específico
+    },
+  ];
+
   const menuPersonal = [
     { id: "perfil", label: t("sidebar.profile"), icon: <FiUser size={20} /> },
-    { id: "podcast", label: "Podcast", icon: <FiUser size={20} /> },
+    // Eliminado "Podcast" de aquí para que no se mezcle con info personal
   ];
 
   return (
@@ -81,6 +90,8 @@ export default function SidebarAlumno() {
 
       {/* NAVIGATION */}
       <nav className="flex-1 px-4 py-2 overflow-y-auto relative z-10">
+        
+        {/* --- CAMPUS --- */}
         <SectionTitle icon={<FiZap size={12} />}>
           {t("sidebar.campusSection")}
         </SectionTitle>
@@ -98,7 +109,7 @@ export default function SidebarAlumno() {
           ))}
         </ul>
 
-        {/* CHAT */}
+        {/* --- CHAT --- */}
         <SectionTitle icon={<FiMessageSquare size={12} />}>
           {t("sidebar.chatSection")}
         </SectionTitle>
@@ -114,7 +125,25 @@ export default function SidebarAlumno() {
           ))}
         </ul>
 
-        {/* PERSONAL */}
+        {/* --- 3. NUEVA SECCIÓN MULTIMEDIA (PODCAST) --- */}
+        <SectionTitle icon={<FiHeadphones size={12} />}>
+          Multimedia
+        </SectionTitle>
+        <ul className="space-y-2 mb-8">
+          {menuMedia.map((item, idx) => (
+            <SidebarButton
+              key={item.id}
+              id={item.id}
+              icon={item.icon}
+              label={item.label}
+              active={section === item.id}
+              onClick={() => setSection(item.id as any)}
+              delay={idx * 50}
+            />
+          ))}
+        </ul>
+
+        {/* --- PERSONAL --- */}
         <SectionTitle icon={<FiUser size={12} />}>
           {t("sidebar.accountSection")}
         </SectionTitle>
@@ -174,7 +203,7 @@ export default function SidebarAlumno() {
   );
 }
 
-/* 🔹 COMPONENTES AUXILIARES */
+/* 🔹 COMPONENTES AUXILIARES (Sin cambios) */
 
 function SidebarButton({
   id,

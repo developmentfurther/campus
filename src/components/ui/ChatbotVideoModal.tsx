@@ -108,140 +108,145 @@ export default function ChatbotVideoModal({
   if (!isOpen || loadingChatbotVideoStatus) return null;
 
   return (
+  <div
+    className={`fixed inset-0 z-[9999] flex items-center justify-center p-3 md:p-4 transition-opacity duration-200 ${
+      isClosing ? "opacity-0" : "opacity-100"
+    }`}
+    style={{
+      backgroundColor: `${COLORS.darkBlue}f0`,
+    }}
+    onClick={(e) => {
+      if (e.target === e.currentTarget) handleClose();
+    }}
+  >
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-200 ${
-        isClosing ? "opacity-0" : "opacity-100"
-      }`}
+      className="relative w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden flex flex-col"
       style={{
-        backgroundColor: `${COLORS.darkBlue}f0`,
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) handleClose();
+        maxHeight: "90vh", // Mantiene el límite de altura
+        background: "white",
+        boxShadow: `0 20px 40px ${COLORS.darkBlue}50`,
       }}
     >
+      {/* Header específico del CHATBOT */}
+      {/* CAMBIOS: px-4 py-3 en móvil, px-8 py-5 en desktop */}
       <div
-        className="relative w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden"
+        className="relative px-4 py-3 md:px-8 md:py-5 flex items-center justify-between shrink-0"
         style={{
-          maxHeight: "90vh",
-          background: "white",
-          boxShadow: `0 20px 40px ${COLORS.darkBlue}50`,
+          background: `linear-gradient(135deg, ${COLORS.darkBlue} 0%, ${COLORS.mediumBlue} 100%)`,
         }}
       >
-        {/* Header específico del CHATBOT */}
-        <div
-          className="relative px-8 py-5 flex items-center justify-between"
-          style={{
-            background: `linear-gradient(135deg, ${COLORS.darkBlue} 0%, ${COLORS.mediumBlue} 100%)`,
-          }}
-        >
-          <div className="flex items-center gap-4">
-            <div 
-              className="p-2.5 rounded-xl"
-              style={{ 
-                background: COLORS.orange,
-              }}
-            >
-              <MessageSquare className="w-7 h-7 text-white" strokeWidth={2.5} />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                {t("chatbotModal.title")}
-              </h2>
-              <p className="text-sm text-gray-300 mt-0.5">
-                {t("chatbotModal.subtitle")}
-              </p>
-            </div>
-          </div>
-          
-          <button
-            onClick={handleClose}
-            className="p-2.5 rounded-xl transition-colors text-white hover:bg-white/10"
-            style={{
-              background: "rgba(255, 255, 255, 0.1)",
+        <div className="flex items-center gap-3 md:gap-4">
+          <div 
+            className="p-1.5 md:p-2.5 rounded-lg md:rounded-xl"
+            style={{ 
+              background: COLORS.orange,
             }}
-            aria-label={t("chatbotModal.close")}
           >
-            <X className="w-6 h-6" strokeWidth={2.5} />
-          </button>
+            {/* Icono más pequeño en móvil */}
+            <MessageSquare className="w-5 h-5 md:w-7 md:h-7 text-white" strokeWidth={2.5} />
+          </div>
+          <div>
+            {/* Texto ajustado: text-lg en móvil, text-2xl en desktop */}
+            <h2 className="text-lg md:text-2xl font-bold text-white flex items-center gap-2">
+              {t("chatbotModal.title")}
+            </h2>
+            <p className="text-xs md:text-sm text-gray-300 mt-0.5 line-clamp-1">
+              {t("chatbotModal.subtitle")}
+            </p>
+          </div>
         </div>
+        
+        <button
+          onClick={handleClose}
+          className="p-1.5 md:p-2.5 rounded-lg md:rounded-xl transition-colors text-white hover:bg-white/10"
+          style={{
+            background: "rgba(255, 255, 255, 0.1)",
+          }}
+          aria-label={t("chatbotModal.close")}
+        >
+          <X className="w-5 h-5 md:w-6 md:h-6" strokeWidth={2.5} />
+        </button>
+      </div>
 
-        {/* Video Container */}
-        <div className="relative bg-black" style={{ paddingBottom: "56.25%" }}>
-          {videoType === "direct" ? (
-            <video
-              src={getEmbedUrl()}
-              className="absolute inset-0 w-full h-full"
-              controls
-              onEnded={handleVideoEnd}
-            />
+      {/* Video Container */}
+      {/* overflow-y-auto asegura que si la pantalla es muy pequeña landscape, se pueda scrollear */}
+      <div className="relative bg-black w-full shrink-0 aspect-video">
+        {videoType === "direct" ? (
+          <video
+            src={getEmbedUrl()}
+            className="absolute inset-0 w-full h-full"
+            controls
+            onEnded={handleVideoEnd}
+          />
+        ) : (
+          <iframe
+            src={getEmbedUrl()}
+            className="absolute inset-0 w-full h-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            title={t("chatbotModal.videoTitle")}
+          />
+        )}
+      </div>
+
+      {/* Footer */}
+      {/* CAMBIOS: flex-col en móvil para apilar botones, flex-row en desktop */}
+      <div 
+        className="px-4 py-4 md:px-8 md:py-5 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 shrink-0 bg-white"
+        style={{
+          background: "#f9fafb",
+          borderTop: `2px solid ${COLORS.orange}`,
+        }}
+      >
+        <div className="flex items-center gap-2 md:gap-3 text-sm w-full md:w-auto justify-center md:justify-start">
+          {videoEnded ? (
+            <>
+              <div 
+                className="p-1 md:p-1.5 rounded-lg"
+                style={{ background: `${COLORS.orange}15` }}
+              >
+                <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5" style={{ color: COLORS.orange }} />
+              </div>
+              <span className="font-semibold text-sm md:text-base" style={{ color: COLORS.darkBlue }}>
+                {t("chatbotModal.ready")}
+              </span>
+            </>
           ) : (
-            <iframe
-              src={getEmbedUrl()}
-              className="absolute inset-0 w-full h-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              title={t("chatbotModal.videoTitle")}
-            />
+            <span className="font-medium text-gray-700 text-xs md:text-sm text-center">
+              {t("chatbotModal.discover")}
+            </span>
           )}
         </div>
 
-        {/* Footer */}
-        <div 
-          className="px-8 py-5 flex items-center justify-between"
-          style={{
-            background: "#f9fafb",
-            borderTop: `2px solid ${COLORS.orange}`,
-          }}
-        >
-          <div className="flex items-center gap-3 text-sm">
-            {videoEnded ? (
-              <>
-                <div 
-                  className="p-1.5 rounded-lg"
-                  style={{ background: `${COLORS.orange}15` }}
-                >
-                  <CheckCircle2 className="w-5 h-5" style={{ color: COLORS.orange }} />
-                </div>
-                <span className="font-semibold" style={{ color: COLORS.darkBlue }}>
-                  {t("chatbotModal.ready")}
-                </span>
-              </>
-            ) : (
-              <span className="font-medium text-gray-700">
-                {t("chatbotModal.discover")}
-              </span>
-            )}
-          </div>
-
-          <div className="flex gap-3">
-            {!videoEnded && (
-              <button
-                onClick={handleSkip}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors"
-                style={{
-                  color: COLORS.darkBlue,
-                  background: "transparent",
-                  border: `2px solid ${COLORS.darkBlue}30`,
-                }}
-              >
-                {t("chatbotModal.skip")}
-              </button>
-            )}
-            
+        <div className="flex gap-3 w-full md:w-auto">
+          {!videoEnded && (
             <button
-              onClick={handleClose}
-              className="px-8 py-2.5 rounded-xl text-sm font-bold text-white transition-colors"
+              onClick={handleSkip}
+              className="flex-1 md:flex-none px-4 py-3 md:px-5 md:py-2.5 rounded-xl text-sm font-semibold transition-colors justify-center flex"
               style={{
-                background: videoEnded
-                  ? `linear-gradient(135deg, ${COLORS.orange} 0%, ${COLORS.red} 100%)`
-                  : COLORS.darkBlue,
+                color: COLORS.darkBlue,
+                background: "transparent",
+                border: `2px solid ${COLORS.darkBlue}30`,
               }}
             >
-              {videoEnded ? t("chatbotModal.start") : t("chatbotModal.close")}
+              {t("chatbotModal.skip")}
             </button>
-          </div>
+          )}
+          
+          <button
+            onClick={handleClose}
+            className="flex-1 md:flex-none px-6 py-3 md:px-8 md:py-2.5 rounded-xl text-sm font-bold text-white transition-colors justify-center flex shadow-lg md:shadow-none"
+            style={{
+              background: videoEnded
+                ? `linear-gradient(135deg, ${COLORS.orange} 0%, ${COLORS.red} 100%)`
+                : COLORS.darkBlue,
+            }}
+          >
+            {videoEnded ? t("chatbotModal.start") : t("chatbotModal.close")}
+          </button>
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 }

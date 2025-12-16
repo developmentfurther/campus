@@ -2674,157 +2674,180 @@ function EnhancedCourseIntro({
 
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6}}
-      className="space-y-6"
-    >
-      <div className="bg-gradient-to-br from-white to-slate-50 rounded-3xl shadow-xl border-2 border-[#EE7203]/20 overflow-hidden">
+  <motion.div
+    initial={{ opacity: 0, y: 30 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.6 }}
+    className="space-y-4 md:space-y-6"
+  >
+    <div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl md:rounded-3xl shadow-xl border-2 border-[#EE7203]/20 overflow-hidden">
+      
+      {/* Header decorativo */}
+      {/* Padding reducido: p-5 en móvil vs p-8 en desktop */}
+      <div className="bg-gradient-to-r from-[#0C212D] to-[#112C3E] p-5 md:p-8 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 md:w-64 md:h-64 bg-[#EE7203]/10 rounded-full blur-3xl"></div>
         
-        {/* Header decorativo */}
-        <div className="bg-gradient-to-r from-[#0C212D] to-[#112C3E] p-8 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-[#EE7203]/10 rounded-full blur-3xl"></div>
-          <div className="relative flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#EE7203] to-[#FF3816] flex items-center justify-center shadow-lg">
-              <span className="text-4xl">🎯</span>
-            </div>
-            <div>
-              <p className="text-[#EE7203] text-sm font-bold uppercase tracking-wider mb-1">
-                {t("coursePlayer.intro.welcomeToUnit")}
-              </p>
-              <h2 className="text-3xl font-black text-white">
-                {activeLesson.unitSummary || currentUnit?.title}
-              </h2>
-            </div>
+        {/* Flex-col en móvil para alinear icono y texto verticalmente si es necesario */}
+        <div className="relative flex flex-col md:flex-row items-start md:items-center gap-4">
+          {/* Icono más pequeño en móvil */}
+          <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-gradient-to-br from-[#EE7203] to-[#FF3816] flex items-center justify-center shadow-lg shrink-0">
+            <span className="text-2xl md:text-4xl">🎯</span>
+          </div>
+          <div>
+            <p className="text-[#EE7203] text-xs md:text-sm font-bold uppercase tracking-wider mb-1">
+              {t("coursePlayer.intro.welcomeToUnit")}
+            </p>
+            {/* Texto responsive */}
+            <h2 className="text-2xl md:text-3xl font-black text-white leading-tight">
+              {activeLesson.unitSummary || currentUnit?.title}
+            </h2>
           </div>
         </div>
+      </div>
 
-        {/* Contenido */}
-        <div className="p-8 space-y-6">
-          
-          {/* Descripción de la unidad */}
-          {activeLesson?.description && (
-            <div className="bg-blue-50 border-l-4 border-blue-500 rounded-r-2xl p-6">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center flex-shrink-0 mt-1">
-                  <span className="text-xl">📖</span>
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-black text-blue-900 mb-2">
-                    {t("coursePlayer.intro.aboutThisUnit")}
-                  </h3>
-                  <p className="text-blue-800 leading-relaxed">
-                    {activeLesson.description}
-                  </p>
-                </div>
+      {/* Contenido Principal */}
+      <div className="p-4 md:p-8 space-y-4 md:space-y-6">
+        
+        {/* Descripción de la unidad */}
+        {activeLesson?.description && (
+          <div className="bg-blue-50 border-l-4 border-blue-500 rounded-r-xl md:rounded-r-2xl p-4 md:p-6">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center flex-shrink-0 mt-1">
+                <span className="text-lg md:text-xl">📖</span>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-base md:text-lg font-black text-blue-900 mb-1 md:mb-2">
+                  {t("coursePlayer.intro.aboutThisUnit")}
+                </h3>
+                <p className="text-sm md:text-base text-blue-800 leading-relaxed">
+                  {activeLesson.description}
+                </p>
               </div>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Grid de estadísticas */}
-          <div className="grid md:grid-cols-3 gap-4">
-            {/* Lecciones */}
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200 rounded-2xl p-6">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-xl bg-purple-500 flex items-center justify-center">
-                  <span className="text-2xl">📚</span>
-                </div>
-                <div className="text-4xl font-black text-purple-900">
-                  {totalLessons}
-                </div>
+        {/* Grid de estadísticas */}
+        {/* En móvil usamos grid-cols-1 con gap pequeño, en md grid-cols-3 */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
+          {/* Lecciones */}
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200 rounded-xl md:rounded-2xl p-4 md:p-6 flex sm:block items-center justify-between sm:justify-start">
+            <div className="flex items-center gap-3 sm:mb-3">
+              <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-purple-500 flex items-center justify-center">
+                <span className="text-lg md:text-2xl">📚</span>
               </div>
-              <p className="text-sm font-bold text-purple-700">
+              {/* En móvil mostramos el texto al lado, en desktop abajo */}
+              <p className="sm:hidden text-sm font-bold text-purple-700">
                 {t("coursePlayer.intro.lessonsInUnit")}
               </p>
             </div>
-
-            {/* Progreso */}
-            <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-2 border-emerald-200 rounded-2xl p-6">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center">
-                  <span className="text-2xl">✅</span>
-                </div>
-                <div className="text-4xl font-black text-emerald-900">
-                  {completedLessons}
-                </div>
+            <div className="text-right sm:text-left">
+              <div className="text-2xl md:text-4xl font-black text-purple-900">
+                {totalLessons}
               </div>
-              <p className="text-sm font-bold text-emerald-700">
+              <p className="hidden sm:block text-sm font-bold text-purple-700">
+                {t("coursePlayer.intro.lessonsInUnit")}
+              </p>
+            </div>
+          </div>
+
+          {/* Progreso */}
+          <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-2 border-emerald-200 rounded-xl md:rounded-2xl p-4 md:p-6 flex sm:block items-center justify-between sm:justify-start">
+            <div className="flex items-center gap-3 sm:mb-3">
+              <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-emerald-500 flex items-center justify-center">
+                <span className="text-lg md:text-2xl">✅</span>
+              </div>
+              <p className="sm:hidden text-sm font-bold text-emerald-700">
                 {t("coursePlayer.intro.completedLessons")}
               </p>
             </div>
-
-            {/* Secciones restantes */}
-<div className="bg-gradient-to-br from-orange-50 to-orange-100 border-2 border-orange-200 rounded-2xl p-6">
-  <div className="flex items-center gap-3 mb-3">
-    <div className="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center">
-      <span className="text-2xl">📋</span>
-    </div>
-    <div className="text-4xl font-black text-orange-900">
-      {totalLessons - completedLessons}
-    </div>
-  </div>
-  <p className="text-sm font-bold text-orange-700">
-    {t("coursePlayer.intro.remainingSections")}
-  </p>
-</div>
-          </div>
-
-          {/* Objetivos de aprendizaje */}
-          <div className="bg-gradient-to-br from-slate-50 to-slate-100 border-2 border-slate-200 rounded-2xl p-6">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#0C212D] to-[#112C3E] flex items-center justify-center flex-shrink-0">
-                <span className="text-2xl">🎓</span>
+            <div className="text-right sm:text-left">
+              <div className="text-2xl md:text-4xl font-black text-emerald-900">
+                {completedLessons}
               </div>
-              <div className="flex-1">
-                <h3 className="text-xl font-black text-slate-900 mb-3">
-                  {t("coursePlayer.intro.whatYouWillLearn")}
-                </h3>
-                <div className="space-y-2">
-                  {currentUnit?.lessons?.slice(1, 5).map((lesson, idx) => (
-                    <div key={idx} className="flex items-center gap-3">
-                      <div className="w-6 h-6 rounded-full bg-[#EE7203] flex items-center justify-center flex-shrink-0">
-                        <span className="text-white text-xs font-bold">{idx + 1}</span>
-                      </div>
-                      <p className="text-slate-700 font-medium">{lesson.title}</p>
-                    </div>
-                  ))}
-                  {(currentUnit?.lessons?.length || 0) > 6 && (
-                    <p className="text-slate-500 text-sm italic ml-9">
-                      {t("coursePlayer.intro.andMore", { 
-                        count: (currentUnit?.lessons?.length || 0) - 5 
-                      })}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* CTA para empezar */}
-          <div className="relative overflow-hidden rounded-2xl">
-            <div className="absolute inset-0 bg-gradient-to-r from-[#EE7203] to-[#FF3816] opacity-10"></div>
-            <div className="relative bg-gradient-to-br from-[#0C212D] to-[#112C3E] p-8 text-center">
-              <h3 className="text-2xl font-black text-white mb-3">
-                {t("coursePlayer.intro.readyToStart")}
-              </h3>
-              <p className="text-slate-300 mb-6 max-w-2xl mx-auto">
-                {t("coursePlayer.intro.clickNextLesson")}
+              <p className="hidden sm:block text-sm font-bold text-emerald-700">
+                {t("coursePlayer.intro.completedLessons")}
               </p>
-              <button
-                onClick={goNextLesson}
-                className="group px-8 py-4 bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white font-black text-lg rounded-2xl shadow-lg hover:scale-105 transition-all inline-flex items-center gap-3"
-              >
-                <span>{t("coursePlayer.intro.startFirstLesson")}</span>
-                <FiChevronRight className="group-hover:translate-x-1 transition-transform" size={24} />
-              </button>
             </div>
           </div>
 
+          {/* Secciones restantes */}
+          <div className="bg-gradient-to-br from-orange-50 to-orange-100 border-2 border-orange-200 rounded-xl md:rounded-2xl p-4 md:p-6 flex sm:block items-center justify-between sm:justify-start">
+            <div className="flex items-center gap-3 sm:mb-3">
+              <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-orange-500 flex items-center justify-center">
+                <span className="text-lg md:text-2xl">📋</span>
+              </div>
+              <p className="sm:hidden text-sm font-bold text-orange-700">
+                 {t("coursePlayer.intro.remainingSections")}
+              </p>
+            </div>
+            <div className="text-right sm:text-left">
+              <div className="text-2xl md:text-4xl font-black text-orange-900">
+                {totalLessons - completedLessons}
+              </div>
+              <p className="hidden sm:block text-sm font-bold text-orange-700">
+                {t("coursePlayer.intro.remainingSections")}
+              </p>
+            </div>
+          </div>
         </div>
+
+        {/* Objetivos de aprendizaje */}
+        <div className="bg-gradient-to-br from-slate-50 to-slate-100 border-2 border-slate-200 rounded-xl md:rounded-2xl p-4 md:p-6">
+          <div className="flex flex-col md:flex-row items-start gap-4">
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-[#0C212D] to-[#112C3E] flex items-center justify-center flex-shrink-0">
+              <span className="text-xl md:text-2xl">🎓</span>
+            </div>
+            <div className="flex-1 w-full">
+              <h3 className="text-lg md:text-xl font-black text-slate-900 mb-3">
+                {t("coursePlayer.intro.whatYouWillLearn")}
+              </h3>
+              <div className="space-y-2">
+                {currentUnit?.lessons?.slice(1, 5).map((lesson, idx) => (
+                  <div key={idx} className="flex items-start gap-3">
+                    <div className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-[#EE7203] flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-white text-[10px] md:text-xs font-bold">{idx + 1}</span>
+                    </div>
+                    <p className="text-sm md:text-base text-slate-700 font-medium line-clamp-2 md:line-clamp-1">{lesson.title}</p>
+                  </div>
+                ))}
+                {(currentUnit?.lessons?.length || 0) > 6 && (
+                  <p className="text-slate-500 text-xs md:text-sm italic ml-8 md:ml-9">
+                    {t("coursePlayer.intro.andMore", { 
+                      count: (currentUnit?.lessons?.length || 0) - 5 
+                    })}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* CTA para empezar */}
+        <div className="relative overflow-hidden rounded-xl md:rounded-2xl">
+          <div className="absolute inset-0 bg-gradient-to-r from-[#EE7203] to-[#FF3816] opacity-10"></div>
+          <div className="relative bg-gradient-to-br from-[#0C212D] to-[#112C3E] p-6 md:p-8 text-center">
+            <h3 className="text-xl md:text-2xl font-black text-white mb-2 md:mb-3">
+              {t("coursePlayer.intro.readyToStart")}
+            </h3>
+            <p className="text-xs md:text-base text-slate-300 mb-4 md:mb-6 max-w-2xl mx-auto">
+              {t("coursePlayer.intro.clickNextLesson")}
+            </p>
+            {/* Botón full width en mobile */}
+            <button
+              onClick={goNextLesson}
+              className="w-full md:w-auto group px-6 py-3 md:px-8 md:py-4 bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white font-black text-base md:text-lg rounded-xl md:rounded-2xl shadow-lg hover:scale-105 transition-all inline-flex items-center justify-center gap-3"
+            >
+              <span>{t("coursePlayer.intro.startFirstLesson")}</span>
+              <FiChevronRight className="group-hover:translate-x-1 transition-transform" size={20} />
+            </button>
+          </div>
+        </div>
+
       </div>
-    </motion.div>
-  );
+    </div>
+  </motion.div>
+);
 }
 
 
@@ -2835,503 +2858,508 @@ function EnhancedCourseIntro({
  <div className="flex h-screen overflow-hidden bg-gradient-to-br from-gray-50 to-white text-slate-900">
    
     {/* ======================= SIDEBAR IZQUIERDA ======================= */}
-      <aside className="w-80 hidden xl:block shrink-0 bg-gradient-to-b from-[#0C212D] via-[#112C3E] to-[#0C212D] sticky top-0 h-screen overflow-y-auto shadow-2xl">
-        
-        {/* Header con efecto de luz */}
-        <div className="relative p-6 border-b border-[#EE7203]/20">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#EE7203] to-transparent"></div>
-          <button
-          onClick={() => router.push("/dashboard")}
-           className="flex items-center gap-2 text-sm text-white/70 hover:text-white font-semibold transition-all group">
-            <div className="w-8 h-8 rounded-lg bg-[#EE7203]/20 flex items-center justify-center group-hover:bg-[#EE7203]/30 transition-colors">
-              <FiChevronLeft className="text-[#EE7203] group-hover:text-[#FF3816] transform group-hover:-translate-x-0.5 transition-all" />
-            </div>
-            <span>{t("coursePlayer.sidebar.backHome")}</span>
-          </button>
-        </div>
+      {/* ======================= SIDEBAR IZQUIERDA (CORREGIDO) ======================= */}
+{/* CAMBIOS: 
+    1. Quitamos 'sticky' y 'top-0' (no son necesarios en este layout flex).
+    2. Cambiamos 'h-screen' por 'h-full' (para respetar el contenedor padre y no cortarse).
+    3. Aseguramos z-index por si acaso.
+*/}
+<aside className="w-80 hidden xl:block shrink-0 bg-gradient-to-b from-[#0C212D] via-[#112C3E] to-[#0C212D] h-full overflow-y-auto shadow-2xl z-30">
+  
+  {/* Header con efecto de luz */}
+  <div className="relative p-6 border-b border-[#EE7203]/20">
+    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#EE7203] to-transparent"></div>
+    <button
+      onClick={() => router.push("/dashboard")}
+      className="flex items-center gap-2 text-sm text-white/70 hover:text-white font-semibold transition-all group"
+    >
+      <div className="w-8 h-8 rounded-lg bg-[#EE7203]/20 flex items-center justify-center group-hover:bg-[#EE7203]/30 transition-colors">
+        <FiChevronLeft className="text-[#EE7203] group-hover:text-[#FF3816] transform group-hover:-translate-x-0.5 transition-all" />
+      </div>
+      <span>{t("coursePlayer.sidebar.backHome")}</span>
+    </button>
+  </div>
 
-        {/* Info del curso con diseño elevado */}
-        <div className="p-6 border-b border-[#EE7203]/10">
-          <div className="bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-sm rounded-2xl p-5 border border-white/10 shadow-xl">
-            <div className="flex items-start gap-3 mb-3">
-              <div className="w-2 h-2 rounded-full bg-[#EE7203] animate-pulse mt-2"></div>
-              <h1 className="text-xl font-black text-white line-clamp-2 leading-tight">
-                {curso.titulo}
-              </h1>
+  {/* Info del curso */}
+  <div className="p-6 border-b border-[#EE7203]/10">
+    <div className="bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-sm rounded-2xl p-5 border border-white/10 shadow-xl">
+      <div className="flex items-start gap-3 mb-3">
+        <div className="w-2 h-2 rounded-full bg-[#EE7203] animate-pulse mt-2"></div>
+        <h1 className="text-xl font-black text-white line-clamp-2 leading-tight">
+          {curso.titulo}
+        </h1>
+      </div>
+      <p className="text-xs text-white/60 line-clamp-3 leading-relaxed ml-5">
+        {curso.descripcion}
+      </p>
+    </div>
+  </div>
+
+  {/* Navigation */}
+  {/* El pb-32 aquí es vital para que el scroll llegue hasta el final con holgura */}
+  <nav className="p-4 space-y-3 pb-32">
+    {units.map((u, uIdx) => {
+      // Cierre del curso
+      if (u.id === "closing-course") {
+        const l = u.lessons?.[0];
+        const done = l && (progress[l.key]?.videoEnded || progress[l.key]?.exSubmitted);
+        const active = activeU === uIdx && activeL === 0;
+
+        return (
+          <div key={u.id} className="mt-6 pt-4">
+            <div className="relative">
+              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#EE7203]/30 to-transparent"></div>
             </div>
-            <p className="text-xs text-white/60 line-clamp-3 leading-relaxed ml-5">
-              {curso.descripcion}
-            </p>
+            
+            <div className="px-3 py-3 mt-4 flex items-center gap-2 text-white/80 font-bold text-sm">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#EE7203] to-[#FF3816] flex items-center justify-center shadow-lg">
+                <span className="text-xl">🎓</span>
+              </div>
+              <span>{t("coursePlayer.sidebar.courseClosing")}</span>
+            </div>
+            
+            <button
+              onClick={() => {
+                setActiveU(uIdx);
+                setActiveL(0);
+              }}
+              className={`block w-full text-left px-4 py-3 rounded-xl text-sm font-semibold transition-all mt-2 ${
+                active
+                  ? "bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white shadow-lg shadow-[#EE7203]/20"
+                  : done
+                  ? "bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 border border-emerald-500/30"
+                  : "bg-white/5 text-white/70 hover:bg-white/10 border border-white/10"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="truncate">{l?.title || t("coursePlayer.sidebar.courseClosing")}</span>
+                {done && <FiCheckCircle size={16} className="text-emerald-400 flex-shrink-0" />}
+              </div>
+            </button>
           </div>
-        </div>
+        );
+      }
 
-        {/* Navigation mejorada */}
-        <nav className="p-4 space-y-3 pb-32">
-          {units.map((u, uIdx) => {
-            // Cierre del curso
-            if (u.id === "closing-course") {
-              const l = u.lessons?.[0];
-              const done = l && (progress[l.key]?.videoEnded || progress[l.key]?.exSubmitted);
-              const active = activeU === uIdx && activeL === 0;
+      const unitNumber = units.slice(0, uIdx).filter((x) => x.id !== "closing-course").length + 1;
 
-              return (
-                <div key={u.id} className="mt-6 pt-4">
-                  <div className="relative">
-                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#EE7203]/30 to-transparent"></div>
-                  </div>
-                  
-                  <div className="px-3 py-3 mt-4 flex items-center gap-2 text-white/80 font-bold text-sm">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#EE7203] to-[#FF3816] flex items-center justify-center shadow-lg">
-                      <span className="text-xl">🎓</span>
-                    </div>
-                    <span>{t("coursePlayer.sidebar.courseClosing")}</span>
-                  </div>
-                  
+      return (
+        <div key={u.id}>
+          <button
+            onClick={() =>
+              setExpandedUnits((prev) => ({ ...prev, [uIdx]: !prev[uIdx] }))
+            }
+            className={`w-full text-left px-4 py-4 font-bold flex justify-between items-center rounded-xl transition-all border ${
+              expandedUnits[uIdx]
+                ? "bg-gradient-to-r from-[#EE7203]/20 to-[#FF3816]/20 text-white border-[#EE7203]/40 shadow-lg"
+                : "bg-white/5 hover:bg-white/10 text-white/80 border-white/10"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black ${
+                expandedUnits[uIdx]
+                  ? "bg-gradient-to-br from-[#EE7203] to-[#FF3816] text-white"
+                  : "bg-white/10 text-white/60"
+              }`}>
+                {unitNumber}
+              </div>
+              <span className="text-sm">{u.title}</span>
+            </div>
+            <FiChevronRight
+              className={`transition-transform flex-shrink-0 ${
+                expandedUnits[uIdx] ? "rotate-90 text-[#EE7203]" : "text-white/40"
+              }`}
+              size={18}
+            />
+          </button>
+
+          {expandedUnits[uIdx] && (
+            <div className="mt-2 space-y-1.5 ml-3 pl-4 border-l-2 border-[#EE7203]/20">
+              {u.lessons.map((l, lIdx) => {
+                const done = progress[l.key]?.videoEnded || progress[l.key]?.exSubmitted;
+                const active = activeU === uIdx && activeL === lIdx;
+                return (
                   <button
+                    key={l.key}
                     onClick={() => {
                       setActiveU(uIdx);
-                      setActiveL(0);
+                      setActiveL(lIdx);
                     }}
-                    className={`block w-full text-left px-4 py-3 rounded-xl text-sm font-semibold transition-all mt-2 ${
+                    className={`block w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-all ${
                       active
-                        ? "bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white shadow-lg shadow-[#EE7203]/20"
+                        ? "bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white shadow-md"
                         : done
-                        ? "bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 border border-emerald-500/30"
-                        : "bg-white/5 text-white/70 hover:bg-white/10 border border-white/10"
+                        ? "bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 border border-emerald-500/20"
+                        : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80"
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="truncate">{l?.title || t("coursePlayer.sidebar.courseClosing")}</span>
-                      {done && <FiCheckCircle size={16} className="text-emerald-400 flex-shrink-0" />}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate text-xs">
+                        {l.id === "closing"
+                          ? `🏁 ${t("coursePlayer.sidebar.unitClosing")}`
+                          : `${uIdx + 1}.${lIdx + 1}  ${l.title}`}
+                      </span>
+                      {done && (
+                        <FiCheckCircle size={14} className="text-emerald-400 flex-shrink-0" />
+                      )}
                     </div>
                   </button>
-                </div>
-              );
-            }
-
-            const unitNumber = units.slice(0, uIdx).filter((x) => x.id !== "closing-course").length + 1;
-
-            return (
-              <div key={u.id}>
-                <button
-                  onClick={() =>
-                    setExpandedUnits((prev) => ({ ...prev, [uIdx]: !prev[uIdx] }))
-                  }
-                  className={`w-full text-left px-4 py-4 font-bold flex justify-between items-center rounded-xl transition-all border ${
-                    expandedUnits[uIdx]
-                      ? "bg-gradient-to-r from-[#EE7203]/20 to-[#FF3816]/20 text-white border-[#EE7203]/40 shadow-lg"
-                      : "bg-white/5 hover:bg-white/10 text-white/80 border-white/10"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black ${
-                      expandedUnits[uIdx]
-                        ? "bg-gradient-to-br from-[#EE7203] to-[#FF3816] text-white"
-                        : "bg-white/10 text-white/60"
-                    }`}>
-                      {unitNumber}
-                    </div>
-                    <span className="text-sm">{u.title}</span>
-                  </div>
-                  <FiChevronRight
-                    className={`transition-transform flex-shrink-0 ${
-                      expandedUnits[uIdx] ? "rotate-90 text-[#EE7203]" : "text-white/40"
-                    }`}
-                    size={18}
-                  />
-                </button>
-
-                {expandedUnits[uIdx] && (
-                  <div className="mt-2 space-y-1.5 ml-3 pl-4 border-l-2 border-[#EE7203]/20">
-                    {u.lessons.map((l, lIdx) => {
-                      const done = progress[l.key]?.videoEnded || progress[l.key]?.exSubmitted;
-                      const active = activeU === uIdx && activeL === lIdx;
-                      return (
-                        <button
-                          key={l.key}
-                          onClick={() => {
-                            setActiveU(uIdx);
-                            setActiveL(lIdx);
-                          }}
-                          className={`block w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-all ${
-                            active
-                              ? "bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white shadow-md"
-                              : done
-                              ? "bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 border border-emerald-500/20"
-                              : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="truncate text-xs">
-                              {l.id === "closing"
-                                ? `🏁 ${t("coursePlayer.sidebar.unitClosing")}`
-                                : `${uIdx + 1}.${lIdx + 1}  ${l.title}`}
-                            </span>
-                            {done && (
-                              <FiCheckCircle size={14} className="text-emerald-400 flex-shrink-0" />
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </nav>
-        
-        
-
-      </aside>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      );
+    })}
+  </nav>
+</aside>
     {/* ======================= CONTENIDO PRINCIPAL ======================= */}
-    <main className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-slate-50">
-      <div className="max-w-6xl mx-auto px-6 py-6 space-y-10">
+    {/* Agregado w-full para asegurar que ocupe el ancho en mobile */}
+    <main className="flex-1 w-full overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-slate-50 relative z-0">
+      
+      {/* Ajustado padding horizontal px-4 para mobile, px-6 o px-8 en desktop */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 md:space-y-10 pb-24">
        
-        
         {/* INTRODUCCIÓN ESPECIAL DE LA UNIDAD */}
-<EnhancedCourseIntro
-  activeLesson={activeLesson}
-  units={units}
-  activeU={activeU}
-  progress={progress}
-  goNextLesson={goNextLesson}
-  t={t}
-/>
+        <EnhancedCourseIntro
+          activeLesson={activeLesson}
+          units={units}
+          activeU={activeU}
+          progress={progress}
+          goNextLesson={goNextLesson}
+          t={t}
+        />
 
-{activeLesson?.id !== "intro" && (
-  <>
-  {/* Header Hero con gradiente y animación */}
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-          className="relative overflow-hidden"
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0C212D] via-[#112C3E] to-[#0C212D] rounded-3xl blur-2xl opacity-5"></div>
-          <div className="relative bg-gradient-to-br from-[#0C212D] to-[#112C3E] rounded-3xl p-8 shadow-2xl border border-[#EE7203]/20">
-            <div className="flex items-start justify-between gap-6">
-              <div className="flex-1 space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-12 bg-gradient-to-b from-[#EE7203] via-[#FF3816] to-[#EE7203] rounded-full shadow-lg"></div>
-                  <h1 className="text-4xl font-black text-white tracking-tight">
-                    {activeLesson?.title || t("coursePlayer.sidebar.lessonCurrent")}
-                  </h1>
-                </div>
-                {activeLesson?.description && (
-                  <p className="text-slate-300 text-lg leading-relaxed ml-5 font-medium">
-                    {activeLesson.description}
-                  </p>
-                )}
-              </div>
-              
-<div className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl shadow-lg ${
-  currentLessonStatus === 'completed'
-    ? 'bg-gradient-to-r from-emerald-500 to-green-500'
-    : 'bg-gradient-to-r from-[#EE7203] to-[#FF3816]'
-}`}>
-  <div className={`w-2 h-2 rounded-full ${
-    currentLessonStatus === 'completed'
-      ? 'bg-white'
-      : 'bg-white animate-pulse'
-  }`}></div>
-  <span className="text-white font-bold text-sm">
-    {currentLessonStatus === 'completed' 
-      ? t("coursePlayer.sidebar.completed") 
-      : t("coursePlayer.sidebar.inProgress")
-    }
-  </span>
-</div>
-            </div>
-          </div>
-        </motion.div>
-  {/* VIDEO - Diseño cinematográfico */}
-        {resolvedVideoUrl && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="relative group"
-          >
-            <div className="absolute -inset-1 bg-gradient-to-r from-[#EE7203] via-[#FF3816] to-[#EE7203] rounded-3xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity"></div>
-            <div className="relative aspect-video rounded-3xl overflow-hidden bg-black shadow-2xl border border-[#0C212D]/10">
-              <iframe
-                id="vimeo-player"
-                src={resolvedVideoUrl}
-                className="w-full h-full"
-                allow="autoplay; fullscreen; picture-in-picture; encrypted-media; web-share"
-                allowFullScreen
-              />
-            </div>
-          </motion.div>
-        )}
-
-        {/* PDF - Diseño elegante con preview */}
-        {activeLesson?.pdfUrl && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden"
-          >
-            <div className="bg-gradient-to-r from-[#0C212D] to-[#112C3E] px-8 py-6">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#EE7203] to-[#FF3816] flex items-center justify-center shadow-lg">
-                  <FiFileText className="text-white" size={28} />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-black text-white">{t("coursePlayer.sidebar.bibliography")}</h3>
-                  <p className="text-slate-300 text-sm font-medium">{t("coursePlayer.sidebar.downloadPdf")}</p>
-                </div>
-              </div>
-            </div>
-            <div className="p-6">
-              <iframe
-                src={toEmbedPdfUrl(activeLesson.pdfUrl)}
-                className="w-full h-[600px] rounded-2xl border border-slate-200 shadow-inner"
-                title="Resumen PDF"
-              />
-            </div>
-          </motion.div>
-        )}
-
-
-
-        {/* CONTENIDO ACADÉMICO - Cards flotantes con glassmorphism */}
-        {(activeLesson?.theory || activeLesson?.vocabulary || 
-          (Array.isArray(activeLesson?.ejercicios) && activeLesson.ejercicios.length > 0)) && (
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="space-y-6"
-          >
-            {/* Navigation Pills - Floating style */}
-            <div className=" top-6 z-10 backdrop-blur-xl bg-white/80 rounded-2xl shadow-2xl border border-slate-200/50 p-2">
-              <div className="flex gap-2">
-                {activeLesson?.theory && (
-                  <button
-                    onClick={() => setActiveTab("theory")}
-                    className={`flex-1 px-6 py-4 rounded-xl font-bold text-sm transition-all ${
-                      activeTab === "theory"
-                        ? "bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white shadow-lg shadow-[#EE7203]/30 scale-105"
-                        : "text-[#112C3E]/70 hover:bg-slate-100 hover:text-[#0C212D]"
-                    }`}
-                  >
-                    <div className="flex items-center justify-center gap-2">
-                      <span className="text-xl">📖</span>
-                      <span>{t("coursePlayer.tabs.theory")}</span>
+        {activeLesson?.id !== "intro" && (
+          <>
+          {/* Header Hero */}
+            <motion.div 
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+              className="relative overflow-hidden mt-12 xl:mt-0" // Margen top en mobile para no chocar con el hamburger menu si es flotante
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-[#0C212D] via-[#112C3E] to-[#0C212D] rounded-3xl blur-2xl opacity-5"></div>
+              {/* Padding reducido en mobile: p-5 vs p-8 */}
+              <div className="relative bg-gradient-to-br from-[#0C212D] to-[#112C3E] rounded-3xl p-5 md:p-8 shadow-2xl border border-[#EE7203]/20">
+                {/* Flex-col en mobile para apilar titulo y estado */}
+                <div className="flex flex-col md:flex-row items-start justify-between gap-4 md:gap-6">
+                  <div className="flex-1 space-y-3 w-full">
+                    <div className="flex items-start md:items-center gap-3">
+                      <div className="w-1.5 h-8 md:w-2 md:h-12 bg-gradient-to-b from-[#EE7203] via-[#FF3816] to-[#EE7203] rounded-full shadow-lg shrink-0 mt-1 md:mt-0"></div>
+                      {/* Texto responsive text-2xl vs text-4xl */}
+                      <h1 className="text-2xl md:text-4xl font-black text-white tracking-tight leading-tight">
+                        {activeLesson?.title || t("coursePlayer.sidebar.lessonCurrent")}
+                      </h1>
                     </div>
-                  </button>
-                )}
-                
-                {activeLesson?.vocabulary && (
-                  <button
-                    onClick={() => setActiveTab("vocabulary")}
-                    className={`flex-1 px-6 py-4 rounded-xl font-bold text-sm transition-all ${
-                      activeTab === "vocabulary"
-                        ? "bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white shadow-lg shadow-[#EE7203]/30 scale-105"
-                        : "text-[#112C3E]/70 hover:bg-slate-100 hover:text-[#0C212D]"
-                    }`}
-                  >
-                    <div className="flex items-center justify-center gap-2">
-                      <span className="text-xl">📝</span>
-                      <span>{t("coursePlayer.tabs.vocabulary")}</span>
-                    </div>
-                  </button>
-                )}
-                
-                {Array.isArray(activeLesson?.ejercicios) && activeLesson.ejercicios.length > 0 && (
-                  <button
-                    onClick={() => setActiveTab("exercises")}
-                    className={`flex-1 px-6 py-4 rounded-xl font-bold text-sm transition-all ${
-                      activeTab === "exercises"
-                        ? "bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white shadow-lg shadow-[#EE7203]/30 scale-105"
-                        : "text-[#112C3E]/70 hover:bg-slate-100 hover:text-[#0C212D]"
-                    }`}
-                  >
-                    <div className="flex items-center justify-center gap-2">
-                      <span className="text-xl">🧠</span>
-                      <span>{t("coursePlayer.tabs.exercises")}</span>
-                    </div>
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Content Cards con animaciones */}
-            <div className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden min-h-[500px]">
-              
-              {/* TEORÍA */}
-              {activeTab === "theory" && activeLesson?.theory && (
-                <motion.div
-                  key="theory"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  transition={{ duration: 0.4 }}
-                  className="p-10"
-                >
-                  <div className="max-w-4xl mx-auto">
-                    <div className="mb-8 flex items-center gap-4">
-                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#0C212D] to-[#112C3E] flex items-center justify-center shadow-lg">
-                        <span className="text-3xl">📖</span>
-                      </div>
-                      <div>
-                        <h2 className="text-3xl font-black text-[#0C212D]">{t("coursePlayer.tabs.theoryTitle")}</h2>
-                        <p className="text-slate-600 font-medium">{t("coursePlayer.tabs.theorySubtitle")}</p>
-                      </div>
-                    </div>
-                    <article className="prose prose-lg prose-slate max-w-none prose-headings:text-[#0C212D] prose-headings:font-black prose-a:text-[#EE7203] prose-a:font-semibold prose-strong:text-[#0C212D] prose-strong:font-bold prose-p:leading-relaxed prose-p:text-slate-700">
-  <MarkdownWYSIWYG>
-    {activeLesson.theory}
-  </MarkdownWYSIWYG>
-</article>
+                    {activeLesson?.description && (
+                      <p className="text-slate-300 text-sm md:text-lg leading-relaxed ml-4 md:ml-5 font-medium">
+                        {activeLesson.description}
+                      </p>
+                    )}
                   </div>
-                </motion.div>
-              )}
-
-              {/* VOCABULARY */}
-              {activeTab === "vocabulary" && activeLesson?.vocabulary && (
-                <motion.div
-                  key="vocabulary"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  transition={{ duration: 0.4 }}
-                  className="p-10"
-                >
-                  <div className="max-w-4xl mx-auto">
-                    <div className="mb-8 flex items-center gap-4">
-                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#EE7203] to-[#FF3816] flex items-center justify-center shadow-lg">
-                        <span className="text-3xl">📝</span>
-                      </div>
-                      <div>
-                        <h2 className="text-3xl font-black text-[#0C212D]">{t("coursePlayer.tabs.vocabTitle")}</h2>
-                        <p className="text-slate-600 font-medium">{t("coursePlayer.tabs.vocabSubtitle")}</p>
-                      </div>
-                    </div>
-                    <RenderVocabularyBlock vocab={activeLesson.vocabulary} />
+                  
+                  <div className={`flex items-center gap-2 px-4 py-2 md:px-5 md:py-2.5 rounded-2xl shadow-lg self-start md:self-center ${
+                    currentLessonStatus === 'completed'
+                      ? 'bg-gradient-to-r from-emerald-500 to-green-500'
+                      : 'bg-gradient-to-r from-[#EE7203] to-[#FF3816]'
+                  }`}>
+                    <div className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full ${
+                      currentLessonStatus === 'completed'
+                        ? 'bg-white'
+                        : 'bg-white animate-pulse'
+                    }`}></div>
+                    <span className="text-white font-bold text-xs md:text-sm whitespace-nowrap">
+                      {currentLessonStatus === 'completed' 
+                        ? t("coursePlayer.sidebar.completed") 
+                        : t("coursePlayer.sidebar.inProgress")
+                      }
+                    </span>
                   </div>
-                </motion.div>
-              )}
-
-              {/* EJERCICIOS */}
-              {activeTab === "exercises" && 
- Array.isArray(activeLesson?.ejercicios) &&
- activeLesson.ejercicios.length > 0 && (
-  <motion.div
-    key="exercises"
-    initial={{ opacity: 0, x: -20 }}
-    animate={{ opacity: 1, x: 0 }}
-    exit={{ opacity: 0, x: 20 }}
-    transition={{ duration: 0.4 }}
-    className="p-10 space-y-8"
-  >
-    <div className="max-w-4xl mx-auto space-y-8">
-      
-      {/* Header con contador TOTAL */}
-      <div className="mb-8 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#112C3E] to-[#0C212D] flex items-center justify-center shadow-lg">
-            <span className="text-3xl">🧠</span>
-          </div>
-          <div>
-            <h2 className="text-3xl font-black text-[#0C212D]">
-              {t("coursePlayer.tabs.exercisesTitle")}
-            </h2>
-            <p className="text-slate-600 font-medium">
-              {t("coursePlayer.tabs.exercisesSubtitle")}
-            </p>
-          </div>
-        </div>
-        <div className="px-6 py-3 bg-gradient-to-r from-[#0C212D] to-[#112C3E] text-white rounded-2xl shadow-lg">
-          <span className="text-2xl font-black">{activeLesson.ejercicios.length}</span>
-          <span className="text-slate-300 font-medium"> ejercicios</span>
-        </div>
-      </div>
-
-      {/* 🔥 TODOS LOS EJERCICIOS EN CASCADA */}
-      {activeLesson.ejercicios.map((_, exerciseIndex) => (
-        <motion.div
-          key={exerciseIndex}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: exerciseIndex * 0.1 }}
-        >
-          <ExerciseRunner
-            ejercicios={[activeLesson.ejercicios[exerciseIndex]]}
-            lessonKey={activeLesson.key}
-            exerciseIndex={exerciseIndex}
-            batchId={userProfile?.batchId}
-            userKey={userProfile?.userKey}
-            courseId={courseId}
-            onSubmit={() => {}}
-          />
-        </motion.div>
-      ))}
-
-      
-    </div>
-  </motion.div>
-)}
-            </div>
-          </motion.div>
-        )}
-
-        {/* Final Message - Celebration card */}
-        {activeLesson?.finalMessage && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5 }}
-            className="relative overflow-hidden"
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-green-400 rounded-3xl blur-2xl opacity-20"></div>
-            <div className="relative bg-gradient-to-br from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-3xl p-8 shadow-xl">
-              <div className="flex items-start gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center shadow-lg flex-shrink-0">
-                  <span className="text-3xl">🎉</span>
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-2xl font-black text-emerald-900 mb-2">{t("coursePlayer.cta.excellentWork")}</h3>
-                  <p className="text-emerald-800 font-medium leading-relaxed">{activeLesson.finalMessage}</p>
                 </div>
               </div>
-            </div>
-          </motion.div>
-        )}
+            </motion.div>
 
-        {/* Next Lesson CTA - Grande y llamativo */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-          className="flex justify-center pt-8"
-        >
-          <button
-            onClick={goNextLesson}
-            className="group relative px-12 py-6 rounded-3xl font-black text-lg shadow-2xl bg-gradient-to-r from-[#EE7203] via-[#FF3816] to-[#EE7203] bg-size-200 bg-pos-0 hover:bg-pos-100 text-white transition-all duration-500 hover:scale-105 hover:shadow-[#EE7203]/50 flex items-center gap-4"
-            style={{ backgroundSize: '200% 100%' }}
-          >
-            <span>{t("coursePlayer.cta.continueNext")}</span>
-            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
-              <FiChevronRight size={24} className="group-hover:translate-x-1 transition-transform" />
-            </div>
-          </button>
-        </motion.div>
-  </>
-)}
-        
+          {/* VIDEO */}
+            {resolvedVideoUrl && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                className="relative group"
+              >
+                <div className="absolute -inset-1 bg-gradient-to-r from-[#EE7203] via-[#FF3816] to-[#EE7203] rounded-3xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity"></div>
+                <div className="relative aspect-video rounded-3xl overflow-hidden bg-black shadow-2xl border border-[#0C212D]/10">
+                  <iframe
+                    id="vimeo-player"
+                    src={resolvedVideoUrl}
+                    className="w-full h-full"
+                    allow="autoplay; fullscreen; picture-in-picture; encrypted-media; web-share"
+                    allowFullScreen
+                  />
+                </div>
+              </motion.div>
+            )}
+
+            {/* PDF */}
+            {activeLesson?.pdfUrl && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden"
+              >
+                {/* Padding responsive px-5 py-4 */}
+                <div className="bg-gradient-to-r from-[#0C212D] to-[#112C3E] px-5 py-4 md:px-8 md:py-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 md:w-14 md:h-14 rounded-2xl bg-gradient-to-br from-[#EE7203] to-[#FF3816] flex items-center justify-center shadow-lg shrink-0">
+                      <FiFileText className="text-white" size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl md:text-2xl font-black text-white">{t("coursePlayer.sidebar.bibliography")}</h3>
+                      <p className="text-slate-300 text-xs md:text-sm font-medium">{t("coursePlayer.sidebar.downloadPdf")}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-4 md:p-6">
+                  <iframe
+                    src={toEmbedPdfUrl(activeLesson.pdfUrl)}
+                    className="w-full h-[400px] md:h-[600px] rounded-2xl border border-slate-200 shadow-inner"
+                    title="Resumen PDF"
+                  />
+                </div>
+              </motion.div>
+            )}
+
+            {/* CONTENIDO ACADÉMICO */}
+            {(activeLesson?.theory || activeLesson?.vocabulary || 
+              (Array.isArray(activeLesson?.ejercicios) && activeLesson.ejercicios.length > 0)) && (
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+                className="space-y-6"
+              >
+                {/* Navigation Pills - Responsive: flex-wrap para que bajen si no caben */}
+                <div className="top-6 z-10 backdrop-blur-xl bg-white/80 rounded-2xl shadow-2xl border border-slate-200/50 p-2">
+                  <div className="flex flex-wrap sm:flex-nowrap gap-2">
+                    {activeLesson?.theory && (
+                      <button
+                        onClick={() => setActiveTab("theory")}
+                        className={`flex-1 min-w-[120px] px-4 py-3 md:px-6 md:py-4 rounded-xl font-bold text-sm transition-all ${
+                          activeTab === "theory"
+                            ? "bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white shadow-lg shadow-[#EE7203]/30 scale-105"
+                            : "text-[#112C3E]/70 hover:bg-slate-100 hover:text-[#0C212D]"
+                        }`}
+                      >
+                        <div className="flex items-center justify-center gap-2">
+                          <span className="text-lg md:text-xl">📖</span>
+                          <span>{t("coursePlayer.tabs.theory")}</span>
+                        </div>
+                      </button>
+                    )}
+                    
+                    {activeLesson?.vocabulary && (
+                      <button
+                        onClick={() => setActiveTab("vocabulary")}
+                        className={`flex-1 min-w-[120px] px-4 py-3 md:px-6 md:py-4 rounded-xl font-bold text-sm transition-all ${
+                          activeTab === "vocabulary"
+                            ? "bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white shadow-lg shadow-[#EE7203]/30 scale-105"
+                            : "text-[#112C3E]/70 hover:bg-slate-100 hover:text-[#0C212D]"
+                        }`}
+                      >
+                        <div className="flex items-center justify-center gap-2">
+                          <span className="text-lg md:text-xl">📝</span>
+                          <span>{t("coursePlayer.tabs.vocabulary")}</span>
+                        </div>
+                      </button>
+                    )}
+                    
+                    {Array.isArray(activeLesson?.ejercicios) && activeLesson.ejercicios.length > 0 && (
+                      <button
+                        onClick={() => setActiveTab("exercises")}
+                        className={`flex-1 min-w-[120px] px-4 py-3 md:px-6 md:py-4 rounded-xl font-bold text-sm transition-all ${
+                          activeTab === "exercises"
+                            ? "bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white shadow-lg shadow-[#EE7203]/30 scale-105"
+                            : "text-[#112C3E]/70 hover:bg-slate-100 hover:text-[#0C212D]"
+                        }`}
+                      >
+                        <div className="flex items-center justify-center gap-2">
+                          <span className="text-lg md:text-xl">🧠</span>
+                          <span>{t("coursePlayer.tabs.exercises")}</span>
+                        </div>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Content Cards - FIX CRÍTICO: p-5 en mobile, p-10 en desktop */}
+                <div className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden min-h-[300px] md:min-h-[500px]">
+                  
+                  {/* TEORÍA */}
+                  {activeTab === "theory" && activeLesson?.theory && (
+                    <motion.div
+                      key="theory"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ duration: 0.4 }}
+                      className="p-5 md:p-10"
+                    >
+                      <div className="max-w-4xl mx-auto">
+                        <div className="mb-6 md:mb-8 flex items-center gap-4">
+                          <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-gradient-to-br from-[#0C212D] to-[#112C3E] flex items-center justify-center shadow-lg shrink-0">
+                            <span className="text-2xl md:text-3xl">📖</span>
+                          </div>
+                          <div>
+                            <h2 className="text-2xl md:text-3xl font-black text-[#0C212D]">{t("coursePlayer.tabs.theoryTitle")}</h2>
+                            <p className="text-sm md:text-base text-slate-600 font-medium">{t("coursePlayer.tabs.theorySubtitle")}</p>
+                          </div>
+                        </div>
+                        <article className="prose prose-base md:prose-lg prose-slate max-w-none prose-headings:text-[#0C212D] prose-headings:font-black prose-a:text-[#EE7203] prose-a:font-semibold prose-strong:text-[#0C212D] prose-strong:font-bold prose-p:leading-relaxed prose-p:text-slate-700">
+                          <MarkdownWYSIWYG>
+                            {activeLesson.theory}
+                          </MarkdownWYSIWYG>
+                        </article>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* VOCABULARY */}
+                  {activeTab === "vocabulary" && activeLesson?.vocabulary && (
+                    <motion.div
+                      key="vocabulary"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ duration: 0.4 }}
+                      className="p-5 md:p-10"
+                    >
+                      <div className="max-w-4xl mx-auto">
+                        <div className="mb-6 md:mb-8 flex items-center gap-4">
+                          <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-gradient-to-br from-[#EE7203] to-[#FF3816] flex items-center justify-center shadow-lg shrink-0">
+                            <span className="text-2xl md:text-3xl">📝</span>
+                          </div>
+                          <div>
+                            <h2 className="text-2xl md:text-3xl font-black text-[#0C212D]">{t("coursePlayer.tabs.vocabTitle")}</h2>
+                            <p className="text-sm md:text-base text-slate-600 font-medium">{t("coursePlayer.tabs.vocabSubtitle")}</p>
+                          </div>
+                        </div>
+                        <RenderVocabularyBlock vocab={activeLesson.vocabulary} />
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* EJERCICIOS */}
+                  {activeTab === "exercises" && 
+                  Array.isArray(activeLesson?.ejercicios) &&
+                  activeLesson.ejercicios.length > 0 && (
+                    <motion.div
+                      key="exercises"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ duration: 0.4 }}
+                      className="p-5 md:p-10 space-y-6 md:space-y-8"
+                    >
+                      <div className="max-w-4xl mx-auto space-y-6 md:space-y-8">
+                        
+                        {/* Header con contador TOTAL */}
+                        <div className="mb-6 md:mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-gradient-to-br from-[#112C3E] to-[#0C212D] flex items-center justify-center shadow-lg shrink-0">
+                              <span className="text-2xl md:text-3xl">🧠</span>
+                            </div>
+                            <div>
+                              <h2 className="text-2xl md:text-3xl font-black text-[#0C212D]">
+                                {t("coursePlayer.tabs.exercisesTitle")}
+                              </h2>
+                              <p className="text-sm md:text-base text-slate-600 font-medium">
+                                {t("coursePlayer.tabs.exercisesSubtitle")}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="px-4 py-2 md:px-6 md:py-3 bg-gradient-to-r from-[#0C212D] to-[#112C3E] text-white rounded-2xl shadow-lg self-start md:self-auto">
+                            <span className="text-xl md:text-2xl font-black">{activeLesson.ejercicios.length}</span>
+                            <span className="text-slate-300 font-medium"> ejercicios</span>
+                          </div>
+                        </div>
+
+                        {/* 🔥 TODOS LOS EJERCICIOS EN CASCADA */}
+                        {activeLesson.ejercicios.map((_, exerciseIndex) => (
+                          <motion.div
+                            key={exerciseIndex}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.4, delay: exerciseIndex * 0.1 }}
+                          >
+                            <ExerciseRunner
+                              ejercicios={[activeLesson.ejercicios[exerciseIndex]]}
+                              lessonKey={activeLesson.key}
+                              exerciseIndex={exerciseIndex}
+                              batchId={userProfile?.batchId}
+                              userKey={userProfile?.userKey}
+                              courseId={courseId}
+                              onSubmit={() => {}}
+                            />
+                          </motion.div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Final Message */}
+            {activeLesson?.finalMessage && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5 }}
+                className="relative overflow-hidden"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-green-400 rounded-3xl blur-2xl opacity-20"></div>
+                <div className="relative bg-gradient-to-br from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-3xl p-6 md:p-8 shadow-xl">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center shadow-lg flex-shrink-0">
+                      <span className="text-2xl md:text-3xl">🎉</span>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-xl md:text-2xl font-black text-emerald-900 mb-2">{t("coursePlayer.cta.excellentWork")}</h3>
+                      <p className="text-sm md:text-base text-emerald-800 font-medium leading-relaxed">{activeLesson.finalMessage}</p>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Next Lesson CTA - Responsive */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+              className="flex justify-center pt-8 pb-8"
+            >
+              <button
+                onClick={goNextLesson}
+                className="group relative px-8 py-4 md:px-12 md:py-6 rounded-3xl font-black text-base md:text-lg shadow-2xl bg-gradient-to-r from-[#EE7203] via-[#FF3816] to-[#EE7203] bg-size-200 bg-pos-0 hover:bg-pos-100 text-white transition-all duration-500 hover:scale-105 hover:shadow-[#EE7203]/50 flex items-center gap-3 md:gap-4 w-full md:w-auto justify-center"
+                style={{ backgroundSize: '200% 100%' }}
+              >
+                <span>{t("coursePlayer.cta.continueNext")}</span>
+                <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
+                  <FiChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                </div>
+              </button>
+            </motion.div>
+          </>
+        )}
       </div>
     </main>
 
-    {/* ======================= SIDEBAR DERECHA ======================= */}
-    {/* ======================= SIDEBAR DERECHA ======================= */}
-      <aside className="hidden xl:block xl:w-96 xl:shrink-0 bg-white border-l border-gray-200 sticky top-0 h-screen overflow-y-auto">
-        
-        {/* Header con gradiente sutil */}
-        <div className="relative bg-gradient-to-br from-[#0C212D] to-[#112C3E] p-8 border-b-4 border-[#EE7203]">
+    {/* ======================= SIDEBAR DERECHA (Desktop) ======================= */}
+    <aside className="hidden xl:block xl:w-96 xl:shrink-0 bg-white border-l border-gray-200 sticky top-0 h-screen overflow-y-auto">
+       {/* ... (Contenido Sidebar Derecha sin cambios) ... */}
+       <div className="relative bg-gradient-to-br from-[#0C212D] to-[#112C3E] p-8 border-b-4 border-[#EE7203]">
           <div className="absolute top-0 right-0 w-32 h-32 bg-[#EE7203]/10 rounded-full blur-3xl"></div>
           <div className="relative">
             <div className="flex items-center gap-3 mb-2">
@@ -3346,7 +3374,6 @@ function EnhancedCourseIntro({
           </div>
         </div>
 
-        {/* Card de lección actual - Diseño premium */}
         <div className="p-6">
           <div className="relative overflow-hidden">
             <div className="absolute -top-10 -right-10 w-40 h-40 bg-gradient-to-br from-[#EE7203]/5 to-[#FF3816]/5 rounded-full blur-2xl"></div>
@@ -3358,7 +3385,7 @@ function EnhancedCourseIntro({
                 </div>
                 <div>
                   <p className="text-[10px] text-[#112C3E]/50 uppercase tracking-widest font-bold mb-1">
-                     {t("coursePlayer.sidebar.lessonCurrent")}
+                      {t("coursePlayer.sidebar.lessonCurrent")}
                   </p>
                   <p className="text-xs text-[#0C212D] font-semibold">
                     {units[activeU]?.title || "—"}
@@ -3380,61 +3407,54 @@ function EnhancedCourseIntro({
           </div>
         </div>
 
-        {/* Estadísticas rápidas */}
         <div className="px-6 pb-6">
           <div className="bg-gradient-to-br from-[#0C212D] to-[#112C3E] rounded-2xl p-5 shadow-xl">
             <div className="grid grid-cols-2 gap-4">
-  <div className="text-center">
-    <div className="text-3xl font-black text-[#EE7203] mb-1">
-      {completedCount}
-    </div>
+              <div className="text-center">
+                <div className="text-3xl font-black text-[#EE7203] mb-1">
+                  {completedCount}
+                </div>
                 <div className="text-[10px] text-white/60 uppercase tracking-wider font-bold">
                   {t("coursePlayer.sidebar.completed")}
                 </div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-black text-[#FF3816] mb-1">
-  {totalLessons}
-</div>
+                  {totalLessons}
+                </div>
                 <div className="text-[10px] text-white/60 uppercase tracking-wider font-bold">
                   {t("coursePlayer.sidebar.total")}
                 </div>
               </div>
             </div>
             
-            {/* Barra de progreso */}
             <div className="mt-5 pt-4 border-t border-white/10">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-white/70 font-semibold">{t("coursePlayer.sidebar.progress")}</span>
                 <span className="text-xs text-[#EE7203] font-black">
-  {progressPercent}%
-</span>
+                  {progressPercent}%
+                </span>
               </div>
               <div className="h-2 bg-white/10 rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-gradient-to-r from-[#EE7203] to-[#FF3816] rounded-full transition-all duration-500"
-                  style={{ 
-  width: `${progressPercent}%` 
-}}
+                  style={{ width: `${progressPercent}%` }}
                 ></div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Botón de descarga mejorado */}
         <div className="px-6 pb-6">
           <div className="relative group">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-[#EE7203] to-[#FF3816] rounded-2xl blur opacity-20 group-hover:opacity-40 transition-opacity"></div>
             <DownloadBibliographyButton 
-  unit={currentUnit}
-  courseTitle={curso?.titulo}
-/>
-
+              unit={currentUnit}
+              courseTitle={curso?.titulo}
+            />
           </div>
         </div>
 
-        {/* Footer decorativo */}
         <div className="px-6 pb-8">
           <div className="bg-gradient-to-r from-[#EE7203]/5 via-[#FF3816]/5 to-[#EE7203]/5 rounded-xl p-4 text-center">
             <p className="text-xs text-slate-600 font-medium">
@@ -3442,34 +3462,34 @@ function EnhancedCourseIntro({
             </p>
           </div>
         </div>
-      </aside>
-       {/* 📚 MODAL DE VIDEO DEL COURSE PLAYER (NUEVO) */}
-      <CoursePlayerVideoModal
-        videoUrl="https://player.vimeo.com/video/1146041029" // 👈 Reemplaza con tu video
-        courseTitle={curso?.titulo || "Material Académico"} // 👈 Usa el título del curso actual
-        autoShow={true}
-        videoType="youtube" // o "vimeo" / "direct"
-      /> 
-      <MobileMenu
-  curso={curso}
-  units={units}
-  progress={progress}
-  activeU={activeU}
-  activeL={activeL}
-  setActiveU={setActiveU}
-  setActiveL={setActiveL}
-  expandedUnits={expandedUnits}
-  setExpandedUnits={setExpandedUnits}
-  activeLesson={activeLesson}
-  currentUnit={units[activeU]}
-  router={router}
-  t={t}
-  DownloadBibliographyButton={DownloadBibliographyButton}
-/>
+    </aside>
 
+    {/* 📚 MODAL DE VIDEO DEL COURSE PLAYER */}
+    <CoursePlayerVideoModal
+      videoUrl="https://player.vimeo.com/video/1146041029" 
+      courseTitle={curso?.titulo || "Material Académico"} 
+      autoShow={true}
+      videoType="youtube"
+    /> 
+
+    <MobileMenu
+      curso={curso}
+      units={units}
+      progress={progress}
+      activeU={activeU}
+      activeL={activeL}
+      setActiveU={setActiveU}
+      setActiveL={setActiveL}
+      expandedUnits={expandedUnits}
+      setExpandedUnits={setExpandedUnits}
+      activeLesson={activeLesson}
+      currentUnit={units[activeU]}
+      router={router}
+      t={t}
+      DownloadBibliographyButton={DownloadBibliographyButton}
+    />
   </div>
 );
-
 
 
 }

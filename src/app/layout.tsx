@@ -7,7 +7,7 @@ import { I18nProvider } from "@/contexts/I18nContext";
 import { UsersProvider } from '@/contexts/UserContext';
 
 // 👇 1. Importar el componente
-import { GlobalPodcast } from '@/components/podcast/GlobalPodcast'; 
+import {GlobalPodcast}  from '@/components/podcast/GlobalPodcast'; 
 
 const inter = Inter({ subsets: ['latin'] });
 

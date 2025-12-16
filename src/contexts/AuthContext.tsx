@@ -29,6 +29,24 @@ import { toast } from "sonner";
    -Define que datos y funciones van a estar disponibles en toda la app
    ========================================================== */
 
+interface SpotifyImage {
+  height: number;
+  url: string;
+  width: number;
+}
+
+interface SpotifyEpisode {
+  id: string;
+  name: string;
+  description: string;
+  release_date: string;
+  duration_ms: number;
+  images: SpotifyImage[];
+  external_urls: {
+    spotify: string;
+  };
+}
+
 interface AuthContextType {
   user: User | null;
   role: "admin" | "profesor" | "alumno" | null;
@@ -63,8 +81,11 @@ interface AuthContextType {
   markCoursePlayerVideoAsSeen: () => Promise<void>;
   loadingCoursePlayerVideoStatus: boolean;
 
-
+podcastEpisodes: SpotifyEpisode[];
+  loadingPodcast: boolean;
+  loadPodcastEpisodes?: () => Promise<void>;
   saveCourseProgress?: (
+
     uid: string,
     courseId: string,
     data: any
@@ -134,6 +155,9 @@ const [loadingCoursePlayerVideoStatus, setLoadingCoursePlayerVideoStatus] = useS
 
   const [profesores, setProfesores] = useState<any[]>([]);
   const [loadingProfesores, setLoadingProfesores] = useState(false);
+
+  const [podcastEpisodes, setPodcastEpisodes] = useState<SpotifyEpisode[]>([]);
+const [loadingPodcast, setLoadingPodcast] = useState(false);
 
   const [chatSessions, setChatSessions] = useState<any[]>([]);
   const [loadingChatSessions, setLoadingChatSessions] = useState(false);
@@ -251,6 +275,21 @@ const loadAlumnos = async () => {
 
   } catch (err) {
     console.error("❌ [AuthContext] Error cargando alumnos:", err);
+  }
+};
+
+const loadPodcastEpisodes = async () => {
+  setLoadingPodcast(true);
+  try {
+    const res = await fetch('/api/spotify');
+    if (!res.ok) throw new Error('Failed to fetch podcast episodes');
+    const data = await res.json();
+    setPodcastEpisodes(data);
+    console.log("🎙️ Episodios de podcast cargados:", data.length);
+  } catch (error) {
+    console.error("❌ Error cargando episodios del podcast:", error);
+  } finally {
+    setLoadingPodcast(false);
   }
 };
 
@@ -948,6 +987,9 @@ const getCourseProgress = async (uid: string, courseId: string) => {
           await loadAnuncios();
         }
 
+        if (resolvedRole === "alumno" || resolvedRole === "admin" || resolvedRole === "profesor") {
+  await loadPodcastEpisodes();
+}
         // ✅ Marcar que terminó de cargar el estado del video
         setLoadingVideoStatus(false); // 👈 NUEVO
         setLoadingChatbotVideoStatus(false); // 👈 Chatbot
@@ -1047,6 +1089,11 @@ const value = useMemo(
       hasSeenCoursePlayerVideo,
       markCoursePlayerVideoAsSeen,
       loadingCoursePlayerVideoStatus,
+
+      podcastEpisodes,
+    loadingPodcast,
+    loadPodcastEpisodes,
+
 
 
     saveCourseProgress,

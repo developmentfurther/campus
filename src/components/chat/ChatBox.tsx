@@ -67,18 +67,6 @@ export default function ChatBox() {
   const { userProfile, user, hasSeenWelcomeVideo, loadingVideoStatus } = useAuth();
   const { t } = useI18n();
 
-  // 🔥 DEBUG: Ver estado del video
-  useEffect(() => {
-    console.log("🎬 ChatBox - Estado del video:", {
-      user: !!user,
-      userProfile: !!userProfile,
-      hasSeenWelcomeVideo,
-      loadingVideoStatus,
-      batchId: userProfile?.batchId,
-      userKey: userProfile?.userKey,
-    });
-  }, [user, userProfile, hasSeenWelcomeVideo, loadingVideoStatus]); 
-
   const rawLang = userProfile?.learningLanguage?.toLowerCase() || "en";
   const language = languageKeyMap[rawLang] ?? "english";
   const level = userProfile?.learningLevel;
@@ -125,6 +113,7 @@ export default function ChatBox() {
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const inputContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -556,7 +545,7 @@ Please try again.
   };
 
   /* =============================================
-     UI Final - OPTIMIZADO
+     UI Final - OPTIMIZADO PARA MOBILE
   ============================================= */
   return (
     <>
@@ -566,55 +555,57 @@ Please try again.
         videoType="youtube"
       />
       
-      <div className="w-full max-w-4xl mx-auto flex flex-col h-[85vh]">
+      {/* WRAPPER CON SAFE AREA PARA MOBILE */}
+     <div className="w-full h-[calc(100dvh-80px)] sm:h-[85vh] sm:max-w-4xl sm:mx-auto flex flex-col px-1 py-1 sm:p-0">
         
         {/* Main container */}
-        <div className="flex flex-col h-full rounded-3xl overflow-hidden shadow-2xl border-2 border-[#EE7203]">
+        <div className="flex flex-col h-full rounded-xl sm:rounded-3xl overflow-hidden shadow-2xl border border-[#EE7203]/30 sm:border-2 sm:border-[#EE7203]">
 
-          {/* HEADER */}
-          <div className="px-8 py-5 bg-gradient-to-r from-[#0C212D] to-[#112C3E] border-b border-[#EE7203]/30">
+          {/* HEADER - OPTIMIZADO MOBILE */}
+          <div className="px-4 sm:px-8 py-3 sm:py-5 bg-gradient-to-r from-[#0C212D] to-[#112C3E] border-b border-[#EE7203]/30 flex-shrink-0">
             <div className="flex justify-between items-center">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 sm:gap-4">
                 {/* Avatar */}
                 <div className="relative">
                   <Image
                     src="/images/avatar.png"
                     alt="Mr Further"
-                    width={52}
-                    height={52}
-                    className="rounded-full border-2 border-[#EE7203] object-cover"
+                    width={40}
+                    height={40}
+                    className="sm:w-[52px] sm:h-[52px] rounded-full border-2 border-[#EE7203] object-cover"
                   />
-                  <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-[#10b981] rounded-full border-2 border-[#0C212D]"></div>
+                  <div className="absolute bottom-0 right-0 w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 bg-[#10b981] rounded-full border-2 border-[#0C212D]"></div>
                 </div>
 
                 <div>
-                  <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-1.5 sm:gap-2">
                     Mr Further
-                    <FiZap className="text-[#EE7203]" size={16} />
+                    <FiZap className="text-[#EE7203]" size={14} />
                   </h2>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="px-2 py-0.5 bg-[#EE7203] text-white text-xs font-bold rounded uppercase">
+                  <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5">
+                    <span className="px-1.5 sm:px-2 py-0.5 bg-[#EE7203] text-white text-[10px] sm:text-xs font-bold rounded uppercase">
                       {language}
                     </span>
-                    <span className="text-white/50 text-xs">•</span>
-                    <span className="text-white/70 text-xs">Level {level}</span>
+                    <span className="text-white/50 text-xs hidden sm:inline">•</span>
+                    <span className="text-white/70 text-[10px] sm:text-xs">Level {level}</span>
                   </div>
                 </div>
               </div>
 
               <button
                 onClick={finishConversation}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 text-white font-semibold text-sm hover:bg-[#FF3816] transition-colors duration-200"
+                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl bg-white/10 text-white font-semibold text-xs sm:text-sm hover:bg-[#FF3816] transition-colors duration-200 active:scale-95"
               >
-                <FiStopCircle size={16} />
-                {t("chat.endConversation")}
+                <FiStopCircle size={14} className="sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">{t("chat.endConversation")}</span>
+                <span className="sm:hidden">End</span>
               </button>
             </div>
           </div>
 
-          {/* CHAT AREA */}
-          <div className="flex-1 overflow-y-auto bg-gray-50">
-            <div className="p-6 space-y-4">
+          {/* CHAT AREA - OPTIMIZADO MOBILE */}
+         <div className="flex-1 overflow-y-auto bg-gray-50 overscroll-contain min-h-0">
+            <div className="p-3 sm:p-6 space-y-3 sm:space-y-4 pb-4 min-h-full">
               {messages.map((msg, idx) => (
                 <MessageBubble
                   key={idx}
@@ -628,14 +619,14 @@ Please try again.
               {isTyping && <TypingIndicator />}
               
               {isAnalyzing && (
-                <div className="flex items-center gap-2 text-xs text-[#EE7203] font-medium">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#EE7203]"></div>
+                <div className="flex items-center gap-2 text-xs text-[#EE7203] font-medium px-2 sm:px-0">
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#EE7203] animate-pulse"></div>
                   {t("chat.analyzing")}
                 </div>
               )}
 
               {isProcessingAudio && (
-                <div className="flex items-center gap-2 text-xs text-[#EE7203] font-medium">
+                <div className="flex items-center gap-2 text-xs text-[#EE7203] font-medium px-2 sm:px-0">
                   <div className="w-1.5 h-1.5 rounded-full bg-[#EE7203] animate-pulse"></div>
                   Processing audio...
                 </div>
@@ -645,81 +636,113 @@ Please try again.
             </div>
           </div>
 
-          {/* INPUT AREA */}
-          <div className="p-6 bg-white border-t border-gray-200">
-            <div className="flex items-end gap-3">
-              <div className="flex-1 relative">
-                <textarea
-                  className="w-full border-2 border-gray-200 rounded-xl p-3 pr-10 resize-none focus:outline-none focus:border-[#EE7203] focus:ring-2 focus:ring-[#EE7203]/20 min-h-[56px] max-h-[120px] transition-colors"
-                  placeholder={t("chat.inputPlaceholder")}
-                  value={input}
-                  onKeyDown={handleKey}
-                  onChange={(e) => setInput(e.target.value)}
-                  disabled={isRecording || isProcessingAudio}
-                />
-                
-                {input.length > 0 && (
-                  <div className="absolute bottom-2 right-3 text-xs text-gray-400">
-                    {input.length}
-                  </div>
-                )}
-              </div>
-
-              {/* Botón de voz */}
-              <button
-                onClick={isRecording ? stopRecording : startRecording}
-                disabled={isProcessingAudio}
-                className={clsx(
-                  "flex items-center justify-center w-14 h-14 rounded-xl text-white transition-all duration-200 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed",
-                  isRecording 
-                    ? "bg-red-500 hover:bg-red-600 animate-pulse" 
-                    : "bg-gradient-to-r from-[#0C212D] to-[#112C3E] hover:shadow-lg"
-                )}
-              >
-                {isRecording ? <FiSquare size={20} /> : <FiMic size={20} />}
-              </button>
-
-              {/* Botón de envío */}
-              <button
-                onClick={handleSend}
-                disabled={!input.trim() || isRecording || isProcessingAudio}
-                className="flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white hover:shadow-lg hover:shadow-[#EE7203]/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 hover:scale-105 active:scale-95"
-              >
-                <FiSend size={20} />
-              </button>
-            </div>
-
-            {/* Recording indicator */}
+          {/* INPUT AREA - FIJO Y MEJORADO PARA MOBILE */}
+          <div 
+            ref={inputContainerRef}
+            className="bg-white border-t border-gray-200 flex-shrink-0 safe-bottom"
+          >
+            {/* Recording indicator - ARRIBA DEL INPUT */}
             {isRecording && (
-              <div className="mt-3 flex items-center gap-2 text-sm text-red-500 font-medium">
-                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
-                Recording... {formatTime(recordingTime)}
+              <div className="px-3 sm:px-6 pt-2 sm:pt-3 pb-1 sm:pb-2 bg-red-50 border-b border-red-100">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs sm:text-sm text-red-600 font-medium">
+                    <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+                    <span>Recording...</span>
+                  </div>
+                  <span className="text-sm sm:text-base font-mono text-red-600">
+                    {formatTime(recordingTime)}
+                  </span>
+                </div>
               </div>
             )}
 
-            {/* Tips */}
-            {!isRecording && (
-              <div className="mt-3 flex items-center gap-3 text-xs text-gray-500">
-                <div className="flex items-center gap-1">
-                  <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-[10px]">Enter</kbd>
-                  <span>send</span>
+            {/* Input container */}
+            <div className="p-3 sm:p-6">
+              <div className="flex items-end gap-2 sm:gap-3">
+                <div className="flex-1 relative">
+                  <textarea
+                    className="w-full border-2 border-gray-200 rounded-xl p-2.5 sm:p-3 pr-8 sm:pr-10 resize-none focus:outline-none focus:border-[#EE7203] focus:ring-2 focus:ring-[#EE7203]/20 min-h-[48px] sm:min-h-[56px] max-h-[100px] sm:max-h-[120px] transition-colors text-sm sm:text-base"
+                    placeholder={t("chat.inputPlaceholder")}
+                    value={input}
+                    onKeyDown={handleKey}
+                    onChange={(e) => setInput(e.target.value)}
+                    disabled={isRecording || isProcessingAudio}
+                    rows={1}
+                  />
+                  
+                  {input.length > 0 && (
+                    <div className="absolute bottom-2 right-2 sm:right-3 text-[10px] sm:text-xs text-gray-400 pointer-events-none">
+                      {input.length}
+                    </div>
+                  )}
                 </div>
-                <span>•</span>
-                <div className="flex items-center gap-1">
-                  <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-[10px]">Shift+Enter</kbd>
-                  <span>new line</span>
-                </div>
-                <span>•</span>
-                <div className="flex items-center gap-1">
-                  <FiMic size={12} />
-                  <span>voice message</span>
-                </div>
+
+                {/* Botón de voz */}
+                <button
+                  onClick={isRecording ? stopRecording : startRecording}
+                  disabled={isProcessingAudio}
+                  className={clsx(
+                    "flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-xl text-white transition-all duration-200 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0 shadow-md",
+                    isRecording 
+                      ? "bg-red-500 hover:bg-red-600 shadow-red-200" 
+                      : "bg-gradient-to-r from-[#0C212D] to-[#112C3E] hover:shadow-lg shadow-gray-300"
+                  )}
+                >
+                  {isRecording ? <FiSquare size={18} className="sm:w-5 sm:h-5" /> : <FiMic size={18} className="sm:w-5 sm:h-5" />}
+                </button>
+
+                {/* Botón de envío */}
+                <button
+                  onClick={handleSend}
+                  disabled={!input.trim() || isRecording || isProcessingAudio}
+                  className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white hover:shadow-lg hover:shadow-[#EE7203]/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 active:scale-95 flex-shrink-0 shadow-md shadow-orange-200"
+                >
+                  <FiSend size={18} className="sm:w-5 sm:h-5" />
+                </button>
               </div>
-            )}
+
+              {/* Tips - SOLO VISIBLES CUANDO NO ESTÁ GRABANDO */}
+              {!isRecording && (
+                <div className="mt-2 sm:mt-3 flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs text-gray-500 flex-wrap">
+                  <div className="flex items-center gap-1">
+                    <kbd className="px-1 sm:px-1.5 py-0.5 bg-gray-100 rounded text-[9px] sm:text-[10px] font-mono">Enter</kbd>
+                    <span>send</span>
+                  </div>
+                  <span className="hidden sm:inline">•</span>
+                  <div className="hidden sm:flex items-center gap-1">
+                    <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-[10px] font-mono">Shift+Enter</kbd>
+                    <span>new line</span>
+                  </div>
+                  <span className="hidden sm:inline">•</span>
+                  <div className="flex items-center gap-1">
+                    <FiMic size={10} className="sm:w-3 sm:h-3" />
+                    <span>voice input</span>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
         </div>
       </div>
+
+      <style jsx global>{`
+        /* Safe area para iOS y Android */
+        .safe-area-inset {
+          padding-top: env(safe-area-inset-top);
+        }
+        
+        .safe-bottom {
+          padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        /* Prevenir scroll bounce en iOS */
+        .overscroll-contain {
+          overscroll-behavior: contain;
+        }
+
+       
+      `}</style>
     </>
   );
 }

@@ -32,19 +32,37 @@ export default function MessageBubble({
 }: MessageBubbleProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const [isMobile, setIsMobile] = useState(false);
   const errorRefs = useRef<(HTMLSpanElement | null)[]>([]);
 
   const isUser = role === "user";
+
+  // Detectar mobile
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Calcular posición del tooltip
   const updateTooltipPosition = (index: number) => {
     const element = errorRefs.current[index];
     if (element) {
       const rect = element.getBoundingClientRect();
-      setTooltipPosition({
-        x: rect.left,
-        y: rect.top + rect.height / 2
-      });
+      
+      if (isMobile) {
+        // En mobile, centrar el tooltip
+        setTooltipPosition({
+          x: window.innerWidth / 2,
+          y: rect.bottom + 10
+        });
+      } else {
+        setTooltipPosition({
+          x: rect.left,
+          y: rect.top + rect.height / 2
+        });
+      }
     }
   };
 
@@ -55,29 +73,27 @@ export default function MessageBubble({
       window.addEventListener('scroll', handleScroll, true);
       return () => window.removeEventListener('scroll', handleScroll, true);
     }
-  }, [hoveredIndex]);
+  }, [hoveredIndex, isMobile]);
 
-  // Procesar contenido del asistente: negritas, cursivas, y keywords
+  // Procesar contenido del asistente
   const processAssistantContent = (text: string) => {
-    // Primero procesar markdown básico
     let processed = text
       .replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-[#0C212D]">$1</strong>')
       .replace(/\*(.*?)\*/g, '<em class="italic text-[#112C3E]">$1</em>');
 
-    // Detectar y resaltar keywords comunes en aprendizaje de idiomas
     const keywords = [
-      'remember', 'recuerda', 'important', 'importante', 'note', 'nota',
-      'tip', 'consejo', 'practice', 'practica', 'attention', 'atención',
+      'remember', 'recuerda', 'recordá', 'important', 'importante', 'note', 'nota',
+      'tip', 'consejo', 'practice', 'practica', 'practicá', 'attention', 'atención',
       'correct', 'correcto', 'incorrect', 'incorrecto', 'error',
-      'good', 'bien', 'excellent', 'excelente', 'great', 'genial',
-      'try', 'intenta', 'avoid', 'evita', 'use', 'usa', 'utiliza'
+      'good', 'bien', 'excellent', 'excelente', 'great', 'genial', 'bárbaro',
+      'try', 'intenta', 'intentá', 'avoid', 'evita', 'evitá', 'use', 'usa', 'usá', 'utiliza', 'utilizá'
     ];
 
     keywords.forEach(keyword => {
       const regex = new RegExp(`\\b(${keyword})\\b`, 'gi');
       processed = processed.replace(
         regex,
-        '<span class="px-2 py-0.5 bg-[#EE7203]/10 text-[#EE7203] rounded font-semibold">$1</span>'
+        '<span class="px-1.5 py-0.5 bg-[#EE7203]/10 text-[#EE7203] rounded text-sm font-semibold">$1</span>'
       );
     });
 
@@ -90,7 +106,6 @@ export default function MessageBubble({
       let parts: JSX.Element[] = [];
       let lastIndex = 0;
 
-      // Ordenar correcciones por posición
       const sortedCorrections = [...corrections].sort(
         (a, b) => a.position - b.position
       );
@@ -107,22 +122,32 @@ export default function MessageBubble({
           );
         }
 
-        // Error subrayado con tooltip mejorado
+        // Error subrayado - MEJORADO PARA MOBILE
         parts.push(
           <span
             key={`error-${idx}`}
             className="relative inline-block group"
             ref={(el) => (errorRefs.current[idx] = el)}
-            onMouseEnter={() => {
-              setHoveredIndex(idx);
-              updateTooltipPosition(idx);
+            onClick={() => {
+              if (isMobile) {
+                setHoveredIndex(hoveredIndex === idx ? null : idx);
+                updateTooltipPosition(idx);
+              }
             }}
-            onMouseLeave={() => setHoveredIndex(null)}
+            onMouseEnter={() => {
+              if (!isMobile) {
+                setHoveredIndex(idx);
+                updateTooltipPosition(idx);
+              }
+            }}
+            onMouseLeave={() => {
+              if (!isMobile) {
+                setHoveredIndex(null);
+              }
+            }}
           >
-            <span className="relative inline-block px-1 bg-[#FF3816]/10 rounded cursor-help">
-              <span className="relative z-10">{error}</span>
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FF3816] rounded-full"></span>
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FF3816] rounded-full animate-pulse"></span>
+            <span className="relative inline-block px-1 py-0.5 bg-yellow-100 border-b-2 border-yellow-500 rounded-sm cursor-pointer transition-all hover:bg-yellow-200 active:bg-yellow-300">
+              <span className="relative z-10 text-gray-900 font-medium">{error}</span>
             </span>
           </span>
         );
@@ -137,14 +162,14 @@ export default function MessageBubble({
         );
       }
 
-      return <div className="whitespace-pre-wrap leading-relaxed">{parts}</div>;
+      return <div className="whitespace-pre-wrap leading-relaxed text-sm sm:text-base">{parts}</div>;
     }
 
     // Mensaje del asistente con procesamiento
     if (!isUser) {
       return (
         <div
-          className="whitespace-pre-wrap leading-relaxed"
+          className="whitespace-pre-wrap leading-relaxed text-sm sm:text-base"
           dangerouslySetInnerHTML={{ __html: processAssistantContent(content) }}
         />
       );
@@ -152,13 +177,13 @@ export default function MessageBubble({
 
     // Mensaje del usuario sin correcciones
     return (
-      <div className="whitespace-pre-wrap leading-relaxed">
+      <div className="whitespace-pre-wrap leading-relaxed text-sm sm:text-base">
         {content}
       </div>
     );
   };
 
-  // Tooltip renderizado con portal
+  // Tooltip mejorado para mobile
   const renderTooltip = () => {
     if (hoveredIndex === null || !corrections[hoveredIndex]) return null;
 
@@ -166,67 +191,79 @@ export default function MessageBubble({
 
     const tooltip = (
       <div
-        className="fixed z-[999999] pointer-events-none transition-all duration-200"
-        style={{
+        className={clsx(
+          "fixed z-[999999] transition-all duration-200",
+          isMobile ? "inset-x-4" : "pointer-events-none"
+        )}
+        style={isMobile ? {
+          top: `${tooltipPosition.y}px`,
+          opacity: tooltipPosition.y === 0 ? 0 : 1
+        } : {
           left: `${tooltipPosition.x}px`,
           top: `${tooltipPosition.y}px`,
-          transform: 'translate(calc(-100% - 16px), -50%)',
+          transform: 'translate(calc(-100% - 20px), -50%)',
           opacity: tooltipPosition.x === 0 ? 0 : 1
         }}
+        onClick={(e) => {
+          if (isMobile) {
+            e.stopPropagation();
+            setHoveredIndex(null);
+          }
+        }}
       >
-        <div
-          className="
-            bg-gradient-to-br from-[#0C212D] to-[#112C3E]
-            text-white 
-            rounded-xl 
-            p-4 
-            shadow-2xl 
-            w-72 
-            whitespace-normal 
-            border-2
-            border-[#EE7203]/30
-          "
-        >
-          {/* Header del tooltip */}
-          <div className="flex items-center gap-2 mb-3 pb-2 border-b border-white/10">
-            <div className="w-2 h-2 rounded-full bg-[#FF3816] animate-pulse"></div>
-            <span className="text-[#FF3816]/80 text-xs uppercase tracking-wider font-bold">
-              Error Found
-            </span>
+        <div className={clsx(
+          "bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-2xl border-2 border-yellow-500/30",
+          isMobile ? "w-full" : "w-80"
+        )}>
+          {/* Header */}
+          <div className="flex items-center justify-between gap-3 mb-3 sm:mb-4 pb-2 sm:pb-3 border-b-2 border-gray-100">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-yellow-100">
+                <span className="text-lg sm:text-xl">💡</span>
+              </div>
+              <span className="text-yellow-600 text-[10px] sm:text-xs uppercase tracking-wider font-bold">
+                Correction
+              </span>
+            </div>
+            {isMobile && (
+              <button 
+                onClick={() => setHoveredIndex(null)}
+                className="text-gray-400 hover:text-gray-600 text-xl"
+              >
+                ×
+              </button>
+            )}
           </div>
 
-          {/* Corrección */}
-          <div className="mb-3">
-            <div className="text-[#10b981] font-bold mb-1 flex items-center gap-2">
-              <span className="text-lg">✓</span>
-              <span>{correction.correction}</span>
-            </div>
+          {/* Error original */}
+          <div className="mb-2 sm:mb-3 p-2 sm:p-3 bg-red-50 rounded-lg border-l-4 border-red-400">
+            <div className="text-[10px] sm:text-xs text-red-600 font-semibold mb-1">Your text:</div>
+            <div className="text-sm sm:text-base text-red-800 font-medium">{correction.error}</div>
+          </div>
+
+          {/* Corrección sugerida */}
+          <div className="mb-3 sm:mb-4 p-2 sm:p-3 bg-green-50 rounded-lg border-l-4 border-green-400">
+            <div className="text-[10px] sm:text-xs text-green-600 font-semibold mb-1">Suggested:</div>
+            <div className="text-base sm:text-lg text-green-800 font-bold">{correction.correction}</div>
           </div>
 
           {/* Explicación */}
-          <div className="bg-white/5 rounded-lg p-3 border border-white/10">
-            <p className="text-white/90 text-xs leading-relaxed">
-              {correction.explanation}
-            </p>
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-3 sm:p-4 border border-blue-200">
+            <div className="flex items-start gap-2">
+              <span className="text-blue-500 text-base sm:text-xl mt-0.5 flex-shrink-0">ℹ️</span>
+              <p className="text-gray-700 text-xs sm:text-sm leading-relaxed">
+                {correction.explanation}
+              </p>
+            </div>
           </div>
 
-          {/* Flecha mejorada */}
-          <div
-            className="
-              absolute 
-              top-1/2 
-              right-0 
-              -translate-y-1/2 
-              translate-x-full 
-              w-0 
-              h-0 
-              border-t-[10px] 
-              border-b-[10px] 
-              border-l-[10px] 
-              border-transparent 
-              border-l-[#0C212D]
-            "
-          ></div>
+          {/* Flecha del tooltip - SOLO DESKTOP */}
+          {!isMobile && (
+            <div
+              className="absolute top-1/2 right-0 -translate-y-1/2 translate-x-full w-0 h-0 border-t-[12px] border-b-[12px] border-l-[12px] border-transparent border-l-white"
+              style={{ filter: 'drop-shadow(2px 0 2px rgba(0,0,0,0.1))' }}
+            ></div>
+          )}
         </div>
       </div>
     );
@@ -234,54 +271,70 @@ export default function MessageBubble({
     return typeof window !== 'undefined' ? createPortal(tooltip, document.body) : null;
   };
 
-  // Renderizar score de pronunciación
+  // Score de pronunciación mejorado para mobile
   const renderPronunciationScore = () => {
     if (!pronunciation) return null;
 
     const getScoreColor = (score: number) => {
-      if (score >= 8) return "text-green-500";
-      if (score >= 6) return "text-yellow-500";
-      return "text-red-500";
+      if (score >= 8) return "from-green-500 to-emerald-600";
+      if (score >= 6) return "from-yellow-500 to-orange-500";
+      return "from-red-500 to-rose-600";
+    };
+
+    const getScoreEmoji = (score: number) => {
+      if (score >= 8) return "🎯";
+      if (score >= 6) return "👍";
+      return "💪";
     };
 
     const getScoreLabel = (score: number) => {
       if (score >= 8) return "Excellent";
       if (score >= 6) return "Good";
-      return "Needs practice";
+      return "Keep practicing";
     };
 
     return (
-      <div className="mt-3 pt-3 border-t border-white/20">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-lg"></span>
-          <span className="text-xs font-bold uppercase opacity-90">Pronunciation</span>
+      <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t-2 border-white/20">
+        <div className="flex items-center gap-2 mb-2 sm:mb-3">
+          <span className="text-xl sm:text-2xl">{getScoreEmoji(pronunciation.score)}</span>
+          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-white/90">Pronunciation</span>
         </div>
         
-        <div className="bg-white/10 rounded-lg p-3 space-y-2">
+        <div className="bg-white/10 backdrop-blur-sm rounded-lg sm:rounded-xl p-3 sm:p-4 space-y-2 sm:space-y-3 border border-white/20">
+          {/* Score principal */}
           <div className="flex items-center justify-between">
-            <span className="text-xs">Score:</span>
-            <div className="flex items-center gap-2">
-              <span className={`text-lg font-bold ${getScoreColor(pronunciation.score)}`}>
-                {pronunciation.score}/10
-              </span>
-              <span className="text-xs opacity-70">({getScoreLabel(pronunciation.score)})</span>
+            <span className="text-xs sm:text-sm text-white/80">Score:</span>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className={`flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br ${getScoreColor(pronunciation.score)} shadow-lg`}>
+                <span className="text-xl sm:text-2xl font-bold text-white">{pronunciation.score}</span>
+              </div>
+              <div className="text-right">
+                <div className="text-[10px] sm:text-xs text-white/60">out of 10</div>
+                <div className="text-xs sm:text-sm font-semibold text-white">{getScoreLabel(pronunciation.score)}</div>
+              </div>
             </div>
           </div>
           
+          {/* Feedback */}
           {pronunciation.feedback && (
-            <p className="text-xs leading-relaxed opacity-90">
-              {pronunciation.feedback}
-            </p>
+            <div className="bg-white/5 rounded-lg p-2 sm:p-3 border border-white/10">
+              <p className="text-xs sm:text-sm leading-relaxed text-white/90">
+                {pronunciation.feedback}
+              </p>
+            </div>
           )}
 
+          {/* Issues comunes */}
           {pronunciation.commonIssues && pronunciation.commonIssues.length > 0 && (
-            <div className="mt-2 pt-2 border-t border-white/10">
-              <span className="text-xs font-semibold opacity-90">Focus on:</span>
-              <ul className="mt-1 space-y-1">
+            <div className="bg-white/5 rounded-lg p-2 sm:p-3 border border-white/10">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs sm:text-sm font-semibold text-white/90">Focus areas:</span>
+              </div>
+              <ul className="space-y-1 sm:space-y-1.5">
                 {pronunciation.commonIssues.map((issue, idx) => (
-                  <li key={idx} className="text-xs opacity-80 flex items-start gap-1">
-                    <span>•</span>
-                    <span>{issue}</span>
+                  <li key={idx} className="text-xs sm:text-sm text-white/80 flex items-start gap-2">
+                    <span className="text-yellow-400 mt-0.5 flex-shrink-0">▸</span>
+                    <span className="break-words">{issue}</span>
                   </li>
                 ))}
               </ul>
@@ -296,13 +349,13 @@ export default function MessageBubble({
     <>
       <div
         className={clsx(
-          "flex",
+          "flex px-2 sm:px-0",
           isUser ? "justify-end" : "justify-start"
         )}
       >
         <div
           className={clsx(
-            "max-w-[75%] px-5 py-4 rounded-2xl shadow-lg relative transition-all duration-200",
+            "max-w-[85%] sm:max-w-[75%] px-3 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl shadow-lg relative transition-all duration-200",
             isUser
               ? "bg-gradient-to-br from-[#EE7203] to-[#FF3816] text-white rounded-br-md"
               : "bg-white text-gray-800 rounded-bl-md border-2 border-gray-100"
@@ -310,10 +363,37 @@ export default function MessageBubble({
         >
           {renderContentWithCorrections()}
           {renderPronunciationScore()}
+          
+          {/* Indicador de correcciones disponibles */}
+          {isUser && corrections.length > 0 && (
+            <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-white/20">
+              <div className="flex items-center gap-2 text-[10px] sm:text-xs text-white/80">
+                <span className="flex items-center justify-center w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-yellow-400 text-yellow-900 font-bold text-[9px] sm:text-[10px]">
+                  {corrections.length}
+                </span>
+                <span className="leading-tight">
+                  {isMobile 
+                    ? "Tap highlighted words for corrections"
+                    : corrections.length === 1 
+                      ? "Hover over the highlighted text to see the correction" 
+                      : `${corrections.length} corrections - hover to see details`}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       {renderTooltip()}
+      
+      {/* Overlay para cerrar tooltip en mobile */}
+      {isMobile && hoveredIndex !== null && createPortal(
+        <div 
+          className="fixed inset-0 bg-black/20 z-[999998]"
+          onClick={() => setHoveredIndex(null)}
+        />,
+        document.body
+      )}
     </>
   );
 }

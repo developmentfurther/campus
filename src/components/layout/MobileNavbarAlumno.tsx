@@ -16,7 +16,8 @@ import {
   FiZap,
   FiMenu,
   FiX,
-  FiInfo
+  FiInfo,
+  FiHeadphones
 } from "react-icons/fi";
 import { useI18n } from "@/contexts/I18nContext";
 
@@ -59,6 +60,14 @@ export default function MobileNavbarAlumno() {
     },
   ];
 
+  // 2. Nueva sección dedicada para Multimedia / Podcast
+    const menuMedia = [
+      { 
+        id: "podcast", 
+        label: "Podcast", 
+        icon: <FiHeadphones size={20} /> // Icono específico
+      },
+    ];
   const menuPersonal = [
     { id: "perfil", label: t("sidebar.profile"), icon: <FiUser size={20} /> },
   ];
@@ -175,6 +184,22 @@ export default function MobileNavbarAlumno() {
             ))}
           </ul>
 
+
+{/* --- 3. NUEVA SECCIÓN MULTIMEDIA (PODCAST) --- */}
+        <MobileSectionTitle icon={<FiHeadphones size={12} />}>
+          Multimedia
+        </MobileSectionTitle>
+        <ul className="space-y-2 mb-8">
+          {menuMedia.map((item) => (
+            <MobileNavButton
+               key={item.id}
+                icon={item.icon}
+                label={item.label}
+                active={section === item.id}
+                onClick={() => handleNavigation(item.id)}
+            />
+          ))}
+        </ul>
           {/* Personal Section */}
           <MobileSectionTitle icon={<FiUser size={12} />}>
             {t("sidebar.accountSection")}
