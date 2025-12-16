@@ -88,8 +88,19 @@ export default function SidebarAlumno() {
         </p>
       </div>
 
-      {/* NAVIGATION */}
-      <nav className="flex-1 px-4 py-2 overflow-y-auto relative z-10">
+      <nav 
+        className="flex-1 px-4 py-2 overflow-y-auto relative z-10 scrollbar-hide"
+        style={{
+          scrollbarWidth: 'none',  /* Firefox */
+          msOverflowStyle: 'none',  /* IE and Edge */
+        }}
+      >
+        {/* Estilo para Webkit (Chrome, Safari, Opera) */}
+        <style jsx>{`
+          nav::-webkit-scrollbar {
+            display: none;
+          }
+        `}</style>
         
         {/* --- CAMPUS --- */}
         <SectionTitle icon={<FiZap size={12} />}>
