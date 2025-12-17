@@ -17,12 +17,14 @@ interface ChatbotVideoModalProps {
   videoUrl?: string;
   autoShow?: boolean;
   videoType?: "youtube" | "vimeo" | "direct";
+  onClose?: () => void;
 }
 
 export default function ChatbotVideoModal({
   videoUrl = "https://www.youtube.com/embed/dQw4w9WgXcQ", // 👈 Cambia por tu video del chatbot
   autoShow = true,
   videoType = "youtube",
+  onClose, 
 }: ChatbotVideoModalProps) {
   const { t } = useI18n();
   const { hasSeenChatbotVideo, markChatbotVideoAsSeen, loadingChatbotVideoStatus, user } = useAuth();
@@ -58,6 +60,7 @@ export default function ChatbotVideoModal({
     setTimeout(() => {
       setIsOpen(false);
       setIsClosing(false);
+      onClose?.(); // 🔥 AVISA AL PADRE
     }, 300);
   };
 

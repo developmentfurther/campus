@@ -233,6 +233,7 @@ function SidebarButton({
 }) {
   return (
     <button
+    data-tutorial={id === "chat-history" ? "chat-history" : undefined}
       onClick={onClick}
       style={{ animationDelay: `${delay}ms` }}
       className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all duration-300 group relative overflow-hidden ${

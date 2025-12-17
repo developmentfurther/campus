@@ -11,6 +11,8 @@ import TypingIndicator from "./TypingIndicator";
 import Image from "next/image";
 import { useI18n } from "@/contexts/I18nContext";
 import ChatbotVideoModal from "@/components/ui/ChatbotVideoModal";
+import ChatboxTutorial from "./ChatboxTutorial";
+
 
 /* =============================================
    🔤 Markdown => HTML (negrita, cursiva)
@@ -64,7 +66,7 @@ interface Message {
 }
 
 export default function ChatBox() {
-  const { userProfile, user, hasSeenWelcomeVideo, loadingVideoStatus } = useAuth();
+  const { userProfile, user, hasSeenChatbotTutorial, markChatbotTutorialAsSeen, loadingChatbotTutorialStatus } = useAuth();
   const { t } = useI18n();
 
   const rawLang = userProfile?.learningLanguage?.toLowerCase() || "en";
@@ -90,6 +92,7 @@ export default function ChatBox() {
     );
   }
 
+  
   /* =============================================
      💬 Mensajes del chat
   ============================================= */
@@ -114,6 +117,27 @@ export default function ChatBox() {
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputContainerRef = useRef<HTMLDivElement>(null);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [videoFinished, setVideoFinished] = useState(false);
+
+
+
+useEffect(() => {
+  if (
+    videoFinished &&
+    !loadingChatbotTutorialStatus &&
+    userProfile &&
+    !hasSeenChatbotTutorial
+  ) {
+    setShowTutorial(true);
+  }
+}, [
+  videoFinished,
+  userProfile,
+  hasSeenChatbotTutorial,
+  loadingChatbotTutorialStatus
+]);
+
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -544,17 +568,31 @@ Please try again.
     }
   };
 
+const closeTutorial = () => {
+  setShowTutorial(false);
+};
+
+
   /* =============================================
      UI Final - OPTIMIZADO PARA MOBILE
   ============================================= */
   return (
     <>
+   
+    
       <ChatbotVideoModal
         videoUrl="https://player.vimeo.com/video/1146041754"
         autoShow={true}
         videoType="youtube"
+        onClose={() => setVideoFinished(true)}
       />
-      
+      {showTutorial && (
+  <ChatboxTutorial
+    onComplete={closeTutorial}
+    onSkip={closeTutorial}
+  />
+)}
+
       {/* WRAPPER CON SAFE AREA PARA MOBILE */}
      <div className="w-full h-[calc(100dvh-80px)] sm:h-[85vh] sm:max-w-4xl sm:mx-auto flex flex-col px-1 py-1 sm:p-0">
         
@@ -582,7 +620,7 @@ Please try again.
                     Mr Further
                     <FiZap className="text-[#EE7203]" size={14} />
                   </h2>
-                  <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5">
+                  <div data-tutorial="language-level" className="flex items-center gap-1.5 sm:gap-2 mt-0.5">
                     <span className="px-1.5 sm:px-2 py-0.5 bg-[#EE7203] text-white text-[10px] sm:text-xs font-bold rounded uppercase">
                       {language}
                     </span>
@@ -593,6 +631,7 @@ Please try again.
               </div>
 
               <button
+              data-tutorial="end-button"
                 onClick={finishConversation}
                 className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl bg-white/10 text-white font-semibold text-xs sm:text-sm hover:bg-[#FF3816] transition-colors duration-200 active:scale-95"
               >
@@ -604,7 +643,7 @@ Please try again.
           </div>
 
           {/* CHAT AREA - OPTIMIZADO MOBILE */}
-         <div className="flex-1 overflow-y-auto bg-gray-50 overscroll-contain min-h-0">
+         <div data-tutorial="chat-area" className="flex-1 overflow-y-auto bg-gray-50 overscroll-contain min-h-0">
             <div className="p-3 sm:p-6 space-y-3 sm:space-y-4 pb-4 min-h-full">
               {messages.map((msg, idx) => (
                 <MessageBubble
@@ -661,6 +700,7 @@ Please try again.
               <div className="flex items-end gap-2 sm:gap-3">
                 <div className="flex-1 relative">
                   <textarea
+                    data-tutorial="text-input"
                     className="w-full border-2 border-gray-200 rounded-xl p-2.5 sm:p-3 pr-8 sm:pr-10 resize-none focus:outline-none focus:border-[#EE7203] focus:ring-2 focus:ring-[#EE7203]/20 min-h-[48px] sm:min-h-[56px] max-h-[100px] sm:max-h-[120px] transition-colors text-sm sm:text-base"
                     placeholder={t("chat.inputPlaceholder")}
                     value={input}
@@ -679,6 +719,7 @@ Please try again.
 
                 {/* Botón de voz */}
                 <button
+                data-tutorial="voice-button"
                   onClick={isRecording ? stopRecording : startRecording}
                   disabled={isProcessingAudio}
                   className={clsx(
@@ -693,6 +734,7 @@ Please try again.
 
                 {/* Botón de envío */}
                 <button
+                data-tutorial="send-button"
                   onClick={handleSend}
                   disabled={!input.trim() || isRecording || isProcessingAudio}
                   className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white hover:shadow-lg hover:shadow-[#EE7203]/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 active:scale-95 flex-shrink-0 shadow-md shadow-orange-200"

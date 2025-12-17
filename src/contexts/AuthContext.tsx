@@ -81,6 +81,15 @@ interface AuthContextType {
   markCoursePlayerVideoAsSeen: () => Promise<void>;
   loadingCoursePlayerVideoStatus: boolean;
 
+  hasSeenChatbotTutorial: boolean;
+  markChatbotTutorialAsSeen: () => Promise<void>;
+  loadingChatbotTutorialStatus: boolean;
+
+  // 📚 Tutorial del Course Player (NUEVO)
+hasSeenCoursePlayerTutorial: boolean;
+markCoursePlayerTutorialAsSeen: () => Promise<void>;
+loadingCoursePlayerTutorialStatus: boolean;
+
 podcastEpisodes: SpotifyEpisode[];
   loadingPodcast: boolean;
   loadPodcastEpisodes?: () => Promise<void>;
@@ -121,6 +130,9 @@ const AuthContext = createContext<AuthContextType>({
   userProfile: null,
   loggingOut: false,
 logout: async () => {},
+  hasSeenCoursePlayerTutorial: false,
+  markCoursePlayerTutorialAsSeen: async () => {},
+  loadingCoursePlayerTutorialStatus: false,
 });
 
 /* ==========================================================
@@ -152,6 +164,11 @@ const [loadingChatbotVideoStatus, setLoadingChatbotVideoStatus] = useState(false
 // 📚 Estados para video del COURSE PLAYER
 const [hasSeenCoursePlayerVideo, setHasSeenCoursePlayerVideo] = useState(false);
 const [loadingCoursePlayerVideoStatus, setLoadingCoursePlayerVideoStatus] = useState(false); // 👈 CAMBIAR a false
+const [hasSeenChatbotTutorial, setHasSeenChatbotTutorial] = useState(false);
+const [loadingChatbotTutorialStatus, setLoadingChatbotTutorialStatus] = useState(false);
+const [hasSeenCoursePlayerTutorial, setHasSeenCoursePlayerTutorial] = useState(false);
+const [loadingCoursePlayerTutorialStatus, setLoadingCoursePlayerTutorialStatus] = useState(false);
+
 
   const [profesores, setProfesores] = useState<any[]>([]);
   const [loadingProfesores, setLoadingProfesores] = useState(false);
@@ -504,21 +521,72 @@ async function loadRecentActivity(uid: string, profile: any, cursos: any[]) {
 //     }
 //   };
 
-// 🎬 Video Dashboard - DESHABILITADO
+// // 🎓 Marcar tutorial del CHATBOT como visto (NUEVA FUNCIÓN)
+// const markChatbotTutorialAsSeen = async () => {
+//   if (!user || !userProfile?.batchId || !userProfile?.userKey) {
+//     console.error("❌ No se puede marcar tutorial chatbot: faltan datos");
+//     return;
+//   }
+
+//   try {
+//     const batchRef = doc(db, "alumnos", userProfile.batchId);
+//     const snap = await getDoc(batchRef);
+    
+//     if (!snap.exists()) throw new Error("Batch no existe");
+
+//     const batchData = snap.data();
+//     const userData = batchData[userProfile.userKey] || {};
+
+//     await setDoc(
+//       batchRef,
+//       {
+//         [userProfile.userKey]: {
+//           ...userData,
+//           hasSeenChatbotTutorial: true, // 👈 Campo específico
+//           chatbotTutorialSeenAt: new Date().toISOString(),
+//         },
+//       },
+//       { merge: true }
+//     );
+
+//     setHasSeenChatbotTutorial(true);
+//     setUserProfile({
+//       ...userProfile,
+//       hasSeenChatbotTutorial: true,
+//       chatbotTutorialSeenAt: new Date().toISOString(),
+//     });
+
+//     console.log("✅ Tutorial chatbot marcado como visto");
+//   } catch (err) {
+//     console.error("❌ Error al marcar tutorial chatbot:", err);
+//     toast.error("Error al guardar el progreso del tutorial");
+//   }
+// };
+
+
+// BORRAR ESTAS FUNCIONES LUEGO DE LAS DEMOS Y DESCOMENTAR LO DE ARRIBA
+const markChatbotTutorialAsSeen = async () => {
+  console.log("⚠️ Función deshabilitada - video siempre visible");
+  // No hace nada
+};
 const markWelcomeVideoAsSeen = async () => {
   console.log("⚠️ Función deshabilitada - video siempre visible");
   // No hace nada
 };
 
-// 🤖 Video Chatbot - DESHABILITADO
 const markChatbotVideoAsSeen = async () => {
   console.log("⚠️ Función deshabilitada - video siempre visible");
   // No hace nada
 };
 
-// 📚 Video Course Player - DESHABILITADO
 const markCoursePlayerVideoAsSeen = async () => {
   console.log("⚠️ Función deshabilitada - video siempre visible");
+  // No hace nada
+};
+
+// BORRAR ESTAS FUNCIONES LUEGO DE LAS DEMOS Y DESCOMENTAR LO DE ARRIBA
+const markCoursePlayerTutorialAsSeen = async () => {
+  console.log("⚠️ Función deshabilitada - tutorial siempre visible");
   // No hace nada
 };
   /* ==========================================================
@@ -872,6 +940,7 @@ const getCourseProgress = async (uid: string, courseId: string) => {
     // setLoadingVideoStatus(true); // 👈 Dashboard
     //   setLoadingChatbotVideoStatus(true); // 👈 Chatbot
     //   setLoadingCoursePlayerVideoStatus(true); // 👈 Material academico
+    //  setLoadingChatbotTutorialStatus(true); 👈 Chatbot TUTORIAL
 
     try {
       if (firebaseUser) {
@@ -926,6 +995,9 @@ const getCourseProgress = async (uid: string, courseId: string) => {
             // setHasSeenCoursePlayerVideo(coursePlayerVideoSeen);
             // console.log(`📖 Video course player: ${coursePlayerVideoSeen ? "Visto" : "No visto"}`);
 
+            // const chatbotTutorialSeen = data.hasSeenChatbotTutorial === true;
+            // setHasSeenChatbotTutorial(chatbotTutorialSeen);
+            // console.log(`🎓 Tutorial chatbot: ${chatbotTutorialSeen ? "Visto" : "No visto"}`)
             // ⚠️ Si es PROFESOR, inicializar idiomas si no existen
             if (profile.role === "profesor") {
               profile.idiomasProfesor = Array.isArray(data.idiomasProfesor)
@@ -994,7 +1066,7 @@ const getCourseProgress = async (uid: string, courseId: string) => {
         setLoadingVideoStatus(false); // 👈 NUEVO
         setLoadingChatbotVideoStatus(false); // 👈 Chatbot
         setLoadingCoursePlayerVideoStatus(false); // 👈 NUEVO
-
+        setLoadingChatbotTutorialStatus(false);
             } else {
           setUser(null);
           setRole(null);
@@ -1002,7 +1074,8 @@ const getCourseProgress = async (uid: string, courseId: string) => {
           setUserProfile(null);
           setHasSeenWelcomeVideo(false);
           setHasSeenChatbotVideo(false);
-          setHasSeenCoursePlayerVideo(false); // 👈 AGREGADO
+          setHasSeenCoursePlayerVideo(false);
+          setHasSeenChatbotTutorial(false);
           setLang("en");
           
       }
@@ -1014,6 +1087,7 @@ const getCourseProgress = async (uid: string, courseId: string) => {
       // setLoadingVideoStatus(false);
       // setLoadingChatbotVideoStatus(false);
       // setLoadingCoursePlayerVideoStatus(false);
+      // setLoadingChatbotTutorialStatus(false);
       setLoading(false);
       setAuthReady(true);
     }
@@ -1089,6 +1163,15 @@ const value = useMemo(
       hasSeenCoursePlayerVideo,
       markCoursePlayerVideoAsSeen,
       loadingCoursePlayerVideoStatus,
+
+      hasSeenChatbotTutorial,
+    markChatbotTutorialAsSeen,
+    loadingChatbotTutorialStatus,
+
+    // 📚 Tutorial Course Player (NUEVO)
+    hasSeenCoursePlayerTutorial,
+    markCoursePlayerTutorialAsSeen,
+    loadingCoursePlayerTutorialStatus,
 
       podcastEpisodes,
     loadingPodcast,

@@ -38,7 +38,7 @@ import MobileMenu from "@/components/ui/MobileMenu";
 import LoaderUi from "@/components/ui/LoaderUi";
 import MarkdownWYSIWYG from "@/components/cursos/cursoItem/blocks/MarkdownWYSIWYG";
 import CoursePlayerVideoModal from "@/components/ui/CoursePlayerVideoModal"; 
-
+import CoursePlayerTutorial from "@/components/material-academico/CoursePlayerTutorial";
 
 
 
@@ -131,7 +131,7 @@ export default function CoursePlayerPage() {
   const router = useRouter();
   const params = useParams();
   const courseId = params?.id?.toString?.() || "";
-  const { user, role, authReady, loading: authLoading, userProfile, saveCourseProgress, getCourseProgress } = useAuth();
+  const { user, role, authReady, loading: authLoading, userProfile, saveCourseProgress, getCourseProgress, hasSeenCoursePlayerTutorial, markCoursePlayerTutorialAsSeen, loadingCoursePlayerTutorialStatus } = useAuth();
   const { t } = useI18n();
 
 
@@ -2635,9 +2635,9 @@ function DownloadBibliographyButton({ unit, courseTitle }) {
           </div>
 
           <div className="text-left">
-            <p className="text-sm font-black text-[#0C212D]">Bibliografía</p>
+            <p className="text-sm font-black text-[#0C212D]">Academic Material</p>
             <p className="text-xs text-slate-500">
-              {loading ? "Generando PDF..." : "Descargar PDF"}
+              {loading ? "Generating PDF..." : "Download PDF"}
             </p>
           </div>
         </div>
@@ -2870,6 +2870,7 @@ function EnhancedCourseIntro({
   <div className="relative p-6 border-b border-[#EE7203]/20">
     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#EE7203] to-transparent"></div>
     <button
+    data-tutorial="back-home"
       onClick={() => router.push("/dashboard")}
       className="flex items-center gap-2 text-sm text-white/70 hover:text-white font-semibold transition-all group"
     >
@@ -2897,7 +2898,9 @@ function EnhancedCourseIntro({
 
   {/* Navigation */}
   {/* El pb-32 aquí es vital para que el scroll llegue hasta el final con holgura */}
-  <nav className="p-4 space-y-3 pb-32">
+  <nav
+  data-tutorial="sidebar-units"
+   className="p-4 space-y-3 pb-32">
     {units.map((u, uIdx) => {
       // Cierre del curso
       if (u.id === "closing-course") {
@@ -3033,6 +3036,7 @@ function EnhancedCourseIntro({
           <>
           {/* Header Hero */}
             <motion.div 
+            data-tutorial="lesson-header"
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: "easeOut" }}
@@ -3082,6 +3086,7 @@ function EnhancedCourseIntro({
           {/* VIDEO */}
             {resolvedVideoUrl && (
               <motion.div
+              data-tutorial="video-player"
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.5, delay: 0.1 }}
@@ -3140,7 +3145,9 @@ function EnhancedCourseIntro({
                 className="space-y-6"
               >
                 {/* Navigation Pills - Responsive: flex-wrap para que bajen si no caben */}
-                <div className="top-6 z-10 backdrop-blur-xl bg-white/80 rounded-2xl shadow-2xl border border-slate-200/50 p-2">
+                <div
+                data-tutorial="content-tabs"
+                 className="top-6 z-10 backdrop-blur-xl bg-white/80 rounded-2xl shadow-2xl border border-slate-200/50 p-2">
                   <div className="flex flex-wrap sm:flex-nowrap gap-2">
                     {activeLesson?.theory && (
                       <button
@@ -3198,6 +3205,7 @@ function EnhancedCourseIntro({
                   {/* TEORÍA */}
                   {activeTab === "theory" && activeLesson?.theory && (
                     <motion.div
+                    data-tutorial="theory-content"
                       key="theory"
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
@@ -3254,6 +3262,7 @@ function EnhancedCourseIntro({
                   Array.isArray(activeLesson?.ejercicios) &&
                   activeLesson.ejercicios.length > 0 && (
                     <motion.div
+                    data-tutorial="exercises-section"
                       key="exercises"
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
@@ -3341,6 +3350,7 @@ function EnhancedCourseIntro({
               className="flex justify-center pt-8 pb-8"
             >
               <button
+              data-tutorial="next-lesson"
                 onClick={goNextLesson}
                 className="group relative px-8 py-4 md:px-12 md:py-6 rounded-3xl font-black text-base md:text-lg shadow-2xl bg-gradient-to-r from-[#EE7203] via-[#FF3816] to-[#EE7203] bg-size-200 bg-pos-0 hover:bg-pos-100 text-white transition-all duration-500 hover:scale-105 hover:shadow-[#EE7203]/50 flex items-center gap-3 md:gap-4 w-full md:w-auto justify-center"
                 style={{ backgroundSize: '200% 100%' }}
@@ -3357,7 +3367,7 @@ function EnhancedCourseIntro({
     </main>
 
     {/* ======================= SIDEBAR DERECHA (Desktop) ======================= */}
-    <aside className="hidden xl:block xl:w-96 xl:shrink-0 bg-white border-l border-gray-200 sticky top-0 h-screen overflow-y-auto">
+    <aside data-tutorial="progress-sidebar" className="hidden xl:block xl:w-96 xl:shrink-0 bg-white border-l border-gray-200 sticky top-0 h-screen overflow-y-auto">
        {/* ... (Contenido Sidebar Derecha sin cambios) ... */}
        <div className="relative bg-gradient-to-br from-[#0C212D] to-[#112C3E] p-8 border-b-4 border-[#EE7203]">
           <div className="absolute top-0 right-0 w-32 h-32 bg-[#EE7203]/10 rounded-full blur-3xl"></div>
@@ -3407,7 +3417,7 @@ function EnhancedCourseIntro({
           </div>
         </div>
 
-        <div className="px-6 pb-6">
+        <div  className="px-6 pb-6">
           <div className="bg-gradient-to-br from-[#0C212D] to-[#112C3E] rounded-2xl p-5 shadow-xl">
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center">
@@ -3445,7 +3455,7 @@ function EnhancedCourseIntro({
           </div>
         </div>
 
-        <div className="px-6 pb-6">
+        <div data-tutorial="bibliography-download" className="px-6 pb-6">
           <div className="relative group">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-[#EE7203] to-[#FF3816] rounded-2xl blur opacity-20 group-hover:opacity-40 transition-opacity"></div>
             <DownloadBibliographyButton 
@@ -3471,6 +3481,13 @@ function EnhancedCourseIntro({
       autoShow={true}
       videoType="youtube"
     /> 
+
+    {/* {!loadingCoursePlayerTutorialStatus && !hasSeenCoursePlayerTutorial && (
+  <CoursePlayerTutorial
+    onComplete={markCoursePlayerTutorialAsSeen}
+    onSkip={markCoursePlayerTutorialAsSeen}
+  />
+)} */}
 
     <MobileMenu
       curso={curso}
