@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { FiBookOpen, FiAward, FiArrowRight, FiStar } from "react-icons/fi";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/contexts/I18nContext";
+import MyMaterialTutorial from "@/components/tutoriales/MyMaterialTutorial"; // 👈 IMPORTANTE
 
 export default function AlumnoCoursesPage() {
   const { misCursos, loadingCursos } = useAuth();
@@ -23,8 +24,14 @@ export default function AlumnoCoursesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white p-6 md:p-10">
       
+      {/* 👇 INTEGRACIÓN DEL TUTORIAL */}
+      {misCursos.length > 0 && <MyMaterialTutorial />}
+
       {/* HEADER con diseño asimétrico */}
-      <div className="max-w-7xl mx-auto mb-12">
+      <div 
+        data-tutorial="material-header" // 👈 TARGET 1
+        className="max-w-7xl mx-auto mb-12"
+      >
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
           <div className="flex-1">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white text-xs font-bold uppercase tracking-wider mb-4 shadow-lg">
@@ -50,7 +57,10 @@ export default function AlumnoCoursesPage() {
 
           {/* Stats card flotante */}
           {misCursos.length > 0 && (
-            <div className="lg:w-64 bg-gradient-to-br from-[#0C212D] to-[#112C3E] rounded-2xl p-6 shadow-2xl border border-[#EE7203]/20">
+            <div 
+              data-tutorial="material-stats" // 👈 TARGET 2
+              className="lg:w-64 bg-gradient-to-br from-[#0C212D] to-[#112C3E] rounded-2xl p-6 shadow-2xl border border-[#EE7203]/20"
+            >
               <div className="flex items-center gap-3">
                 <div className="p-3 rounded-xl bg-[#EE7203]">
                   <FiBookOpen className="text-white" size={24} />
@@ -124,8 +134,14 @@ function CourseCard({ course, index, router, t }) {
   
   const scheme = colorSchemes[index % colorSchemes.length];
 
+  // Solo marcamos el primer elemento para el tutorial
+  const isFirst = index === 0;
+
   return (
-    <div className="group relative rounded-3xl overflow-hidden transition-all duration-500 hover:scale-[1.02]">
+    <div 
+      data-tutorial={isFirst ? "first-course-card" : undefined} // 👈 TARGET 3 (Condicional)
+      className="group relative rounded-3xl overflow-hidden transition-all duration-500 hover:scale-[1.02]"
+    >
       
       {/* Gradient background */}
       <div 
@@ -182,7 +198,10 @@ function CourseCard({ course, index, router, t }) {
         </div>
 
         {/* Stats Grid - SIN DURACIÓN */}
-        <div className="grid grid-cols-2 gap-3 mb-6 flex-grow mt-6">
+        <div 
+          data-tutorial={isFirst ? "first-course-info" : undefined} // 👈 TARGET 4
+          className="grid grid-cols-2 gap-3 mb-6 flex-grow mt-6"
+        >
           <StatBubble
             icon={<FiBookOpen size={16} />}
             label={t("courses.units")}
@@ -199,6 +218,7 @@ function CourseCard({ course, index, router, t }) {
 
         {/* CTA Button */}
         <button
+          data-tutorial={isFirst ? "first-course-btn" : undefined} // 👈 TARGET 5
           onClick={() => window.open(`/material-academico/${course.id}`, "_blank")}
           className="relative w-full py-4 px-6 rounded-xl font-bold text-sm flex items-center justify-center gap-3 overflow-hidden transition-all duration-300 group-hover:gap-4 bg-white text-[#0C212D] hover:shadow-2xl"
         >

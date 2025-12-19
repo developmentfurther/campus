@@ -15,6 +15,7 @@ import {
 } from "firebase/firestore";
 import { query, orderBy } from "firebase/firestore";
 import { useI18n } from "@/contexts/I18nContext";
+import { useRouter } from "next/navigation";
 
 
 import {
@@ -143,6 +144,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [role, setRole] = useState<"admin" | "profesor" | "alumno" | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [loading, setLoading] = useState(true);
+  const router = useRouter(); // 👈 1. Instanciamos el router aquí
+  
 
   const [alumnos, setAlumnos] = useState<any[]>([]);
   const [misCursos, setMisCursos] = useState<any[]>([]);
@@ -188,17 +191,24 @@ const [loadingPodcast, setLoadingPodcast] = useState(false);
 
 
 
-  /* ==========================================================
-     🔹 Logout => Cierra sesion en firebase y limpia todo el estado local
+ /* ==========================================================
+     🔹 Logout => Cierra sesion y REDIRECCIONA
      ========================================================== */
   const logout = async () => {
     try {
       setLoggingOut(true);
       await signOut(auth);
+      
+      // Limpiamos estados (esto ya lo tenías bien)
       setUser(null);
       setRole(null);
       setMisCursos([]);
       setUserProfile(null);
+      
+      // 🔥 LA SOLUCIÓN: Redirección forzada
+      // Usamos replace para que no puedan volver atrás con el botón del navegador
+      router.replace("/"); // O '/login' si esa es tu ruta
+      
     } catch (err) {
       console.error("❌ Error al cerrar sesión:", err);
       toast.error("Error al cerrar sesión");

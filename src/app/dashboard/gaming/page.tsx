@@ -16,6 +16,7 @@ import {
 import { GAMES_MAP } from "@/app/gaming/games";
 import { useI18n } from "@/contexts/I18nContext";
 import Image from "next/image";
+import GamingTutorial from "@/components/tutoriales/GamingTutorial";
 
 export default function GamingHub() {
   const router = useRouter();
@@ -115,6 +116,8 @@ export default function GamingHub() {
   return (
     <div className="min-h-[80vh] px-6 py-20 relative overflow-hidden">
       {/* Floating geometric shapes */}
+
+      <GamingTutorial />
       <div className="absolute top-20 left-10 w-72 h-72 rounded-full bg-gradient-to-br from-[#EE7203]/10 to-[#FF3816]/5 blur-3xl animate-pulse"></div>
       <div
         className="absolute bottom-20 right-10 w-96 h-96 rounded-full bg-gradient-to-tl from-[#0C212D]/5 to-[#112C3E]/10 blur-3xl animate-pulse"
@@ -122,7 +125,8 @@ export default function GamingHub() {
       ></div>
 
       {/* HEADER - Asymmetric Layout */}
-      <header className="mb-20 max-w-7xl mx-auto">
+      <header
+       className="mb-20 max-w-7xl mx-auto">
         <div className="flex flex-col lg:flex-row items-center lg:items-start gap-12 lg:gap-20">
           <div className="relative group">
             <div className="absolute -inset-8 bg-gradient-to-r from-[#EE7203] via-[#FF3816] to-[#EE7203] rounded-full opacity-20 blur-2xl group-hover:opacity-30 transition-opacity duration-700"></div>
@@ -180,6 +184,7 @@ export default function GamingHub() {
             return (
               <div
                 key={game.slug}
+                data-tutorial={`game-card-${game.slug}`}
                 className={`group relative rounded-3xl overflow-hidden transform hover:scale-[1.02] transition-all duration-500 md:col-span-2 lg:col-span-1
 
                 `}

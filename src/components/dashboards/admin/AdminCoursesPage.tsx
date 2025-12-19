@@ -150,7 +150,7 @@ export default function MaterialAcademico() {
 
         {/* MODAL: CREATE COURSE */}
         <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-          <DialogOverlay className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40" />
+          <DialogOverlay className="fixed inset-0 bg-black/50 z-40" />
 
           <DialogContent
             className="!max-w-none !w-[95vw] !h-[90vh] !p-0 overflow-hidden 
@@ -172,7 +172,7 @@ export default function MaterialAcademico() {
 
         {/* MODAL: EDIT COURSE */}
         <Dialog open={isModalOpen} onOpenChange={handleCloseModal}>
-          <DialogOverlay className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40" />
+          <DialogOverlay className="fixed inset-0 bg-black/50 z-40" />
 
           <DialogContent
             className="!max-w-none !w-[95vw] !h-[90vh] !p-0 overflow-hidden 

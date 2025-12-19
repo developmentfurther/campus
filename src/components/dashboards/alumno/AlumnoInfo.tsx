@@ -16,6 +16,7 @@ import {
   FiHelpCircle,
 } from "react-icons/fi";
 import { useI18n } from "@/contexts/I18nContext";
+import InfoTutorial from "@/components/tutoriales/InfoTutorial";
 
 interface AlumnoInfoProps {
   userEmail?: string;
@@ -430,11 +431,14 @@ export default function AlumnoInfo({ userEmail = "test@gmail.com" }: AlumnoInfoP
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4">
       <div className="max-w-4xl mx-auto">
+
+        <InfoTutorial />
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
+          data-tutorial="info-header"
         >
           <div className="inline-flex items-center gap-3 bg-gradient-to-r from-[#EE7203] to-[#FF3816] px-6 py-2 rounded-full mb-4 shadow-lg">
             <FiInfo className="text-white" size={20} />
@@ -470,6 +474,7 @@ export default function AlumnoInfo({ userEmail = "test@gmail.com" }: AlumnoInfoP
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
+                data-tutorial={`section-${section.id}`}
                 className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden"
               >
                 <button
@@ -523,6 +528,7 @@ export default function AlumnoInfo({ userEmail = "test@gmail.com" }: AlumnoInfoP
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6 }}
           className="mt-8 bg-gradient-to-r from-[#0C212D] to-[#112C3E] rounded-2xl p-6 shadow-xl"
+        data-tutorial="info-footer"
         >
           <div className="flex items-start gap-4">
             <div className="w-10 h-10 rounded-full bg-[#EE7203] flex items-center justify-center flex-shrink-0">

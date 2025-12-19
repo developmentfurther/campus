@@ -37,6 +37,7 @@ import {
 import BlockEditor from "../cursoItem/blocks/BlockEditor";
 import ContentTimelineEditor from "../cursoItem/Content/ContentTimeLineEditor";
 import UnitBlockToolbar from "../cursoItem/blocks/UnitToolbar";
+import LessonItem from "../cursoItem/LessonItem"; // ✅ IMPORTADO
 import { db, storage } from "@/lib/firebase";
 
 /* ----------------- Interfaces ----------------- */
@@ -119,24 +120,6 @@ const defaultBlock = (type: string): LessonBlock => {
     return { ...base, value: "" };
 };
 
-// Subida a Imgur
-async function uploadToImgur(file: File): Promise<string | null> {
-  try {
-    const formData = new FormData();
-    formData.append("image", file);
-    const res = await fetch("https://api.imgur.com/3/image", {
-      method: "POST",
-      headers: { Authorization: "Client-ID TU_CLIENT_ID_AQUI" }, // ⚠️ REEMPLAZAR
-      body: formData,
-    });
-    const data = await res.json();
-    return data.success ? data.data.link : null;
-  } catch (err) {
-    console.error("Imgur error:", err);
-    return null;
-  }
-}
-
 /* ==============================================================
    COMPONENTE PRINCIPAL: CREAR CURSO
    ============================================================== */
@@ -168,14 +151,15 @@ export default function CrearCurso({ onClose }: { onClose?: () => void }) {
   const [uploading, setUploading] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
-  // --- Filtros Alumnos (Restaurados Completos) ---
+  // --- Filtros Alumnos ---
   const [filterIdioma, setFilterIdioma] = useState("");
   const [filterNivel, setFilterNivel] = useState("");
   const [filterNombre, setFilterNombre] = useState("");
   const [filterCursoId, setFilterCursoId] = useState("");
+  
 
   /* ==============================================================
-     LOGICA DE FILTRADO (Restaurada al 100% del original)
+     LOGICA DE FILTRADO
      ============================================================== */
   const filteredAlumnos = useMemo(() => {
   const list = Array.isArray(alumnos) ? alumnos : [];
@@ -201,7 +185,7 @@ export default function CrearCurso({ onClose }: { onClose?: () => void }) {
            tieneCurso;
   });
 
-  // 2. 🔥 AQUI ESTA LA MAGIA: Desduplicar por email
+  // 2. Desduplicar por email
   const uniqueMatches: any[] = [];
   const seenEmails = new Set();
 
@@ -274,6 +258,30 @@ export default function CrearCurso({ onClose }: { onClose?: () => void }) {
           contentTimeline: [...prev.contentTimeline, { id, type, refId: id }]
       }));
       setSelectedItemId(id);
+  };
+
+  // 🔥 NUEVA FUNCIÓN: Eliminar items del timeline y sus datos asociados
+  const deleteContentItem = (itemId: string) => {
+    const item = curso.contentTimeline.find((i) => i.id === itemId);
+    if (!item) return;
+
+    if (!confirm(`Delete this ${item.type.replace("_", " ")}?`)) return;
+
+    // 1. Actualizar el Timeline
+    setCurso((prev) => ({
+      ...prev,
+      contentTimeline: prev.contentTimeline.filter((i) => i.id !== itemId),
+    }));
+
+    // 2. Borrar datos asociados si es una unidad
+    if (item.type === "unit") {
+      setUnidades((prev) => prev.filter((u) => u.id !== item.refId));
+    }
+    
+    // 3. Resetear selección si borramos lo que estábamos viendo
+    if (selectedItemId === itemId) {
+        setSelectedItemId(null);
+    }
   };
 
   const updateUnidad = useCallback((idx: number, patch: Partial<Unidad>) => {
@@ -355,11 +363,9 @@ export default function CrearCurso({ onClose }: { onClose?: () => void }) {
                             type="url" 
                             className="w-full p-3 border rounded-xl" 
                             placeholder="https://vimeo.com/..." 
-                            value={u.introVideo || ""} // Usamos introVideo de la unidad
+                            value={u.introVideo || ""} 
                             onChange={e => {
-                                const val = e.target.value;
-                                // Validación opcional de Vimeo aquí si quieres
-                                updateUnidad(idx, { introVideo: val });
+                                updateUnidad(idx, { introVideo: e.target.value });
                             }} 
                         />
                         {/* Preview del video de la unidad */}
@@ -377,23 +383,24 @@ export default function CrearCurso({ onClose }: { onClose?: () => void }) {
                 </div>
                 <div>
                     <h4 className="font-bold text-[#0C212D] mb-4">Sections</h4>
-                    {u.lecciones.map((l, lIdx) => (
-                        <div key={l.id} className="bg-white border rounded-xl p-4 mb-4 shadow-sm">
-                            <div className="flex justify-between items-center mb-4 border-b pb-2">
-                                <span className="font-semibold text-slate-700">Section {String.fromCharCode(65 + lIdx)}</span>
-                                <button onClick={() => borrarLeccion(idx, lIdx)} className="text-red-500 hover:bg-red-50 p-2 rounded"><FiTrash2 /></button>
-                            </div>
-                            <UnitBlockToolbar addBlock={(t) => addBlock(idx, lIdx, t)} />
-                            <div className="space-y-4 mt-4">
-                                {l.blocks.map((b, bIdx) => (
-                                    <div key={bIdx} className="border rounded-lg p-4 bg-gray-50/50">
-                                        <BlockEditor block={b} onChange={(v) => updateBlock(idx, lIdx, bIdx, v)} onDelete={() => deleteBlock(idx, lIdx, bIdx)} />
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    ))}
-                    <button onClick={() => agregarLeccion(idx)} className="w-full p-3 border border-dashed rounded-xl bg-slate-50 hover:bg-slate-100 flex justify-center items-center gap-2 text-slate-600 font-medium">
+                    
+                    {/* 🔥 AQUÍ USAMOS EL COMPONENTE COLAPSABLE LessonItem */}
+                    <div className="space-y-4">
+                        {u.lecciones.map((l, lIdx) => (
+                            <LessonItem
+                                key={l.id}
+                                unidadIdx={idx}
+                                leccion={l}
+                                leccionIdx={lIdx}
+                                updateBlock={updateBlock}
+                                deleteBlock={deleteBlock}
+                                addBlock={addBlock}
+                                borrarLeccion={borrarLeccion}
+                            />
+                        ))}
+                    </div>
+
+                    <button onClick={() => agregarLeccion(idx)} className="w-full p-3 border border-dashed rounded-xl bg-slate-50 hover:bg-slate-100 flex justify-center items-center gap-2 text-slate-600 font-medium mt-4">
                         <FiPlus /> Add Section
                     </button>
                 </div>
@@ -597,7 +604,7 @@ export default function CrearCurso({ onClose }: { onClose?: () => void }) {
                                      <label className="text-[#0C212D] font-bold text-sm">Description</label>
                                      <textarea className="w-full p-3 border rounded-xl mt-1 resize-none" rows={3} value={curso.descripcion} onChange={e => setCurso({...curso, descripcion: e.target.value})} required />
                                  </div>
-                                
+                                 
 
                                  <div>
                                      <label className="text-[#0C212D] font-bold text-sm">Level</label>
@@ -622,6 +629,7 @@ export default function CrearCurso({ onClose }: { onClose?: () => void }) {
                                 onChange={newTl => setCurso(prev => ({...prev, contentTimeline: newTl}))}
                                 selectedItemId={selectedItemId}
                                 onSelect={setSelectedItemId}
+                                onDelete={deleteContentItem} // ✅ AGREGADO: Función para borrar
                                 onAddUnit={agregarUnidad}
                                 onAddFinalExam={() => addTimelineItem("final_exam")}
                                 onAddProject={() => addTimelineItem("project")}
@@ -700,8 +708,7 @@ export default function CrearCurso({ onClose }: { onClose?: () => void }) {
                                     onChange={(e) => setFilterNivel(e.target.value)}
                                     className="w-full rounded-xl border border-[#112C3E]/20 bg-white p-3 text-[#0C212D] focus:ring-2 focus:ring-[#EE7203]"
                                 >
-                                    <option value="">All</option>
-                                    {["A1","A2","B1","B2","B2.5","C1","C2"].map(l => <option key={l} value={l}>{l}</option>)}
+                                    <option value="">All</option>{["A1","A2","B1","B2","B2.5","C1","C2"].map(l => <option key={l} value={l}>{l}</option>)}
                                 </select>
                                 </div>
                             </div>

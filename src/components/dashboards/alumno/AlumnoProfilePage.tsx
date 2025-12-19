@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { FiMail, FiUser, FiSave, FiGlobe, FiFileText } from "react-icons/fi";
+import ProfileTutorial from "@/components/tutoriales/ProfileTutorial";
+import { FiMail, FiUser, FiSave, FiGlobe, FiFileText, FiHelpCircle } from "react-icons/fi";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,6 +19,8 @@ export default function AlumnoProfilePage() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  const [tutorialKey, setTutorialKey] = useState(0);
+
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -27,7 +30,7 @@ export default function AlumnoProfilePage() {
   });
 
   // ============================================================
-  // Cargar datos del alumno
+  // Cargar datos
   // ============================================================
   useEffect(() => {
     if (!authReady) return;
@@ -73,15 +76,12 @@ export default function AlumnoProfilePage() {
   }, [authReady, userProfile]);
 
   // ============================================================
-  // Handler para input
+  // Handlers
   // ============================================================
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // ============================================================
-  // Guardar datos personales
-  // ============================================================
   const handleSave = async () => {
     if (!userProfile?.batchId || !userProfile?.userKey)
       return toast.error("No se pudo identificar al alumno.");
@@ -130,24 +130,37 @@ export default function AlumnoProfilePage() {
   }
 
   // ============================================================
-  // UI REDISEÑADA
+  // UI FIX: Padding corregido en inputs con icono
   // ============================================================
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white p-8 space-y-8">
-        {/* HEADER con degradado sutil */}
+      <ProfileTutorial key={tutorialKey} />
+
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white p-4 md:p-8 space-y-6 md:space-y-8">
+        
+        {/* HEADER */}
         <div className="relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0C212D] to-[#112C3E] rounded-3xl opacity-5"></div>
-          <div className="relative p-8 rounded-3xl border border-gray-100">
-            <div className="flex items-start gap-6">
-              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#EE7203] to-[#FF3816] flex items-center justify-center shadow-lg">
-                <FiUser className="text-white" size={32} />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0C212D] to-[#112C3E] rounded-2xl md:rounded-3xl opacity-5"></div>
+          <div className="relative p-5 md:p-8 rounded-2xl md:rounded-3xl border border-gray-100">
+            
+            <button 
+                onClick={() => setTutorialKey(prev => prev + 1)}
+                className="absolute top-4 right-4 md:top-6 md:right-6 p-2 bg-white border border-gray-200 text-gray-400 hover:text-[#EE7203] hover:border-[#EE7203] rounded-full transition-all shadow-sm z-20 hover:scale-110"
+                title="Ayuda / Tutorial"
+            >
+                <FiHelpCircle size={20} className="md:w-[22px] md:h-[22px]" />
+            </button>
+
+            <div className="flex flex-col md:flex-row items-start md:items-start gap-4 md:gap-6">
+              <div className="w-16 h-16 md:w-20 md:h-20 rounded-xl md:rounded-2xl bg-gradient-to-br from-[#EE7203] to-[#FF3816] flex items-center justify-center shadow-lg flex-shrink-0">
+                <FiUser className="text-white w-7 h-7 md:w-8 md:h-8" />
               </div>
+              
               <div className="flex-1">
-                <h1 className="text-4xl font-extrabold bg-gradient-to-r from-[#0C212D] to-[#112C3E] bg-clip-text text-transparent">
+                <h1 className="text-2xl md:text-4xl font-extrabold bg-gradient-to-r from-[#0C212D] to-[#112C3E] bg-clip-text text-transparent">
                   {t("profile.title")}
                 </h1>
-                <p className="text-gray-500 mt-2 text-lg">
+                <p className="text-gray-500 mt-1 md:mt-2 text-sm md:text-lg leading-relaxed">
                   {t("profile.subtitle")}
                 </p>
               </div>
@@ -157,94 +170,100 @@ export default function AlumnoProfilePage() {
 
         {/* GRID DE SECCIONES */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* DATOS PERSONALES - 2 columnas */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-3xl border-2 border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden">
-              {/* Header con borde de color */}
-              <div className="relative p-6 border-b border-gray-100">
+          
+          {/* DATOS PERSONALES */}
+          <div className="lg:col-span-2" data-tutorial="profile-personal-card">
+            <div className="bg-white rounded-2xl md:rounded-3xl border-2 border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden">
+              
+              {/* Header Card */}
+              <div className="relative p-5 md:p-6 border-b border-gray-100">
                 <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-[#EE7203] to-[#FF3816]"></div>
-                <div className="flex items-center gap-4 pl-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#0C212D]/10 to-[#112C3E]/10 flex items-center justify-center">
-                    <FiUser className="text-[#0C212D]" size={20} />
+                <div className="flex items-center gap-3 md:gap-4 pl-3 md:pl-4">
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-gradient-to-br from-[#0C212D]/10 to-[#112C3E]/10 flex items-center justify-center flex-shrink-0">
+                    <FiUser className="text-[#0C212D] w-5 h-5" />
                   </div>
                   <div>
-                    <h2 className="font-bold text-xl text-[#0C212D]">
+                    <h2 className="font-bold text-lg md:text-xl text-[#0C212D]">
                       {t("profile.personalHeader")}
                     </h2>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-xs md:text-sm text-gray-500">
                       Información básica de tu cuenta
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Contenido */}
-              <div className="p-8 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Contenido Card */}
+              <div className="p-5 md:p-8 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
                   {/* Nombre */}
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-[#0C212D] uppercase tracking-wide">
+                    <label className="text-xs md:text-sm font-semibold text-[#0C212D] uppercase tracking-wide">
                       {t("profile.placeholderFirstName")}
                     </label>
                     <input
                       name="firstName"
                       value={form.firstName}
                       onChange={handleChange}
-                      className="w-full border-2 border-gray-200 p-4 rounded-xl focus:border-[#EE7203] focus:ring-4 focus:ring-[#EE7203]/10 outline-none transition-all text-gray-700 font-medium"
+                      // 🛠 FIX: Usamos py-3 pr-4 pl-12 (sin usar 'p-' shorthand) para evitar conflictos con md:p-4
+                      className="w-full border-2 border-gray-200 py-3 pr-4 md:py-4 pl-4 rounded-xl focus:border-[#EE7203] focus:ring-4 focus:ring-[#EE7203]/10 outline-none transition-all text-gray-700 font-medium text-sm md:text-base"
                     />
                   </div>
 
                   {/* Apellido */}
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-[#0C212D] uppercase tracking-wide">
+                    <label className="text-xs md:text-sm font-semibold text-[#0C212D] uppercase tracking-wide">
                       {t("profile.placeholderLastName")}
                     </label>
                     <input
                       name="lastName"
                       value={form.lastName}
                       onChange={handleChange}
-                      className="w-full border-2 border-gray-200 p-4 rounded-xl focus:border-[#EE7203] focus:ring-4 focus:ring-[#EE7203]/10 outline-none transition-all text-gray-700 font-medium"
+                      className="w-full border-2 border-gray-200 py-3 pr-4 md:py-4 pl-4 rounded-xl focus:border-[#EE7203] focus:ring-4 focus:ring-[#EE7203]/10 outline-none transition-all text-gray-700 font-medium text-sm md:text-base"
                     />
                   </div>
 
                   {/* DNI */}
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-[#0C212D] uppercase tracking-wide">
+                    <label className="text-xs md:text-sm font-semibold text-[#0C212D] uppercase tracking-wide">
                       {t("profile.placeholderDni")}
                     </label>
                     <div className="relative">
-                      <FiFileText className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                      <FiFileText className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                       <input
                         name="dni"
                         value={form.dni}
                         onChange={handleChange}
-                        className="w-full border-2 border-gray-200 p-4 pl-12 rounded-xl focus:border-[#EE7203] focus:ring-4 focus:ring-[#EE7203]/10 outline-none transition-all text-gray-700 font-medium"
+                        // 🛠 FIX: 'pl-12' asegurado en todos los breakpoints
+                        className="w-full border-2 border-gray-200 py-3 pr-4 md:py-4 pl-12 rounded-xl focus:border-[#EE7203] focus:ring-4 focus:ring-[#EE7203]/10 outline-none transition-all text-gray-700 font-medium text-sm md:text-base"
                       />
                     </div>
                   </div>
 
-                  {/* Email readonly */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-[#0C212D] uppercase tracking-wide">
+                  {/* Email */}
+                  <div className="space-y-2" data-tutorial="profile-email-container">
+                    <label className="text-xs md:text-sm font-semibold text-[#0C212D] uppercase tracking-wide">
                       {t("profile.emailLabel")}
                     </label>
                     <div className="relative">
-                      <FiMail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                      <FiMail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                       <input
                         value={user?.email || ""}
                         disabled
-                        className="w-full border-2 border-gray-200 p-4 pl-12 rounded-xl bg-gray-50 text-gray-500 cursor-not-allowed"
+                        // 🛠 FIX: Padding Left 12 fijo, evitando que md:p-4 lo pise
+                        className="w-full border-2 border-gray-200 py-3 pr-4 md:py-4 pl-12 rounded-xl bg-gray-50 text-gray-500 cursor-not-allowed text-sm md:text-base"
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* Botón Guardar */}
-                <div className="flex justify-end pt-4">
+                <div className="flex justify-end pt-2 md:pt-4">
                   <Button
+                    data-tutorial="profile-save-btn"
                     onClick={handleSave}
                     disabled={saving}
-                    className="px-8 py-4 bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white rounded-xl font-bold flex items-center gap-3 transition-all hover:shadow-lg hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
+                    className="w-full md:w-auto px-8 py-6 md:py-4 bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white rounded-xl font-bold flex justify-center items-center gap-3 transition-all hover:shadow-lg hover:scale-[1.02] md:hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
                   >
                     {saving ? (
                       <>
@@ -263,39 +282,37 @@ export default function AlumnoProfilePage() {
             </div>
           </div>
 
-          {/* IDIOMA Y NIVEL - 1 columna */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-3xl border-2 border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden h-full">
-              {/* Header con borde de color */}
-              <div className="relative p-6 border-b border-gray-100">
+          {/* ACADEMIC INFO */}
+          <div className="lg:col-span-1" data-tutorial="profile-academic-card">
+            <div className="bg-white rounded-2xl md:rounded-3xl border-2 border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden h-full">
+              
+              <div className="relative p-5 md:p-6 border-b border-gray-100">
                 <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-[#0C212D] to-[#112C3E]"></div>
-                <div className="flex items-center gap-4 pl-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#EE7203]/10 to-[#FF3816]/10 flex items-center justify-center">
-                    <FiGlobe className="text-[#EE7203]" size={20} />
+                <div className="flex items-center gap-3 md:gap-4 pl-3 md:pl-4">
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-gradient-to-br from-[#EE7203]/10 to-[#FF3816]/10 flex items-center justify-center flex-shrink-0">
+                    <FiGlobe className="text-[#EE7203] w-5 h-5" />
                   </div>
                   <div>
-                    <h2 className="font-bold text-xl text-[#0C212D]">
+                    <h2 className="font-bold text-lg md:text-xl text-[#0C212D]">
                       {t("profile.learningHeader")}
                     </h2>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-xs md:text-sm text-gray-500">
                       Read only
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Contenido */}
-              <div className="p-8 space-y-6">
-                {/* Idioma */}
+              <div className="p-5 md:p-8 space-y-6">
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-[#0C212D] uppercase tracking-wide">
+                  <label className="text-xs md:text-sm font-semibold text-[#0C212D] uppercase tracking-wide">
                     {t("profile.languageLabel")}
                   </label>
                   <div className="relative">
                     <select
                       disabled
                       value={form.learningLanguage}
-                      className="w-full border-2 border-gray-200 p-4 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 text-gray-600 cursor-not-allowed font-medium appearance-none"
+                      className="w-full border-2 border-gray-200 p-3 md:p-4 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 text-gray-600 cursor-not-allowed font-medium appearance-none text-sm md:text-base"
                     >
                       <option value="en">English</option>
                       <option value="pt">Portuguese</option>
@@ -306,16 +323,15 @@ export default function AlumnoProfilePage() {
                   </div>
                 </div>
 
-                {/* Nivel con diseño especial */}
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-[#0C212D] uppercase tracking-wide">
+                  <label className="text-xs md:text-sm font-semibold text-[#0C212D] uppercase tracking-wide">
                     {t("profile.levelLabel")}
                   </label>
                   <div className="relative">
                     <select
                       disabled
                       value={form.learningLevel}
-                      className="w-full border-2 border-gray-200 p-4 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 text-gray-600 cursor-not-allowed font-medium appearance-none"
+                      className="w-full border-2 border-gray-200 p-3 md:p-4 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 text-gray-600 cursor-not-allowed font-medium appearance-none text-sm md:text-base"
                     >
                       <option value="A1">A1 – Beginner</option>
                       <option value="A2">A2 – Elementary</option>
@@ -328,9 +344,8 @@ export default function AlumnoProfilePage() {
                   </div>
                 </div>
 
-                {/* Badge informativo */}
-                <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-[#0C212D]/5 to-[#112C3E]/5 border-l-4 border-[#EE7203]">
-                  <p className="text-sm text-gray-600 leading-relaxed">
+                <div className="mt-4 md:mt-6 p-4 rounded-xl bg-gradient-to-r from-[#0C212D]/5 to-[#112C3E]/5 border-l-4 border-[#EE7203]">
+                  <p className="text-xs md:text-sm text-gray-600 leading-relaxed">
                     <span className="font-semibold text-[#0C212D]">💡 Note:</span> Your language and level are assigned by your institution. Contact your teacher to change them.
                   </p>
                 </div>

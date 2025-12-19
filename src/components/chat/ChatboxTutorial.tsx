@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
 import { FiX, FiChevronRight, FiChevronLeft } from "react-icons/fi";
 
 interface TutorialStep {
@@ -8,6 +8,7 @@ interface TutorialStep {
   title: string;
   description: string;
   position?: "top" | "bottom" | "left" | "right";
+  desktopOnly?: boolean; // Nueva propiedad opcional
 }
 
 interface ChatTutorialProps {
@@ -15,7 +16,8 @@ interface ChatTutorialProps {
   onSkip: () => void;
 }
 
-const tutorialSteps: TutorialStep[] = [
+// Definimos los pasos fuera del componente, marcando el que queremos ocultar en mobile
+const allTutorialSteps: TutorialStep[] = [
   {
     target: "[data-tutorial='language-level']",
     title: "Your Learning Profile",
@@ -53,48 +55,76 @@ const tutorialSteps: TutorialStep[] = [
     position: "bottom"
   },
   {
-  target: "[data-tutorial='chat-history']",
-  title: "Conversation History",
-  description: "Here you can access your previous conversations, review feedback, and track your progress over time.",
-  position: "right"
-}
+    target: "[data-tutorial='chat-history']",
+    title: "Conversation History",
+    description: "Here you can access your previous conversations, review feedback, and track your progress over time.",
+    position: "right",
+    desktopOnly: true // <--- Marcamos este paso solo para escritorio
+  }
 ];
 
 export default function ChatboxTutorial({ onComplete, onSkip }: ChatTutorialProps) {
+  // Estado para detectar mobile (inicializado de forma segura para SSR)
+  const [isMobile, setIsMobile] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Efecto para detectar el tamaño de pantalla al montar y al redimensionar
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    // Chequeo inicial
+    checkMobile();
+    setIsInitialized(true);
+
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // 1. FILTRADO DINÁMICO DE PASOS
+  // Usamos useMemo para recalcular la lista de pasos solo cuando cambie isMobile
+  const activeSteps = useMemo(() => {
+    return allTutorialSteps.filter(step => {
+      // Si es mobile y el paso es solo para desktop, lo filtramos
+      if (isMobile && step.desktopOnly) {
+        return false;
+      }
+      return true;
+    });
+  }, [isMobile]);
+
   const [currentStep, setCurrentStep] = useState(0);
   const [highlightRect, setHighlightRect] = useState<DOMRect | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
   const tooltipRef = useRef<HTMLDivElement>(null);
 
   const updateHighlight = useCallback(() => {
-    const step = tutorialSteps[currentStep];
+    // Usamos activeSteps en lugar de tutorialSteps estático
+    const step = activeSteps[currentStep];
+    
+    // Si por el redimensionamiento el paso actual ya no existe, reseteamos o salimos
+    if (!step) return;
+
     const element = document.querySelector(step.target);
-    const mobile = window.innerWidth < 768;
-    setIsMobile(mobile);
     
     if (element) {
       const rect = element.getBoundingClientRect();
       setHighlightRect(rect);
       
-      const padding = mobile ? 12 : 20;
+      const padding = isMobile ? 12 : 20;
       let top = 0;
       let left = 0;
 
-      if (mobile) {
+      if (isMobile) {
         // --- LÓGICA OPTIMIZADA PARA MOBILE ---
         left = window.innerWidth / 2;
 
-        // CASO ESPECIAL: STEP 2 (Chat Area) o elementos muy altos
         const isChatArea = step.target.includes('chat-area');
         
         if (isChatArea) {
-          // Si es el chat area, fijamos el tooltip al fondo de la pantalla (safe area)
-          // para que no se corte como en tu imagen
           top = window.innerHeight - 20; 
         } else {
-          // Para otros elementos, decidimos si arriba o abajo según espacio
           if (step.position === "top" || rect.bottom > window.innerHeight - 200) {
             top = rect.top - padding;
           } else {
@@ -102,7 +132,7 @@ export default function ChatboxTutorial({ onComplete, onSkip }: ChatTutorialProp
           }
         }
       } else {
-        // --- LÓGICA DESKTOP (SIN CAMBIOS) ---
+        // --- LÓGICA DESKTOP ---
         switch (step.position) {
           case "bottom":
             top = rect.bottom + padding;
@@ -127,24 +157,21 @@ export default function ChatboxTutorial({ onComplete, onSkip }: ChatTutorialProp
       }
 
       setTooltipPosition({ top, left });
-      
-      if (!isInitialized) {
-        setTimeout(() => setIsInitialized(true), 10);
-      }
     }
-  }, [currentStep, isInitialized]);
+  }, [currentStep, isMobile, activeSteps]); // Añadidas dependencias correctas
 
   useLayoutEffect(() => {
     updateHighlight();
   }, [updateHighlight]);
 
+  // Listener para recalcular posición al redimensionar (separado de la detección de mobile)
   useEffect(() => {
     window.addEventListener("resize", updateHighlight);
     return () => window.removeEventListener("resize", updateHighlight);
   }, [updateHighlight]);
 
   const handleNext = () => {
-    if (currentStep < tutorialSteps.length - 1) {
+    if (currentStep < activeSteps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
       onComplete();
@@ -157,14 +184,17 @@ export default function ChatboxTutorial({ onComplete, onSkip }: ChatTutorialProp
     }
   };
 
-  const step = tutorialSteps[currentStep];
+  const step = activeSteps[currentStep];
+  
+  // Si no hay paso activo (ej. durante un resize drástico), no renderizar nada
+  if (!step) return null;
+
   const isFirstStep = currentStep === 0;
-  const isLastStep = currentStep === tutorialSteps.length - 1;
+  const isLastStep = currentStep === activeSteps.length - 1;
 
   const getTooltipTransform = () => {
     if (isMobile) {
       const isChatArea = step.target.includes('chat-area');
-      // Si es el chat area o está muy abajo, lo anclamos desde su base para que suba
       if (isChatArea || step.position === "top" || (highlightRect && highlightRect.bottom > window.innerHeight - 200)) {
         return "translate(-50%, -100%)";
       }
@@ -180,7 +210,7 @@ export default function ChatboxTutorial({ onComplete, onSkip }: ChatTutorialProp
   };
 
   return (
-    <div className={`fixed inset-0 z-999999 pointer-events-none transition-opacity duration-300 ${isInitialized ? 'opacity-100' : 'opacity-0'}`}>
+    <div className={`fixed inset-0 z-[999999] pointer-events-none transition-opacity duration-300 ${isInitialized ? 'opacity-100' : 'opacity-0'}`}>
       <svg className="absolute inset-0 w-full h-full pointer-events-auto">
         <defs>
           <mask id="spotlight-mask">
@@ -225,8 +255,7 @@ export default function ChatboxTutorial({ onComplete, onSkip }: ChatTutorialProp
           transition: isInitialized ? "all 0.3s ease-out" : "none",
           maxWidth: "92vw",
           width: isMobile ? "calc(100vw - 32px)" : "400px",
-          // Evitamos que se pegue a los bordes verticales en mobile
-          zIndex: 60
+          zIndex: 999999 // Aseguramos que esté por encima de todo
         }}
       >
         <div className={`bg-white rounded-2xl shadow-2xl relative ${isMobile ? 'p-4' : 'p-6'}`}>
@@ -236,7 +265,7 @@ export default function ChatboxTutorial({ onComplete, onSkip }: ChatTutorialProp
 
           <div className="flex items-center gap-2 mb-2">
             <span className="px-3 py-1 bg-[#EE7203] text-white text-[10px] sm:text-xs font-bold rounded-full">
-              Step {currentStep + 1}/{tutorialSteps.length}
+              Step {currentStep + 1}/{activeSteps.length}
             </span>
           </div>
 
@@ -259,7 +288,7 @@ export default function ChatboxTutorial({ onComplete, onSkip }: ChatTutorialProp
             </button>
 
             <div className="flex gap-1.5">
-              {tutorialSteps.map((_, idx) => (
+              {activeSteps.map((_, idx) => (
                 <div key={idx} className={`w-1.5 h-1.5 rounded-full ${idx === currentStep ? "bg-[#EE7203]" : "bg-gray-300"}`} />
               ))}
             </div>
@@ -274,24 +303,22 @@ export default function ChatboxTutorial({ onComplete, onSkip }: ChatTutorialProp
           </div>
         </div>
 
-        {/* Arrow pointer - Se oculta en el Step 2 de Mobile para evitar solapamiento */}
+        {/* Arrow pointer */}
         {(!isMobile || !step.target.includes('chat-area')) && (
           <div
-    className="absolute w-4 h-4 bg-white transform rotate-45"
-    style={{
-      // Posicionamiento vertical (para top/bottom)
-      ...( (step.position === "top" || step.position === "bottom" || isMobile) ? {
-        [step.position === "top" || (isMobile && highlightRect && highlightRect.bottom > window.innerHeight - 200) ? "bottom" : "top"]: "-8px",
-        left: "50%",
-        marginLeft: "-8px"
-      } : {
-        // Posicionamiento horizontal (para left/right en Desktop)
-        [step.position === "left" ? "right" : "left"]: "-8px",
-        top: "50%",
-        marginTop: "-8px"
-      })
-    }}
-  />
+            className="absolute w-4 h-4 bg-white transform rotate-45"
+            style={{
+              ...((step.position === "top" || step.position === "bottom" || isMobile) ? {
+                [step.position === "top" || (isMobile && highlightRect && highlightRect.bottom > window.innerHeight - 200) ? "bottom" : "top"]: "-8px",
+                left: "50%",
+                marginLeft: "-8px"
+              } : {
+                [step.position === "left" ? "right" : "left"]: "-8px",
+                top: "50%",
+                marginTop: "-8px"
+              })
+            }}
+          />
         )}
       </div>
 

@@ -4,7 +4,7 @@ import React from 'react';
 import { useDashboardUI } from '@/stores/useDashboardUI';
 import { useAuth } from '@/contexts/AuthContext';
 import { Headphones, Mic2, PlayCircle, Calendar, Clock } from 'lucide-react';
-
+import PodcastsTutorial from '../tutoriales/PodcastsTutorial';
 // --- Helper para formatear tiempo ---
 const formatDuration = (ms: number): string => {
   const minutes = Math.floor(ms / 60000);
@@ -14,13 +14,16 @@ const formatDuration = (ms: number): string => {
 
 export default function PodcastsSection() {
   const { playPodcast } = useDashboardUI(); 
-  const { podcastEpisodes, loadingPodcast } = useAuth(); // ✅ Corregido
+  const { podcastEpisodes, loadingPodcast } = useAuth();
 
   return (
-    <div className="min-h-full w-full bg-gray-50 p-6 md:p-12 pb-40 animate-in fade-in duration-500">
+    <div className="min-h-full w-full bg-gray-50 p-6 md:p-12 pb-40">
       
+      
+      <PodcastsTutorial />
+
       {/* --- HEADER --- */}
-      <div className="mb-10 max-w-4xl mx-auto text-center">
+      <div className="mb-10 max-w-4xl mx-auto text-center" data-tutorial="podcasts-header">
         <div className="flex items-center justify-center gap-3 mb-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#EE7203]/10 text-[#EE7203]">
             <Headphones size={16} />
@@ -37,7 +40,7 @@ export default function PodcastsSection() {
 
       {/* --- CARD PRINCIPAL --- */}
       <div className="max-w-5xl mx-auto">
-        <div className="rounded-3xl border-2 border-[#EE7203]/20 bg-white shadow-xl overflow-hidden">
+        <div className="rounded-3xl border-2 border-[#EE7203]/20 bg-white shadow-xl overflow-hidden" data-tutorial="podcast-main-card">
           
           {/* Header Naranja */}
           <div className="relative bg-gradient-to-br from-[#EE7203] to-[#FF3816] p-6">
@@ -56,19 +59,23 @@ export default function PodcastsSection() {
 
           {/* --- LISTA DE EPISODIOS (Custom UI) --- */}
           <div className="bg-gray-50 min-h-[352px]">
-            {loadingPodcast ? ( // ✅ Corregido
+            {loadingPodcast ? (
               <div className="flex items-center justify-center h-64 text-gray-400 animate-pulse">
                 Loading episodes...
               </div>
-            ) : podcastEpisodes.length === 0 ? ( // ✅ Agregado manejo de array vacío
+            ) : podcastEpisodes.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-64 text-gray-400">
                 <Headphones size={48} className="mb-4 opacity-50" />
                 <p>No episodes availables</p>
               </div>
             ) : (
               <div className="divide-y divide-gray-100">
-                {podcastEpisodes.map((ep) => ( // ✅ Corregido
-                  <div key={ep.id} className="group p-4 hover:bg-white transition-colors flex gap-4 items-start">
+                {podcastEpisodes.map((ep, index) => (
+                  <div 
+                    key={ep.id} 
+                    className="group p-4 hover:bg-white transition-colors flex gap-4 items-start"
+                    data-tutorial={index === 0 ? 'episode-item-0' : undefined}
+                  >
                     
                     {/* Imagen (Thumb) */}
                     <img 
@@ -112,7 +119,7 @@ export default function PodcastsSection() {
           </div>
 
           {/* Footer con plataformas */}
-          <div className="p-6 bg-white border-t border-gray-100">
+          <div className="p-6 bg-white border-t border-gray-100" data-tutorial="podcast-platforms">
             {/* También disponible en */}
             <div className="pt-6">
               <p className="text-sm text-gray-500 mb-3 text-center">Also available in:</p>
@@ -164,7 +171,7 @@ export default function PodcastsSection() {
       </div>
 
       {/* --- INFORMACIÓN ADICIONAL --- */}
-      <div className="mt-16 grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+      <div className="mt-16 grid md:grid-cols-3 gap-6 max-w-5xl mx-auto" data-tutorial="podcast-benefits">
         <div className="rounded-2xl border border-gray-200 bg-white p-6 hover:shadow-lg transition-shadow">
           <div className="h-12 w-12 rounded-xl bg-[#EE7203]/10 flex items-center justify-center mb-4">
             <svg className="h-6 w-6 text-[#EE7203]" fill="none" viewBox="0 0 24 24" stroke="currentColor">

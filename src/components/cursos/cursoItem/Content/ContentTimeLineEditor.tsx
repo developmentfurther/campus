@@ -12,7 +12,7 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { FiLayers, FiClipboard, FiFlag, FiCheckCircle } from "react-icons/fi";
+import { FiLayers, FiClipboard, FiFlag, FiCheckCircle, FiTrash2 } from "react-icons/fi";
 
 interface ContentItem {
   id: string;
@@ -24,11 +24,13 @@ interface ContentItem {
 function SortableItem({ 
   item, 
   isSelected, 
-  onSelect 
+  onSelect,
+  onDelete // 👈 NUEVO
 }: { 
   item: ContentItem; 
   isSelected: boolean;
   onSelect: (id: string) => void;
+  onDelete?: (id: string) => void; // 👈 NUEVO
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id: item.id });
@@ -64,7 +66,7 @@ function SortableItem({
     }
   };
 
-  return (
+    return (
     <div
       ref={setNodeRef}
       style={style}
@@ -86,14 +88,33 @@ function SortableItem({
         <span className="font-medium text-[#0C212D]">{getLabel()}</span>
         {isSelected && <FiCheckCircle className="w-4 h-4 text-[#EE7203]" />}
       </div>
-      <span 
-        {...listeners}
-        className="text-xs text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing px-2"
-      >
-        ⋮⋮
-      </span>
+      
+      <div className="flex items-center gap-2">
+        {/* 👇 BOTÓN ELIMINAR NUEVO */}
+        {onDelete && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(item.id);
+            }}
+            className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition"
+            title="Delete"
+          >
+            <FiTrash2 className="w-4 h-4" />
+          </button>
+        )}
+        
+        <span 
+          {...listeners}
+          className="text-xs text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing px-2"
+        >
+          ⋮⋮
+        </span>
+      </div>
     </div>
   );
+
 }
 
 interface Props {
@@ -101,6 +122,7 @@ interface Props {
   onChange: (next: ContentItem[]) => void;
   selectedItemId?: string | null;
   onSelect: (id: string) => void;
+  onDelete?: (id: string) => void; // 👈 NUEVO
 
   onAddUnit: () => void;
   onAddFinalExam: () => void;
@@ -117,6 +139,7 @@ export default function ContentTimelineEditor({
   onAddFinalExam,
   onAddProject,
   onAddClosing,
+  onDelete
 }: Props) {
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -211,6 +234,7 @@ export default function ContentTimelineEditor({
                 item={item} 
                 isSelected={selectedItemId === item.id}
                 onSelect={onSelect}
+                onDelete={onDelete}
               />
             ))
           )}

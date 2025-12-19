@@ -31,11 +31,13 @@ import {
   FiBookOpen,
   FiFlag,
   FiGlobe,
+  FiClock, FiArrowRight
 } from "react-icons/fi";
 import VocabularyEditor from "../cursoItem/VocabularyEditor";
 import BlockEditor from "../cursoItem/blocks/BlockEditor";
 import ContentTimelineEditor from "../cursoItem/Content/ContentTimeLineEditor"; // ✅ Importado
 import UnitBlockToolbar from "../cursoItem/blocks/UnitToolbar"; // ✅ Importado
+import LessonItem from "../cursoItem/LessonItem";
 
 /* ----------------- Interfaces ----------------- */
 
@@ -162,7 +164,7 @@ export default function EditCourseForm({
   loading?: boolean;
   onClose?: () => void;
 }) {
-  const { firestore, storage, alumnos, reloadData, alumnosRaw } = useAuth();
+  const { firestore, alumnos, reloadData, alumnosRaw, userProfile } = useAuth();
 
   // Estados principales
   const [curso, setCurso] = useState<Curso | null>(null);
@@ -190,7 +192,91 @@ export default function EditCourseForm({
   const [filterNivel, setFilterNivel] = useState("");
   const [filterNombre, setFilterNombre] = useState("");
   const [filterCursoId, setFilterCursoId] = useState("");
+  const [resumeItem, setResumeItem] = useState<{ id: string; name: string } | null>(null);
 
+
+  /* =========================================================
+     PERSISTENCIA DE POSICIÓN (BASE DE DATOS)
+     ========================================================= */
+
+  // 1. GUARDAR: Cada vez que seleccionas un item, actualizamos Firestore
+  useEffect(() => {
+    // Si no hay item, perfil o firestore listo, no hacemos nada
+    if (!selectedItemId || !userProfile?.batchId || !userProfile?.userKey || !firestore) return;
+
+    // Usamos un "debounce" de 1.5 segundos para no saturar la base de datos si das clicks rápidos
+    const timer = setTimeout(async () => {
+      try {
+        const { batchId, userKey } = userProfile;
+        const batchRef = doc(firestore, "alumnos", batchId);
+        
+        // Guardamos en: user_XYZ.editingProgress.ID_DEL_CURSO
+        // Usamos notación de punto para actualizar solo ese campo específico sin borrar lo demás
+        await updateDoc(batchRef, {
+          [`${userKey}.editingProgress.${courseId}`]: selectedItemId
+        });
+        
+        // Opcional: console.log("Posición guardada en DB");
+      } catch (error) {
+        console.error("Error guardando posición:", error);
+      }
+    }, 1500); 
+
+    return () => clearTimeout(timer);
+  }, [selectedItemId, userProfile, firestore, courseId]);
+
+
+ // 2. LEER: Al abrir, consultamos DIRECTAMENTE a la base de datos
+  useEffect(() => {
+    const checkSavedPosition = async () => {
+        // Validamos que tengamos lo necesario
+        if (!userProfile?.batchId || !userProfile?.userKey || !firestore || contentTimeline.length === 0) return;
+
+        try {
+            // 🔥 CLAVE: Leemos el documento fresco, no usamos el userProfile del contexto que puede ser viejo
+            const batchRef = doc(firestore, "alumnos", userProfile.batchId);
+            const snap = await getDoc(batchRef);
+
+            if (snap.exists()) {
+                const batchData = snap.data();
+                // Accedemos a user_XXX -> editingProgress
+                const userData = batchData[userProfile.userKey] || {};
+                const savedProgress = userData.editingProgress || {};
+                const lastId = savedProgress[courseId];
+
+                console.log("🔍 Posición recuperada de DB:", lastId); // Para depurar
+
+                // Si existe un ID guardado y NO es el que ya está seleccionado por defecto (el primero)
+                if (lastId && lastId !== selectedItemId) {
+                    
+                    // Verificamos que esa unidad/sección siga existiendo en el timeline
+                    const itemExists = contentTimeline.find(i => i.id === lastId);
+
+                    if (itemExists) {
+                        let name = "Sección anterior";
+                        
+                        // Buscamos un nombre bonito
+                        if (itemExists.type === "unit") {
+                            const u = unidades.find(unit => unit.id === itemExists.refId);
+                            if (u) name = `Unidad: ${u.titulo || "Sin título"}`;
+                        } else if (itemExists.type === "final_exam") name = "Examen Final";
+                        else if (itemExists.type === "project") name = "Proyecto Final";
+                        else if (itemExists.type === "closing") name = "Cierre";
+
+                        setResumeItem({ id: lastId, name });
+                    }
+                }
+            }
+        } catch (error) {
+            console.error("❌ Error leyendo posición guardada:", error);
+        }
+    };
+
+    // Ejecutamos la lectura solo cuando el timeline y el usuario estén listos
+    checkSavedPosition();
+    
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contentTimeline, userProfile?.batchId, courseId]);
  /* ==============================================================
      1. Cargar datos e inicializar (CON NORMALIZACIÓN)
      ============================================================== */
@@ -213,6 +299,17 @@ export default function EditCourseForm({
     }
   }, [initialData]);
 
+  // Agregar este useEffect después de los estados
+useEffect(() => {
+  // 👇 AGREGAR ESTA VALIDACIÓN
+  if (!curso) return;
+  
+  // Si el item seleccionado ya no existe en el timeline, resetear
+  if (selectedItemId && !curso.contentTimeline.some(i => i.id === selectedItemId)) {
+    const firstItem = curso.contentTimeline.length > 0 ? curso.contentTimeline[0].id : null;
+    setSelectedItemId(firstItem);
+  }
+}, [curso, selectedItemId]); // 👈 Cambiar dependencia a 'curso' completo
   /* ==============================================================
      2. Handlers de Contenido (Paridad con CrearCurso)
      ============================================================== */
@@ -238,6 +335,8 @@ export default function EditCourseForm({
     ]);
     setTimeout(() => setSelectedItemId(timelineId), 50);
   };
+  
+  
 
   const addFinalExamBlock = () => {
     const id = makeId();
@@ -321,6 +420,37 @@ export default function EditCourseForm({
         return copy;
       });
   }
+
+const deleteContentItem = (itemId: string) => {
+  // 1. Buscamos en el estado contentTimeline (que es tu fuente de verdad para el orden)
+  const item = contentTimeline.find((i) => i.id === itemId);
+  if (!item) return;
+
+  if (!confirm(`Delete this ${item.type.replace("_", " ")}?`)) return;
+
+  // 2. 🔥 CORRECCIÓN CRÍTICA: Actualizamos el estado contentTimeline
+  // Esto asegura que handleSubmit reciba la lista limpia
+  setContentTimeline((prev) => prev.filter((i) => i.id !== itemId));
+
+  // 3. Actualizamos el objeto curso (para mantener consistencia visual si algo más lo usa)
+  setCurso((prev) => {
+    if (!prev) return prev;
+    return {
+      ...prev,
+      contentTimeline: prev.contentTimeline.filter((i) => i.id !== itemId),
+    };
+  });
+
+  // 4. Si es una unidad, la borramos del array de unidades
+  if (item.type === "unit") {
+    setUnidades((prev) => prev.filter((u) => u.id !== item.refId));
+  }
+  
+  // 5. UX: Si borraste lo que tenías seleccionado, limpia la selección
+  if (selectedItemId === itemId) {
+      setSelectedItemId(null);
+  }
+};
 
   /* ==============================================================
      3. Renderizadores de Editores (Lado Derecho)
@@ -416,30 +546,20 @@ export default function EditCourseForm({
         {/* Lecciones */}
         <div>
             <h4 className="text-lg font-bold text-[#0C212D] mb-4">Sections</h4>
-             {unidad.lecciones.map((l, lIdx) => (
-                <div key={l.id} className="p-4 border rounded-xl bg-white mb-4 shadow-sm">
-                    <div className="flex items-center justify-between mb-4 pb-2 border-b">
-                        <h4 className="font-semibold text-slate-700">Section {String.fromCharCode(65 + lIdx)}</h4>
-                        <button onClick={() => borrarLeccion(idx, lIdx)} className="text-red-500 hover:bg-red-50 p-2 rounded-lg"><FiTrash2 /></button>
-                    </div>
-
-                    {/* Toolbar de Bloques */}
-                    <div className="space-y-4">
-                        <UnitBlockToolbar addBlock={(type) => addBlock(idx, lIdx, type)} />
-                        
-                        {/* Render Bloques */}
-                        {l.blocks.map((block, bIdx) => (
-                            <div key={bIdx} className="bg-white p-4 border rounded-lg">
-                                <BlockEditor 
-                                    block={block}
-                                    onChange={(updated) => updateBlock(idx, lIdx, bIdx, updated)}
-                                    onDelete={() => deleteBlock(idx, lIdx, bIdx)}
-                                />
-                            </div>
-                        ))}
-                    </div>
-                </div>
-             ))}
+             <div className="space-y-4">
+  {unidad.lecciones.map((l, lIdx) => (
+    <LessonItem
+      key={l.id}
+      unidadIdx={idx}
+      leccion={l}
+      leccionIdx={lIdx}
+      updateBlock={updateBlock}
+      deleteBlock={deleteBlock}
+      addBlock={addBlock}
+      borrarLeccion={borrarLeccion}
+    />
+  ))}
+</div>
 
             <button
                 type="button"
@@ -828,12 +948,52 @@ export default function EditCourseForm({
                 {/* === TAB CONTENT (Unificado) === */}
                 {activeMainTab === "content" && (
                     <div className="space-y-8">
+{/* === BANNER: RETOMAR TRABAJO (DB) === */}
+        {resumeItem && resumeItem.id !== selectedItemId && (
+            <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-100 rounded-xl animate-fadeIn shadow-sm">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-white text-blue-600 rounded-lg border border-blue-100">
+                        <FiClock size={20} />
+                    </div>
+                    <div>
+                        <p className="text-sm text-blue-900 font-bold">
+                            ¿Continuar donde lo dejaste?
+                        </p>
+                        <p className="text-xs text-blue-700">
+                            Detectamos edición reciente en: <span className="font-semibold underline">{resumeItem.name}</span>
+                        </p>
+                    </div>
+                </div>
+                <div className="flex gap-2">
+                     <button
+                        type="button"
+                        onClick={() => setResumeItem(null)}
+                        className="px-3 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                    >
+                        Descartar
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setSelectedItemId(resumeItem.id);
+                            setResumeItem(null);
+                        }}
+                        className="flex items-center gap-1 px-4 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm shadow-blue-200 transition-all"
+                    >
+                        Ir allí <FiArrowRight />
+                    </button>
+                </div>
+            </div>
+        )}
+
+
                         {/* Timeline Editor */}
                         <ContentTimelineEditor
                             items={contentTimeline}
                             onChange={setContentTimeline}
                             selectedItemId={selectedItemId}
                             onSelect={setSelectedItemId}
+                            onDelete={deleteContentItem}
                             onAddUnit={agregarUnidad}
                             onAddFinalExam={addFinalExamBlock}
                             onAddProject={addProjectBlock}

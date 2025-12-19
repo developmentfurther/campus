@@ -4,46 +4,47 @@ import { FiAward, FiBookOpen } from "react-icons/fi";
 import { useI18n } from "@/contexts/I18nContext";
 import { useDashboardUI } from "@/stores/useDashboardUI";
 
-
 export default function AlumnoCertificatesPage() {
   const { t } = useI18n();
   const { setSection } = useDashboardUI();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white p-6 md:p-10">
+    // AJUSTE 1: Padding reducido en mobile (p-4)
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white p-4 md:p-10">
       <div className="max-w-5xl mx-auto">
         
         {/* HEADER */}
-        <div className="mb-10">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-1.5 h-10 bg-gradient-to-b from-[#EE7203] to-[#FF3816] rounded-full"></div>
-            <h1 className="text-4xl font-black text-[#0C212D]">
+        <div className="mb-6 md:mb-10">
+          <div className="flex items-center gap-3 mb-3 md:mb-6">
+            <div className="w-1.5 h-8 md:h-10 bg-gradient-to-b from-[#EE7203] to-[#FF3816] rounded-full"></div>
+            {/* AJUSTE 2: Texto más pequeño en mobile */}
+            <h1 className="text-2xl md:text-4xl font-black text-[#0C212D]">
               {t("certificates.title")}
             </h1>
           </div>
           
-          <p className="text-[#112C3E]/70 text-lg max-w-2xl">
+          <p className="text-[#112C3E]/70 text-sm md:text-lg max-w-2xl leading-relaxed">
             {t("certificates.subtitle")}
           </p>
         </div>
 
         {/* MAIN CONTENT */}
-        <div className="relative overflow-hidden bg-white rounded-3xl border-2 border-gray-100 shadow-2xl">
+        <div className="relative overflow-hidden bg-white rounded-2xl md:rounded-3xl border-2 border-gray-100 shadow-2xl">
           
           {/* Decorative header bar */}
-          <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#EE7203] via-[#FF3816] to-[#EE7203]"></div>
+          <div className="absolute top-0 left-0 right-0 h-1.5 md:h-2 bg-gradient-to-r from-[#EE7203] via-[#FF3816] to-[#EE7203]"></div>
 
-          <div className="p-10 md:p-12">
+          <div className="p-6 md:p-12">
             
             {/* Icon section */}
-            <div className="flex justify-center mb-8">
+            <div className="flex justify-center mb-6 md:mb-8">
               <div className="relative">
                 {/* Glow effect */}
                 <div className="absolute inset-0 bg-gradient-to-br from-[#EE7203] to-[#FF3816] blur-3xl opacity-20 rounded-full"></div>
                 
-                {/* Icon container */}
-                <div className="relative w-24 h-24 bg-gradient-to-br from-[#0C212D] to-[#112C3E] rounded-3xl flex items-center justify-center shadow-2xl transform rotate-3 hover:rotate-0 transition-transform duration-300">
-                  <FiAward className="text-white" size={48} />
+                {/* Icon container - Ajuste de tamaño */}
+                <div className="relative w-16 h-16 md:w-24 md:h-24 bg-gradient-to-br from-[#0C212D] to-[#112C3E] rounded-2xl md:rounded-3xl flex items-center justify-center shadow-2xl transform rotate-3 hover:rotate-0 transition-transform duration-300">
+                  <FiAward className="text-white w-8 h-8 md:w-12 md:h-12" />
                 </div>
               </div>
             </div>
@@ -52,7 +53,7 @@ export default function AlumnoCertificatesPage() {
             <div className="max-w-2xl mx-auto">
               
               {/* Certificate preview */}
-              <div className="relative mb-8">
+              <div className="relative mb-6 md:mb-8">
                 {/* Decorative background pattern */}
                 <div 
                   className="absolute inset-0 opacity-5"
@@ -62,48 +63,49 @@ export default function AlumnoCertificatesPage() {
                   }}
                 ></div>
                 
-                <div className="relative border-2 border-dashed border-[#0C212D]/20 rounded-2xl p-12 bg-gradient-to-br from-gray-50 to-white">
+                {/* AJUSTE 3: Padding interno reducido en mobile */}
+                <div className="relative border-2 border-dashed border-[#0C212D]/20 rounded-2xl p-6 md:p-12 bg-gradient-to-br from-gray-50 to-white">
                   
                   {/* Certificate mockup */}
-                  <div className="bg-white border-4 border-[#EE7203]/30 rounded-xl p-8 shadow-lg">
-                    <div className="text-center space-y-4">
-                      <div className="w-16 h-16 bg-gradient-to-br from-[#EE7203] to-[#FF3816] rounded-full mx-auto flex items-center justify-center mb-4">
-                        <FiAward className="text-white" size={32} />
+                  <div className="bg-white border-4 border-[#EE7203]/30 rounded-xl p-4 md:p-8 shadow-lg">
+                    <div className="text-center space-y-3 md:space-y-4">
+                      <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-[#EE7203] to-[#FF3816] rounded-full mx-auto flex items-center justify-center mb-2 md:mb-4">
+                        <FiAward className="text-white w-6 h-6 md:w-8 md:h-8" />
                       </div>
                       
-                      <div className="h-3 bg-gradient-to-r from-transparent via-[#0C212D]/20 to-transparent rounded"></div>
-                      <div className="h-3 bg-gradient-to-r from-transparent via-[#0C212D]/10 to-transparent rounded w-3/4 mx-auto"></div>
+                      <div className="h-2 md:h-3 bg-gradient-to-r from-transparent via-[#0C212D]/20 to-transparent rounded"></div>
+                      <div className="h-2 md:h-3 bg-gradient-to-r from-transparent via-[#0C212D]/10 to-transparent rounded w-3/4 mx-auto"></div>
                       
-                      <div className="pt-6">
-                        <div className="h-2 bg-[#0C212D]/10 rounded w-32 mx-auto"></div>
+                      <div className="pt-4 md:pt-6">
+                        <div className="h-1.5 md:h-2 bg-[#0C212D]/10 rounded w-24 md:w-32 mx-auto"></div>
                       </div>
                     </div>
                   </div>
                   
-                  <p className="text-center text-[#112C3E]/60 text-sm font-medium mt-6">
+                  <p className="text-center text-[#112C3E]/60 text-xs md:text-sm font-medium mt-4 md:mt-6">
                     {t("certificates.emptyPreview")}
                   </p>
                 </div>
               </div>
 
               {/* CTA Message */}
-              <div className="text-center bg-gradient-to-br from-[#EE7203]/10 to-[#FF3816]/5 border-2 border-[#EE7203]/20 rounded-2xl p-6">
+              <div className="text-center bg-gradient-to-br from-[#EE7203]/10 to-[#FF3816]/5 border-2 border-[#EE7203]/20 rounded-xl md:rounded-2xl p-4 md:p-6">
                 <div className="flex items-center justify-center gap-2 mb-3">
                   <FiBookOpen className="text-[#EE7203]" size={20} />
-                  <p className="text-[#0C212D] font-bold">
+                  <p className="text-[#0C212D] font-bold text-sm md:text-base">
                     {t("certificates.ctaPrefix")}
                   </p>
                 </div>
                 
                 <button
-  onClick={() => setSection("miscursos")}
-  className="group inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white font-bold rounded-xl hover:shadow-2xl hover:shadow-[#EE7203]/30 transition-all duration-300 hover:scale-105"
->
-  <span>{t("certificates.ctaLink")}</span>
-  <span className="transform group-hover:translate-x-1 transition-transform duration-300">
-    →
-  </span>
-</button>
+                  onClick={() => setSection("miscursos")}
+                  className="w-full md:w-auto group inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white font-bold rounded-xl hover:shadow-2xl hover:shadow-[#EE7203]/30 transition-all duration-300 hover:scale-105 active:scale-95"
+                >
+                  <span>{t("certificates.ctaLink")}</span>
+                  <span className="transform group-hover:translate-x-1 transition-transform duration-300">
+                    →
+                  </span>
+                </button>
               </div>
 
             </div>
@@ -111,13 +113,13 @@ export default function AlumnoCertificatesPage() {
           </div>
 
           {/* Decorative corner elements */}
-          <div className="absolute bottom-0 right-0 w-48 h-48 bg-gradient-to-tl from-[#EE7203]/5 to-transparent rounded-tl-full"></div>
-          <div className="absolute top-20 left-0 w-32 h-32 bg-gradient-to-br from-[#FF3816]/5 to-transparent rounded-br-full"></div>
+          <div className="absolute bottom-0 right-0 w-24 h-24 md:w-48 md:h-48 bg-gradient-to-tl from-[#EE7203]/5 to-transparent rounded-tl-full"></div>
+          <div className="absolute top-20 left-0 w-16 h-16 md:w-32 md:h-32 bg-gradient-to-br from-[#FF3816]/5 to-transparent rounded-br-full"></div>
 
         </div>
 
-        {/* Info cards */}
-        <div className="grid md:grid-cols-3 gap-6 mt-8">
+        {/* Info cards - Stack en mobile */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mt-6 md:mt-8">
           
           <InfoCard
             title="Complete Courses"
@@ -146,14 +148,14 @@ export default function AlumnoCertificatesPage() {
 
 function InfoCard({ title, description, gradient }) {
   return (
-    <div className="group relative bg-white rounded-2xl border-2 border-gray-100 p-6 hover:border-[#EE7203]/30 hover:shadow-xl transition-all duration-300">
+    <div className="group relative bg-white rounded-xl md:rounded-2xl border-2 border-gray-100 p-5 md:p-6 hover:border-[#EE7203]/30 hover:shadow-xl transition-all duration-300">
       <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${gradient} rounded-t-xl`}></div>
       
       <div className="pt-2">
-        <h3 className="font-black text-[#0C212D] text-lg mb-2 group-hover:text-[#EE7203] transition-colors">
+        <h3 className="font-black text-[#0C212D] text-base md:text-lg mb-1 md:mb-2 group-hover:text-[#EE7203] transition-colors">
           {title}
         </h3>
-        <p className="text-[#112C3E]/70 text-sm leading-relaxed">
+        <p className="text-[#112C3E]/70 text-xs md:text-sm leading-relaxed">
           {description}
         </p>
       </div>

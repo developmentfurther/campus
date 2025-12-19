@@ -1,5 +1,6 @@
 "use client";
 
+import HomeTutorial from "@/components/tutoriales/HomeTutorial";
 import { useAuth } from "@/contexts/AuthContext";
 import { useI18n } from "@/contexts/I18nContext";
 import { useDashboardUI } from "@/stores/useDashboardUI";
@@ -131,12 +132,16 @@ export default function AlumnoHome() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+
+      <HomeTutorial />
         {/* Padding reducido en mobile: p-4 vs p-8 */}
       <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-6 md:space-y-8 pb-24">
 
         {/* ---------------- HEADER ---------------- */}
         {/* Padding interno reducido en mobile: p-6 vs p-12 */}
-        <header className="relative overflow-hidden bg-gradient-to-br from-[#0C212D] via-[#112C3E] to-[#0C212D] rounded-2xl md:rounded-3xl p-6 md:p-12 text-white shadow-2xl">
+        <header
+        data-tutorial="header"
+         className="relative overflow-hidden bg-gradient-to-br from-[#0C212D] via-[#112C3E] to-[#0C212D] rounded-2xl md:rounded-3xl p-6 md:p-12 text-white shadow-2xl">
           
           {/* Elementos decorativos */}
           <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-[#EE7203] to-[#FF3816] opacity-10 rounded-full blur-3xl -mr-48 -mt-48"></div>
@@ -223,24 +228,34 @@ export default function AlumnoHome() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {quickLinks.map((link) => (
-              <QuickAccessCard key={link.id} link={link} onClick={() => setSection(link.id)} />
-            ))}
-          </div>
+  {quickLinks.map((link, index) => (
+    <QuickAccessCard 
+      key={link.id} 
+      link={link} 
+      onClick={() => setSection(link.id)}
+      data-tutorial={index === 0 ? "quick-access-card" : undefined}
+    />
+  ))}
+</div>
         </section>
 
         {/* ---------------- ANUNCIOS + ACTIVIDAD ---------------- */}
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          {/* ANUNCIOS */}
-          <AnnouncementsSection
-            anunciosFiltrados={anunciosFiltrados}
-            locale={locale}
-            t={t}
-          />
+          
+            <AnnouncementsSection
+              anunciosFiltrados={anunciosFiltrados}
+              locale={locale}
+              t={t}
+              data-tutorial="announcements"
+            />
+        
 
-          {/* ACTIVIDAD */}
-          <ActivitySection recentActivity={recentActivity} timeAgo={timeAgo} t={t} />
+          {/* ACTIVIDAD - 👇 Agrega data-tutorial="activity" */}
+            <ActivitySection recentActivity={recentActivity} timeAgo={timeAgo}
+            t={t}
+            data-tutorial="activity" />
+            
 
         </section>
 
@@ -308,9 +323,10 @@ function renderLanguage(code?: string) {
   return languages[code ?? ""] || "🌍 N/A";
 }
 
-function QuickAccessCard({ link, onClick }) {
+function QuickAccessCard({ link, onClick, ...props }) {
   return (
     <button
+    {...props}
       onClick={onClick}
       className="group relative bg-white rounded-xl md:rounded-2xl p-5 md:p-7 shadow-sm hover:shadow-2xl transition-all duration-500 border border-gray-100 overflow-hidden cursor-pointer text-left hover:-translate-y-1 w-full"
     >
@@ -345,9 +361,10 @@ function QuickAccessCard({ link, onClick }) {
   );
 }
 
-function AnnouncementsSection({ anunciosFiltrados, locale, t }) {
+function AnnouncementsSection({ anunciosFiltrados, locale, t, ...props }) {
   return (
-    <div className="lg:col-span-2 bg-white rounded-xl md:rounded-2xl p-5 md:p-7 shadow-sm border border-gray-100 hover:shadow-lg transition-shadow duration-300">
+    <div
+    {...props} className="lg:col-span-2 bg-white rounded-xl md:rounded-2xl p-5 md:p-7 shadow-sm border border-gray-100 hover:shadow-lg transition-shadow duration-300">
       <div className="flex items-center justify-between mb-6 md:mb-8">
         <div className="flex items-center gap-3">
           <div className="bg-gradient-to-br from-[#EE7203] to-[#FF3816] p-2 md:p-3 rounded-lg md:rounded-xl shadow-md">
@@ -396,9 +413,11 @@ function AnnouncementsSection({ anunciosFiltrados, locale, t }) {
   );
 }
 
-function ActivitySection({ recentActivity, timeAgo, t }) {
+function ActivitySection({ recentActivity, timeAgo, t, ...props }) {
   return (
-    <div className="bg-white rounded-xl md:rounded-2xl p-5 md:p-7 shadow-sm border border-gray-100 hover:shadow-lg transition-shadow duration-300">
+    <div
+    {...props}
+     className="bg-white rounded-xl md:rounded-2xl p-5 md:p-7 shadow-sm border border-gray-100 hover:shadow-lg transition-shadow duration-300">
       <div className="flex items-center gap-3 mb-6 md:mb-8">
         <div className="bg-gradient-to-br from-[#0C212D] to-[#112C3E] p-2 md:p-3 rounded-lg md:rounded-xl shadow-md">
           <FiActivity className="text-white" size={18} />

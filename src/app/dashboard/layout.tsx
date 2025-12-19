@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import ProtectedRoute from "@/components/auth/ProtectedRoute"; // 👈 Importamos el guardián
 
+// Layouts
 import SidebarAdmin from "@/components/layout/SidebarAdmin";
 import SidebarProfesor from "@/components/layout/SidebarProfesor";
 import SidebarAlumno from "@/components/layout/SidebarAlumno";
@@ -11,20 +11,11 @@ import SidebarAlumno from "@/components/layout/SidebarAlumno";
 import MobileNavbarAlumno from "@/components/layout/MobileNavbarAlumno";
 import MobileNavbarAdmin from "@/components/layout/MobileNavbarAdmin";
 import MobileNavbarProfesor from "@/components/layout/MobileNavbarProfesor";
-import LoaderUi from "@/components/ui/LoaderUi";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, role, authReady, loading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (authReady && !user) router.replace("/login");
-  }, [authReady, user, router]);
-
-  if (!authReady || loading)
-   return <LoaderUi />;
-
-  if (!user) return null;
+  // Solo necesitamos el role para decidir qué sidebar mostrar.
+  // La protección de "si está logueado o no" la hace el componente padre.
+  const { role } = useAuth();
 
   const renderSidebar = () => {
     switch (role) {
@@ -40,15 +31,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {renderSidebar()}
-      <main className="flex-1 overflow-y-auto p-6">{children}</main>
+    // 🔥 Envolvemos todo en ProtectedRoute. 
+    // Si no hay usuario, este componente NUNCA renderizará el div de abajo,
+    // sino que redirigirá al login inmediatamente.
+    <ProtectedRoute>
+      <div className="flex h-screen bg-gray-50">
+        
+        {renderSidebar()}
+        
+        <main className="flex-1 overflow-y-auto p-6">
+            {children}
+        </main>
 
-      {/* MOBILE NAV ONLY FOR ALUMNO */}
-      {role === "alumno" && <MobileNavbarAlumno />}
-      {role === "admin" && <MobileNavbarAdmin />}
-      {role === "profesor" && <MobileNavbarProfesor />}
-    
-    </div>
+        {/* MOBILE NAV */}
+        {role === "alumno" && <MobileNavbarAlumno />}
+        {role === "admin" && <MobileNavbarAdmin />}
+        {role === "profesor" && <MobileNavbarProfesor />}
+      
+      </div>
+    </ProtectedRoute>
   );
 }
