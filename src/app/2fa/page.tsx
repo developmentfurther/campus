@@ -36,7 +36,21 @@ export default function TwoFactorPage() {
   useEffect(() => {
     if (hasVerified.current || loading) return;
     
-    if (!user || role !== "admin") {
+   // 1. Si no hay usuario cargado, esperamos o redirigimos (seguridad básica)
+    if (!user) return; 
+
+    // 2. Si es usuario normal (NO admin), le damos pase libre
+    if (role !== "admin") {
+      console.log("👤 Usuario estándar: Auto-autorizando cookie...");
+      
+      // 🔥 ESTA ES LA CLAVE: Seteamos la cookie para que el Middleware lo deje pasar
+      Cookies.set("admin_2fa_valid", "true", {
+        expires: 7,
+        path: "/",
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+      });
+
       router.replace("/dashboard");
       return;
     }
