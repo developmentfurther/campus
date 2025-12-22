@@ -12,7 +12,13 @@ type Section =
   | "chat-history"
   | "chat-session"
   | "events"
-  | "podcasts"; // 👈 1. Nueva Sección Agregada
+  | "podcast"
+  | "certificados"
+  | "gaming"
+  | "material"
+  | "alumnos"
+  | "profesores"
+  | "anuncios"
 
 interface State {
   // Navegación

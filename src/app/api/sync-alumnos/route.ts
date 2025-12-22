@@ -24,16 +24,16 @@ function normalizeEmail(raw: string | undefined | null) {
     .toLowerCase()
     .trim()
     .replace(/\s+/g, "")
-    .split(/[;,/]+/)[0]; // toma el primer email válido
+    .split(/[;,/]+/)[0];
 
   const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-
   return valid ? email : null;
 }
 
 export async function POST() {
   try {
     const db = admin.firestore();
+    // Nota: Si esto crece mucho, considera usar paginación, pero para "cientos" está bien.
     const snaps = await db.collection("alumnos_raw").get();
     const results: any[] = [];
 
@@ -42,11 +42,29 @@ export async function POST() {
     for (const docSnap of snaps.docs) {
       const data = docSnap.data();
       const updates: any = {};
+      let needsUpdate = false; // Flag para saber si tocamos este documento
 
       for (const key in data) {
         if (!key.startsWith("user_")) continue;
 
         const alumno = data[key];
+
+        // =====================================================================
+        // 🔥 OPTIMIZACIÓN DE COSTOS Y VELOCIDAD
+        // Si el alumno ya tiene UID, ya fue procesado antes. Lo saltamos.
+        // =====================================================================
+        if (alumno.uid) {
+          // (Opcional) Log para ver qué está pasando, puedes comentarlo para menos ruido
+          // console.log(`⏩ Saltando ${alumno.email || 'user'} (Ya sincronizado)`);
+          
+          results.push({
+            email: alumno.email,
+            uid: alumno.uid,
+            status: "skipped", // Marcamos como saltado para el reporte
+            wasCreated: false,
+          });
+          continue; // 🚀 ESTO ES LA CLAVE: Pasa al siguiente user_X sin hacer nada más
+        }
 
         // ===========================
         // 🧼 Normalizar Email
@@ -84,8 +102,9 @@ export async function POST() {
           let wasCreated = false;
 
           try {
+            // Esto NO consume lecturas de Firestore (es API de Identity)
             userRecord = await admin.auth().getUserByEmail(email);
-            console.log(`✔ Usuario ya existe: ${email}`);
+            console.log(`✔ Usuario ya existe en Auth: ${email}`);
           } catch (authError: any) {
             if (authError.code === "auth/user-not-found") {
               userRecord = await admin.auth().createUser({
@@ -94,20 +113,23 @@ export async function POST() {
                 displayName: alumno.nombre || "",
               });
               wasCreated = true;
-              console.log(`🆕 Usuario creado: ${email}`);
+              console.log(`🆕 Usuario creado en Auth: ${email}`);
             } else {
               throw authError;
             }
           }
 
+          // Preparamos la actualización para Firestore
           updates[key] = {
             ...alumno,
-            email, // email corregido
-            uid: userRecord.uid,
+            email,
+            uid: userRecord.uid, // 👈 Aquí vinculamos
             role: alumno.role || "alumno",
             passwordFinal: finalPassword,
             syncedAt: admin.firestore.FieldValue.serverTimestamp(),
           };
+          
+          needsUpdate = true; // Marcamos que este documento batch necesita guardarse
 
           results.push({
             email,
@@ -127,17 +149,21 @@ export async function POST() {
         }
       }
 
-      if (Object.keys(updates).length > 0) {
+      // 💾 ESCRITURA: Solo escribimos en la DB si hubo cambios reales en este Batch
+      if (needsUpdate && Object.keys(updates).length > 0) {
         await docSnap.ref.update(updates);
         console.log(
-          `💾 Documento ${docSnap.id} actualizado con ${Object.keys(updates).length} alumnos`
+          `💾 Batch ${docSnap.id} actualizado con cambios.`
         );
+      } else {
+        console.log(`zzz Batch ${docSnap.id} sin cambios (todos ya estaban sincronizados).`);
       }
     }
 
     return NextResponse.json({
       ok: true,
       processed: results.length,
+      skipped: results.filter((r) => r.status === "skipped").length, // Nueva métrica
       created: results.filter((r) => r.wasCreated).length,
       existing: results.filter((r) => r.status === "ok" && !r.wasCreated).length,
       errors: results.filter((r) => r.status === "error").length,

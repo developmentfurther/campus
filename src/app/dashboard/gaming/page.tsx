@@ -24,6 +24,15 @@ export default function GamingHub() {
   const [hoveredGame, setHoveredGame] = useState<string | null>(null);
   const [hoveredHelp, setHoveredHelp] = useState<string | null>(null);
 
+  const [loadingGame, setLoadingGame] = useState<string | null>(null);
+
+
+const handlePlay = (slug: string) => {
+    if (loadingGame) return; // Evitar doble clic
+    setLoadingGame(slug);
+    // No reseteamos el loading a false, porque la página se desmontará al navegar
+    router.push(`/gaming/${slug}`);
+  };
 
   const META: Record<
   string,
@@ -180,7 +189,7 @@ export default function GamingHub() {
           {GAMES.map((game, index) => {
             
             const isHovered = hoveredGame === game.slug;
-
+            const isLoading = loadingGame === game.slug;
             return (
               <div
                 key={game.slug}
@@ -299,10 +308,15 @@ export default function GamingHub() {
                     {game.description}
                   </p>
 
-                  {/* CTA Button - Morphing effect */}
+                 {/* 🔥 BOTÓN MODIFICADO */}
                   <button
-                    onClick={() => router.push(`/gaming/${game.slug}`)}
-                    className="relative inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl font-bold text-base overflow-hidden group/btn bg-white text-[#0C212D] hover:text-white transition-colors duration-300"
+                    onClick={() => handlePlay(game.slug)}
+                    disabled={loadingGame !== null} // Deshabilita todos los botones mientras uno carga
+                    className={`
+                      relative inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl font-bold text-base overflow-hidden group/btn 
+                      ${isLoading ? 'bg-[#EE7203] cursor-wait' : 'bg-white text-[#0C212D] hover:text-white'}
+                      transition-all duration-300
+                    `}
                   >
                     {/* Sliding background */}
                     <span className="absolute inset-0 bg-gradient-to-r from-[#EE7203] to-[#FF3816] transform -translate-x-full group-hover/btn:translate-x-0 transition-transform duration-500 ease-out"></span>

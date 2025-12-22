@@ -16,6 +16,7 @@ import {
 import { query, orderBy } from "firebase/firestore";
 import { useI18n } from "@/contexts/I18nContext";
 import { useRouter } from "next/navigation";
+import Cookies from "js-cookie";
 
 
 import {
@@ -53,6 +54,7 @@ interface AuthContextType {
   role: "admin" | "profesor" | "alumno" | null;
   authReady: boolean;
   loading: boolean;
+  dataReady: boolean;
   userProfile: any | null;
 
   alumnos: any[];
@@ -142,7 +144,8 @@ logout: async () => {},
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<"admin" | "profesor" | "alumno" | null>(null);
-  const [authReady, setAuthReady] = useState(false);
+  const [authReady, setAuthReady] = useState(false); // El usuario existe
+  const [dataReady, setDataReady] = useState(false); // Los cursos/alumnos cargaron
   const [loading, setLoading] = useState(true);
   const router = useRouter(); // 👈 1. Instanciamos el router aquí
   
@@ -191,31 +194,66 @@ const [loadingPodcast, setLoadingPodcast] = useState(false);
 
 
 
+  // 🔥 NUEVA FUNCIÓN: Carga datos sin bloquear la UI
+  const fetchInitialData = async (uid: string, userRole: string) => {
+    console.log(`⚡ Iniciando carga de datos en background para: ${userRole}`);
+    
+    // Usamos Promise.allSettled para que si falla Spotify, no rompa la app
+    const promises = [];
+
+    // 1. Cargas comunes (ligeras)
+    promises.push(loadChatSessions(uid));
+    promises.push(loadAnuncios());
+    promises.push(loadPodcastEpisodes());
+
+    // 2. Cargas según Rol (AQUÍ ESTÁ EL AHORRO DE LECTURAS)
+    if (userRole === "alumno") {
+        // Alumno: Solo sus cursos. NO carga lista de alumnos.
+        promises.push(loadMisCursos(uid));
+    } 
+    else if (userRole === "profesor") {
+        promises.push(loadAllCursos());
+        promises.push(loadProfesores());
+    }
+    else if (userRole === "admin") {
+        // Admin: Carga todo
+        promises.push(loadAllCursos());
+        promises.push(loadProfesores());
+        promises.push(loadAlumnos()); // ⚠️ Solo el admin gasta estas lecturas
+    }
+
+    await Promise.allSettled(promises);
+    setDataReady(true); // Avisamos que los datos ya están
+    console.log("✅ Datos cargados.");
+  };
  /* ==========================================================
      🔹 Logout => Cierra sesion y REDIRECCIONA
      ========================================================== */
-  const logout = async () => {
-    try {
-      setLoggingOut(true);
-      await signOut(auth);
-      
-      // Limpiamos estados (esto ya lo tenías bien)
-      setUser(null);
-      setRole(null);
-      setMisCursos([]);
-      setUserProfile(null);
-      
-      // 🔥 LA SOLUCIÓN: Redirección forzada
-      // Usamos replace para que no puedan volver atrás con el botón del navegador
-      router.replace("/"); // O '/login' si esa es tu ruta
-      
-    } catch (err) {
-      console.error("❌ Error al cerrar sesión:", err);
-      toast.error("Error al cerrar sesión");
-    } finally{
-      setLoggingOut(false);
-    }
-  };
+
+const logout = async () => {
+  try {
+    setLoggingOut(true);
+    
+    // 🔥 BORRAR COOKIE DE 2FA ANTES DE CERRAR SESIÓN
+    Cookies.remove("admin_2fa_valid");
+    
+    await signOut(auth);
+    
+    // Limpieza de estado
+    setUser(null);
+    setRole(null);
+    setMisCursos([]);
+    setUserProfile(null);
+    
+    router.replace("/"); 
+    
+  } catch (err) {
+    console.error("❌ Error al cerrar sesión:", err);
+    toast.error("Error al cerrar sesión");
+  } finally {
+    setLoggingOut(false);
+  }
+};
 
 
 /* ==========================================================
@@ -944,167 +982,74 @@ const getCourseProgress = async (uid: string, courseId: string) => {
   /* ==========================================================
      🔹 Listener de Auth
      ========================================================== */
- useEffect(() => {
-  const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-    setLoading(true);
-    // setLoadingVideoStatus(true); // 👈 Dashboard
-    //   setLoadingChatbotVideoStatus(true); // 👈 Chatbot
-    //   setLoadingCoursePlayerVideoStatus(true); // 👈 Material academico
-    //  setLoadingChatbotTutorialStatus(true); 👈 Chatbot TUTORIAL
+useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setLoading(true);
 
-    try {
-      if (firebaseUser) {
-        setUser(firebaseUser);
+      try {
+        if (firebaseUser) {
+          setUser(firebaseUser);
 
-        // 🔥 PASO 1: Cargar sesiones de chat
-        await loadChatSessions(firebaseUser.uid);
-
-        // 🔥 PASO 2: Buscar perfil existente
-        let profile = await fetchUserFromBatchesByUid(firebaseUser.uid);
-
-        // 🔥 PASO 3: Si NO existe → CREAR PRIMERO
-        if (!profile) {
-          console.log("⚠️ Usuario nuevo detectado, creando en batch...");
-          await addUserToBatch(firebaseUser, "alumno");
+          // -----------------------------------------------------------
+          // FASE 1: Identidad (Bloqueante, pero rápida)
+          // -----------------------------------------------------------
           
-          // Volver a buscar después de crear
-          profile = await fetchUserFromBatchesByUid(firebaseUser.uid);
-          
+          // 1. Buscar perfil en batches
+          let profile = await fetchUserFromBatchesByUid(firebaseUser.uid);
+
+          // 2. Si es nuevo, crearlo
           if (!profile) {
-            console.error("❌ Error: No se pudo crear el usuario en batch");
-            toast.error("Error al crear perfil de usuario");
-            setLoading(false);
-            setLoadingVideoStatus(false); // 👈 NUEVO
-            setLoadingChatbotVideoStatus(false); 
-            return;
+            console.log("⚠️ Usuario nuevo detectado, creando...");
+            await addUserToBatch(firebaseUser, "alumno");
+            profile = await fetchUserFromBatchesByUid(firebaseUser.uid);
           }
-        }
 
-        // 🔥 PASO 4: Obtener datos completos del batch
-        if (profile?.batchId && profile?.userKey) {
-          const batchRef = doc(db, "alumnos", profile.batchId);
-          const snap = await getDoc(batchRef);
-
-          if (snap.exists()) {
-            const data = snap.data()[profile.userKey] || {};
-
-            // 🔥 Unificar datos del usuario
-            profile = { ...profile, ...data };
-
-            // 🎬 Cargar estado del video DASHBOARD
-            //   const dashboardVideoSeen = data.hasSeenWelcomeVideo === true;
-            //   setHasSeenWelcomeVideo(dashboardVideoSeen);
-            //   console.log(`📹 Video dashboard: ${dashboardVideoSeen ? "Visto" : "No visto"}`);
-
-            //   // 🤖 Cargar estado del video CHATBOT (NUEVO)
-            //   const chatbotVideoSeen = data.hasSeenChatbotVideo === true;
-            //   setHasSeenChatbotVideo(chatbotVideoSeen);
-            //   console.log(`💬 Video chatbot: ${chatbotVideoSeen ? "Visto" : "No visto"}`);
-            //   // 📚 Cargar estado del video COURSE PLAYER (NUEVO)
-            // const coursePlayerVideoSeen = data.hasSeenCoursePlayerVideo === true;
-            // setHasSeenCoursePlayerVideo(coursePlayerVideoSeen);
-            // console.log(`📖 Video course player: ${coursePlayerVideoSeen ? "Visto" : "No visto"}`);
-
-            // const chatbotTutorialSeen = data.hasSeenChatbotTutorial === true;
-            // setHasSeenChatbotTutorial(chatbotTutorialSeen);
-            // console.log(`🎓 Tutorial chatbot: ${chatbotTutorialSeen ? "Visto" : "No visto"}`)
-            // ⚠️ Si es PROFESOR, inicializar idiomas si no existen
-            if (profile.role === "profesor") {
-              profile.idiomasProfesor = Array.isArray(data.idiomasProfesor)
-                ? data.idiomasProfesor
-                : [];
-
-              // 👇 NO aplicar lógica de idioma del alumno
-              setLang("en"); // o idioma por defecto global
+          // 3. Completar datos del perfil
+          if (profile?.batchId) {
+            const batchRef = doc(db, "alumnos", profile.batchId);
+            const snap = await getDoc(batchRef);
+            if (snap.exists()) {
+               const data = snap.data()[profile.userKey] || {};
+               profile = { ...profile, ...data };
             }
           }
-        }
 
-        // 🔥 PASO 5: Configurar idioma según rol
-        if (profile.role === "profesor") {
-          // 🔥 NO usar idiomas de alumno
+          // 4. Determinar Rol e Idioma
+          const resolvedRole = profile?.role || "alumno";
+          setRole(resolvedRole);
           setUserProfile(profile);
+
+          const lang = resolvedRole === "profesor" ? "en" : (profile.learningLanguage || "en");
+          setLang(lang);
+
+          // 🔓 LIBERAMOS LA UI AQUÍ: El usuario ya entra al dashboard
+          setAuthReady(true);
+          setLoading(false);
+
+          // -----------------------------------------------------------
+          // FASE 2: Datos Pesados (Segundo plano)
+          // -----------------------------------------------------------
+          // Ya no bloqueamos al usuario esperando loadAlumnos
+          fetchInitialData(firebaseUser.uid, resolvedRole);
+
         } else {
-          // 🔥 Alumno sí usa learningLanguage
-          const resolvedLanguage =
-            profile?.learningLanguage ||
-            profile?.language ||
-            profile?.idioma ||
-            "en";
-
-          profile = {
-            ...profile,
-            learningLanguage: resolvedLanguage,
-            language: resolvedLanguage,
-            idioma: resolvedLanguage,
-          };
-
-          setUserProfile(profile);
-          setLang(resolvedLanguage);
-        }
-
-        // 🔥 PASO 6: Determinar rol
-        const resolvedRole = profile?.role || "alumno";
-        setRole(resolvedRole);
-
-        // 🔥 PASO 7: Cargar alumnos (para todos los roles)
-        await loadAlumnos();
-
-        // 🔥 PASO 8: Cargar datos según rol
-        if (resolvedRole === "alumno") {
-          await loadMisCursos(firebaseUser.uid);
-          await loadAnuncios();
-        }
-
-        if (resolvedRole === "profesor") {
-          await loadAllCursos();
-          await loadProfesores();
-          await loadAnuncios();
-        }
-
-        if (resolvedRole === "admin") {
-          await loadAlumnos();
-          await loadAllCursos();
-          await loadProfesores();
-          await loadAnuncios();
-        }
-
-        if (resolvedRole === "alumno" || resolvedRole === "admin" || resolvedRole === "profesor") {
-  await loadPodcastEpisodes();
-}
-        // ✅ Marcar que terminó de cargar el estado del video
-        setLoadingVideoStatus(false); // 👈 NUEVO
-        setLoadingChatbotVideoStatus(false); // 👈 Chatbot
-        setLoadingCoursePlayerVideoStatus(false); // 👈 NUEVO
-        setLoadingChatbotTutorialStatus(false);
-            } else {
+          // Logout / Sin usuario
           setUser(null);
           setRole(null);
           setMisCursos([]);
           setUserProfile(null);
-          setHasSeenWelcomeVideo(false);
-          setHasSeenChatbotVideo(false);
-          setHasSeenCoursePlayerVideo(false);
-          setHasSeenChatbotTutorial(false);
-          setLang("en");
-          
+          setAuthReady(true);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error("❌ Error Auth:", error);
+        setLoading(false);
+        setAuthReady(true); // Dejar entrar para mostrar error
       }
-    } catch (error) {
-      console.error("❌ Error en onAuthStateChanged:", error);
-      toast.error("Error al cargar datos del usuario");
-    } finally {
-      // ✅ MOVER TODOS LOS setLoading...Status AQUÍ
-      // setLoadingVideoStatus(false);
-      // setLoadingChatbotVideoStatus(false);
-      // setLoadingCoursePlayerVideoStatus(false);
-      // setLoadingChatbotTutorialStatus(false);
-      setLoading(false);
-      setAuthReady(true);
-    }
-  });
+    });
 
-  return () => unsubscribe();
-}, []);
+    return () => unsubscribe();
+  }, []);
 
 /* ==========================================================
    🔥 Paso 3 — Cargar actividad cuando TODO esté listo
@@ -1136,6 +1081,7 @@ const value = useMemo(
     userProfile,
     authReady,
     loading,
+    dataReady,
 
     // --- Datos académicos ---
     alumnos,

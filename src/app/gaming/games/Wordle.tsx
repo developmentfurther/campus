@@ -1,17 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import {
-  userPlayedToday,
-  updateUserGameAttempt,
-} from "@/lib/games/attempts";
 import { useI18n } from "@/contexts/I18nContext";
 import { motion, AnimatePresence } from "framer-motion";
-import GameBlockedModal from "@/components/ui/GameBlockedModal";
 import LoaderGame from "@/components/ui/LoaderGame";
-import GameBackground from "@/components/ui/GameBackground";
-import { FiRefreshCw, FiZap, FiTrendingUp, FiTarget } from "react-icons/fi";
+import { FiRefreshCw, FiZap, FiTarget, FiInfo } from "react-icons/fi";
 
 type LetterState = "correct" | "present" | "absent" | "";
 
@@ -22,17 +16,22 @@ interface GuessResult {
 
 const GAME_ID = "wordle";
 
+// 🔥 Componente Tile Mejorado (Más pequeño y estético)
 const WordleTile = ({ letter, state, delay }: { letter: string; state: LetterState; delay: number }) => {
-  const baseClasses = "w-full h-full flex items-center justify-center text-2xl md:text-3xl font-black rounded-xl transition-all duration-300 border-2";
+  // Ajuste de tamaños para que no sea enorme
+  const baseClasses = "w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 flex items-center justify-center text-xl sm:text-2xl md:text-3xl font-extrabold rounded-lg select-none transition-all duration-300";
   
-  let stateClasses = "bg-white border-gray-300 text-[#0C212D]";
+  let stateClasses = "bg-white border-2 border-gray-200 text-[#0C212D]";
   
   if (state === "correct") {
-    stateClasses = "bg-gradient-to-br from-emerald-500 to-green-500 border-emerald-400 text-white shadow-lg";
+    stateClasses = "bg-emerald-500 border-emerald-500 text-white shadow-md";
   } else if (state === "present") {
-    stateClasses = "bg-gradient-to-br from-[#EE7203] to-[#FF3816] border-[#EE7203] text-white shadow-lg";
+    stateClasses = "bg-amber-500 border-amber-500 text-white shadow-md"; // Cambié a amber para mejor contraste
   } else if (state === "absent") {
-    stateClasses = "bg-gray-400 border-gray-500 text-white";
+    stateClasses = "bg-gray-400 border-gray-400 text-white";
+  } else if (letter) {
+    // Estado cuando escribes pero no has enviado (Borde activo)
+    stateClasses = "bg-white border-2 border-gray-400 text-[#0C212D] animate-pulse-short";
   }
 
   return (
@@ -50,6 +49,7 @@ const WordleTile = ({ letter, state, delay }: { letter: string; state: LetterSta
 export default function Wordle() {
   const { t } = useI18n();
   const { user, role, userProfile } = useAuth();
+  const inputRef = useRef<HTMLInputElement>(null); // 🔥 Referencia para mantener foco
 
   const MAX_TRIES = 6;
 
@@ -64,7 +64,7 @@ export default function Wordle() {
   const [loadingWord, setLoadingWord] = useState(true);
   const [showLoader, setShowLoader] = useState(true);
 
-  const WORD_LENGTH = word.length;
+  const WORD_LENGTH = word.length || 5; // Default para evitar crash inicial
 
   useEffect(() => {
     setBlocked(false);
@@ -74,10 +74,16 @@ export default function Wordle() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowLoader(false);
-    }, 1800);
-
+    }, 1000); // Reduje tiempo para mejor UX
     return () => clearTimeout(timer);
   }, []);
+
+  // 🔥 Auto-focus: Mantener el teclado abierto en móviles
+  const focusInput = () => {
+    if (status === 'playing') {
+        inputRef.current?.focus();
+    }
+  };
 
   const fetchWord = async () => {
     try {
@@ -88,11 +94,13 @@ export default function Wordle() {
       setStatus("playing");
 
       const res = await fetch(
-        `/api/games/wordle?lang=${userProfile.learningLanguage}`
+        `/api/games/wordle?lang=${userProfile?.learningLanguage || 'en'}`
       );
       const data = await res.json();
 
       setWord(data.word.toLowerCase().trim());
+      // Re-focus al cargar nueva palabra
+      setTimeout(() => inputRef.current?.focus(), 100);
     } catch (err) {
       console.error(err);
     } finally {
@@ -117,26 +125,28 @@ export default function Wordle() {
       letterCount[char] = (letterCount[char] || 0) + 1;
     }
 
+    // Primera pasada: Correctas (Verdes)
     for (let i = 0; i < WORD_LENGTH; i++) {
       const letter = attempt[i];
       if (letter === word[i]) {
         result[i] = { letter, state: "correct" };
         letterCount[letter] -= 1;
       } else {
-        result[i] = { letter, state: "" };
+        // Placeholder temporal
+        result[i] = { letter, state: "" }; 
       }
     }
 
+    // Segunda pasada: Presentes (Amarillas) o Ausentes (Grises)
     for (let i = 0; i < WORD_LENGTH; i++) {
+      if (result[i].state === "correct") continue; // Ya procesada
+
       const letter = attempt[i];
-
-      if (result[i].state === "correct") continue;
-
       if (letterCount[letter] > 0) {
-        result[i].state = "present";
+        result[i] = { letter, state: "present" };
         letterCount[letter] -= 1;
       } else {
-        result[i].state = "absent";
+        result[i] = { letter, state: "absent" };
       }
     }
 
@@ -146,246 +156,170 @@ export default function Wordle() {
 
     if (attempt === word) {
       setStatus("won");
-      return;
     } else if (updated.length >= MAX_TRIES) {
       setStatus("lost");
-      return;
     }
 
+    // Lógica de Pistas
     if (updated.length === 3)
       setHint(t("gaming.games.wordle.hint1", { letter: word[0].toUpperCase() }));
-
     if (updated.length === 5)
       setHint(t("gaming.games.wordle.hint2"));
   };
-
-  useEffect(() => {
-    // const mark = async () => {
-    //   if (!user) return;
-    //   if (role !== "alumno") return;
-    //   if (status === "playing") return;
-
-    //   await updateUserGameAttempt(user.uid, GAME_ID);
-    //   setBlocked(true);
-    // };
-
-    // void mark();
-  }, [status, user, role]);
 
   if (checkingAttempt || loadingWord || showLoader) {
     return <LoaderGame />;
   }
 
   return (
-    <div className="relative flex flex-col items-center justify-center min-h-screen space-y-8 text-center px-4 py-12 overflow-hidden bg-white">
+    // 🔥 Contenedor Principal: Altura ajustada y centrado
+    <div 
+        className="min-h-[85vh] flex flex-col items-center py-8 px-4  relative overflow-hidden font-sans"
+        onClick={focusInput} // Clic en cualquier lado hace focus al input
+    >
       
-      {/* Background decorativo */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-[#EE7203]/10 rounded-full blur-3xl animate-pulse"></div>
-        <div
-          className="absolute bottom-20 right-10 w-96 h-96 bg-[#FF3816]/10 rounded-full blur-3xl animate-pulse"
-          style={{ animationDelay: "1s" }}
-        ></div>
-      </div>
+     
 
       <motion.div
-        initial={{ opacity: 0, y: 15 }}
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        className="relative z-20 max-w-2xl mx-auto w-full"
+        className="relative z-10 w-full max-w-md mx-auto flex flex-col items-center"
       >
 
-        {/* Header */}
-        <div className="mb-10">
-          <motion.div
-            initial={{ y: -20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="inline-flex items-center gap-3 bg-gradient-to-r from-[#EE7203] to-[#FF3816] px-6 py-2 rounded-full mb-6 shadow-lg"
-          >
-            <FiZap className="text-white" size={20} />
-            <span className="text-white font-bold text-sm uppercase tracking-wider">
-              Wordle Challenge
+        {/* HEADER COMPACTO */}
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center gap-2 bg-white px-4 py-1.5 rounded-full shadow-sm border border-gray-100 mb-3">
+            <FiZap className="text-[#EE7203]" size={16} />
+            <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+              Daily Challenge
             </span>
-          </motion.div>
-
-          <h1 className="text-4xl md:text-5xl font-black text-[#0C212D] mb-3">
-            {t("gaming.games.wordle.title")}
+          </div>
+          <h1 className="text-3xl font-black text-[#0C212D] tracking-tight">
+            WORDLE
           </h1>
-
-          <p className="text-[#0C212D]/70 text-base md:text-lg font-medium">
-            Adivina la palabra en {MAX_TRIES} intentos
-          </p>
         </div>
 
-        {/* Card principal */}
-        <motion.div
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          className="bg-white/80 backdrop-blur-xl rounded-3xl p-6 md:p-10 border border-gray-200 shadow-2xl mb-8"
-        >
-          
-          {/* Hint */}
-          <AnimatePresence>
-            {hint && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="mb-6 bg-gradient-to-r from-blue-500/20 to-blue-600/20 backdrop-blur-sm rounded-xl px-4 py-3 border border-blue-500/30"
-              >
-                <p className="text-blue-700 font-bold text-sm flex items-center justify-center gap-2">
-                  <FiTarget size={16} />
-                  {hint}
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* GRID de intentos */}
-          <div className="space-y-2 mb-6">
-            {Array.from({ length: MAX_TRIES }).map((_, row) => {
-              const guessRow = guesses[row] ?? [];
-
-              return (
-                <div
-                  key={row}
-                  className="grid gap-2"
-                  style={{
-                    gridTemplateColumns: `repeat(${WORD_LENGTH}, 1fr)`,
-                  }}
+        {/* 🎮 TABLERO DE JUEGO */}
+        <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-xl border border-gray-100 w-full max-w-[360px] sm:max-w-[420px]">
+            
+            {/* Pista Flotante */}
+            <AnimatePresence>
+                {hint && (
+                <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mb-4 bg-blue-50 text-blue-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2"
                 >
-                  {Array.from({ length: WORD_LENGTH }).map((_, col) => {
-                    const cell = guessRow[col];
-                    const delay = row === guesses.length - 1 ? col * 0.15 : 0;
+                    <FiInfo className="flex-shrink-0" />
+                    {hint}
+                </motion.div>
+                )}
+            </AnimatePresence>
 
+            {/* GRID */}
+            <div className="grid gap-2 mb-6 justify-center">
+                {Array.from({ length: MAX_TRIES }).map((_, rowIndex) => {
+                    const guess = guesses[rowIndex];
+                    const isCurrentRow = rowIndex === guesses.length;
+                    
                     return (
-                      <div key={col} className="aspect-square">
-                        <WordleTile
-                          letter={cell?.letter || ""}
-                          state={cell?.state ?? ""}
-                          delay={delay}
-                        />
-                      </div>
+                    <div 
+                        key={rowIndex} 
+                        className="grid gap-2" 
+                        style={{ gridTemplateColumns: `repeat(${WORD_LENGTH}, 1fr)` }}
+                    >
+                        {Array.from({ length: WORD_LENGTH }).map((_, colIndex) => {
+                            // Lógica para mostrar letra:
+                            // 1. Si ya se adivinó (guess existe), usa guess[col].
+                            // 2. Si es la fila actual, usa currentInput[col].
+                            // 3. Sino, vacío.
+                            let letter = "";
+                            let state: LetterState = "";
+
+                            if (guess) {
+                                letter = guess[colIndex].letter;
+                                state = guess[colIndex].state;
+                            } else if (isCurrentRow && currentInput[colIndex]) {
+                                letter = currentInput[colIndex];
+                            }
+
+                            // Retraso de animación solo para la fila recién enviada
+                            const delay = (guess && rowIndex === guesses.length - 1) ? colIndex * 0.1 : 0;
+
+                            return (
+                                <WordleTile 
+                                    key={colIndex} 
+                                    letter={letter} 
+                                    state={state} 
+                                    delay={delay} 
+                                />
+                            );
+                        })}
+                    </div>
                     );
-                  })}
-                </div>
-              );
-            })}
-          </div>
+                })}
+            </div>
 
-          {/* Estado: Jugando */}
-          {status === "playing" && (
-            <>
-              <div className="relative mb-4">
-                <input
-                  maxLength={WORD_LENGTH}
-                  value={currentInput}
-                  onChange={(e) =>
-                    setCurrentInput(
-                      e.target.value.replace(/[^a-zA-Záéíóúüñçàèìòùâêîôû]/gi, "")
-                    )
-                  }
-                  onKeyPress={(e) => e.key === "Enter" && submitGuess()}
-                  placeholder="Escribe tu palabra..."
-                  className="w-full px-6 py-4 md:py-5 rounded-2xl text-lg md:text-xl font-bold text-[#0C212D] bg-white border-3 border-gray-300 focus:border-[#EE7203] focus:shadow-lg focus:shadow-[#EE7203]/30 transition-all outline-none text-center uppercase tracking-wider"
-                />
-              </div>
+            {/* CONTROLES / ESTADO */}
+            <div className="relative min-h-[60px] flex items-center justify-center">
+                
+                {/* Input Invisible (Pero funcional) */}
+                {status === "playing" && (
+                    <input
+                        ref={inputRef}
+                        autoFocus
+                        maxLength={WORD_LENGTH}
+                        value={currentInput}
+                        onChange={(e) => {
+                            const val = e.target.value.replace(/[^a-zA-Záéíóúüñç]/gi, "");
+                            if (val.length <= WORD_LENGTH) setCurrentInput(val);
+                        }}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") submitGuess();
+                        }}
+                        className="opacity-0 absolute inset-0 w-full h-full cursor-default z-0"
+                        autoComplete="off"
+                        autoCorrect="off"
+                    />
+                )}
 
-              <button
-                onClick={submitGuess}
-                className="w-full px-8 py-4 md:py-5 bg-gradient-to-r from-[#EE7203] to-[#FF3816] rounded-2xl font-black text-lg md:text-xl text-white shadow-xl hover:shadow-2xl hover:shadow-[#EE7203]/40 hover:scale-105 transition-all active:scale-95 mb-3"
-              >
-                {t("gaming.games.wordle.submit")}
-              </button>
+                {/* Botones de Estado Final */}
+                {status !== "playing" ? (
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="text-center w-full"
+                    >
+                        <p className={`text-lg font-bold mb-3 ${status === 'won' ? 'text-emerald-600' : 'text-red-500'}`}>
+                            {status === 'won' ? '🎉 ¡Correcto!' : `La palabra era: ${word.toUpperCase()}`}
+                        </p>
+                        <button
+                            onClick={fetchWord}
+                            disabled={loadingWord}
+                            className="w-full bg-[#0C212D] text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-[#112C3E] transition-colors"
+                        >
+                            <FiRefreshCw className={loadingWord ? "animate-spin" : ""} />
+                            {t("gaming.games.wordle.new")}
+                        </button>
+                    </motion.div>
+                ) : (
+                    // Botón "Enviar" (Solo visible si hay letras escritas, opcional)
+                    <p className="text-gray-400 text-sm font-medium animate-pulse">
+                        {currentInput.length === WORD_LENGTH 
+                            ? "Press ENTER to submit" 
+                            : "Type to play..."}
+                    </p>
+                )}
+            </div>
 
-              <button
-                onClick={fetchWord}
-                disabled={loadingWord}
-                className="w-full px-6 py-3 bg-white hover:bg-gray-50 border-2 border-gray-300 hover:border-[#EE7203] rounded-xl text-[#0C212D] font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 group"
-              >
-                <FiRefreshCw className="group-hover:rotate-180 transition-transform duration-500" size={18} />
-                {t("gaming.games.wordle.new")}
-              </button>
-            </>
-          )}
+        </div>
 
-          {/* Estado: Ganado */}
-          {status === "won" && (
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="text-center space-y-6"
-            >
-              <div className="inline-flex items-center gap-3 bg-gradient-to-r from-emerald-500 to-green-500 px-8 py-4 rounded-2xl shadow-2xl">
-                <span className="text-4xl">🎉</span>
-                <span className="text-white text-xl font-black">¡CORRECTO!</span>
-              </div>
-
-              <p className="text-emerald-600 text-xl md:text-2xl font-bold">
-                {t("gaming.games.wordle.won", { word: word.toUpperCase() })}
-              </p>
-
-              <button
-                onClick={fetchWord}
-                disabled={loadingWord}
-                className="group px-8 py-4 bg-gradient-to-r from-[#EE7203] to-[#FF3816] rounded-2xl font-bold text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3 mx-auto"
-              >
-                <FiRefreshCw className="group-hover:rotate-180 transition-transform duration-500" size={20} />
-                {t("gaming.games.wordle.new")}
-              </button>
-            </motion.div>
-          )}
-
-          {/* Estado: Perdido */}
-          {status === "lost" && (
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="text-center space-y-6"
-            >
-              <div className="inline-flex items-center gap-3 bg-gradient-to-r from-red-500 to-red-600 px-8 py-4 rounded-2xl shadow-2xl">
-                <span className="text-4xl">😔</span>
-                <span className="text-white text-xl font-black">¡GAME OVER!</span>
-              </div>
-
-              <p className="text-red-600 text-xl md:text-2xl font-bold">
-                {t("gaming.games.wordle.lost", { word: word.toUpperCase() })}
-              </p>
-
-              <button
-                onClick={fetchWord}
-                disabled={loadingWord}
-                className="group px-8 py-4 bg-gradient-to-r from-[#EE7203] to-[#FF3816] rounded-2xl font-bold text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3 mx-auto"
-              >
-                <FiRefreshCw className="group-hover:rotate-180 transition-transform duration-500" size={20} />
-                {t("gaming.games.wordle.new")}
-              </button>
-            </motion.div>
-          )}
-        </motion.div>
-
-        {/* Stats */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
-          className="flex justify-center gap-4 md:gap-6"
-        >
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl px-6 py-3 border border-gray-200 shadow-lg">
-            <p className="text-[#0C212D]/60 text-xs font-bold uppercase tracking-wider mb-1">
-              Intentos
-            </p>
-            <p className="text-[#0C212D] text-2xl font-black">{guesses.length}/{MAX_TRIES}</p>
-          </div>
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl px-6 py-3 border border-gray-200 shadow-lg">
-            <p className="text-[#0C212D]/60 text-xs font-bold uppercase tracking-wider mb-1">
-              Longitud
-            </p>
-            <p className="text-[#EE7203] text-2xl font-black">{WORD_LENGTH}</p>
-          </div>
-        </motion.div>
+        {/* Stats Footer */}
+        <div className="mt-6 flex gap-8 text-gray-400 text-sm font-medium">
+            <span>Length: <strong className="text-gray-600">{WORD_LENGTH}</strong></span>
+            <span>Tries: <strong className="text-gray-600">{guesses.length}/{MAX_TRIES}</strong></span>
+        </div>
 
       </motion.div>
     </div>

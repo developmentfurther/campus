@@ -119,6 +119,7 @@ export default function SidebarAdmin() {
         <ul className="space-y-2 mb-8">
           {chatSection.map((item, idx) => (
             <SidebarButton
+            
               key={item.id}
               {...item}
               active={section === item.id}
@@ -207,6 +208,7 @@ function SidebarButton({
 }) {
   return (
     <button
+    data-tutorial={id === "chat-history" ? "chat-history" : undefined}
       onClick={onClick}
       style={{ animationDelay: `${delay}ms` }}
       className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold 

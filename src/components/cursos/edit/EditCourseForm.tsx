@@ -31,7 +31,7 @@ import {
   FiBookOpen,
   FiFlag,
   FiGlobe,
-  FiClock, FiArrowRight
+  FiClock, FiArrowRight, FiCheckCircle
 } from "react-icons/fi";
 import VocabularyEditor from "../cursoItem/VocabularyEditor";
 import BlockEditor from "../cursoItem/blocks/BlockEditor";
@@ -193,6 +193,7 @@ export default function EditCourseForm({
   const [filterNombre, setFilterNombre] = useState("");
   const [filterCursoId, setFilterCursoId] = useState("");
   const [resumeItem, setResumeItem] = useState<{ id: string; name: string } | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
 
   /* =========================================================
@@ -690,6 +691,7 @@ const deleteContentItem = (itemId: string) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!firestore || !curso) return toast.error("Error: System not ready");
+    setUploading(true);
 
     const refCurso = doc(firestore, "cursos", courseId);
 
@@ -745,12 +747,24 @@ const deleteContentItem = (itemId: string) => {
         }
       }
 
-      toast.success(`✅ Saved successfully`);
-      await reloadData?.();
-      onClose?.();
+     // --- CAMBIOS AQUÍ ---
+        // 1. Refrescamos la data de fondo
+        await reloadData?.();
+        
+        // 2. Quitamos el loading
+        setUploading(false);
+
+        // 3. NO cerramos el formulario todavía (quitamos onClose?.())
+        // 4. Mostramos el Modal de Éxito
+        setShowSuccessModal(true);
+        
+        // Opcional: Mantener el toast si quieres doble feedback, o quitarlo.
+        // toast.success(`✅ Saved successfully`); 
+
     } catch (err) {
-      console.error(err);
-      toast.error("Error saving course");
+        console.error(err);
+        setUploading(false);
+        toast.error("Error saving course");
     }
   };
 
@@ -1085,6 +1099,41 @@ const deleteContentItem = (itemId: string) => {
             </form>
         </div>
       </div>
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/10 animate-fadeIn">
+            <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full text-center border border-white/20 transform transition-all scale-100 relative overflow-hidden">
+                
+                {/* Decoración de fondo */}
+                <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#EE7203] to-[#FF3816]" />
+                <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#EE7203]/10 rounded-full blur-2xl" />
+
+                {/* Icono Animado */}
+                <div className="mx-auto w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-6 shadow-inner">
+                    <FiCheckCircle className="w-10 h-10 text-green-500 stroke-[2]" />
+                </div>
+
+                {/* Texto */}
+                <h3 className="text-2xl font-black text-[#0C212D] mb-2">
+                    ¡Cambios Guardados!
+                </h3>
+                <p className="text-gray-500 mb-8 leading-relaxed text-sm">
+                    El material académico ha sido actualizado y sincronizado correctamente.
+                </p>
+
+                {/* Botón de Acción */}
+                <button
+                    type="button" // Importante poner type="button" para que no intente enviar form
+                    onClick={() => {
+                        setShowSuccessModal(false);
+                        onClose?.(); 
+                    }}
+                    className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white font-bold text-lg shadow-lg hover:shadow-orange-500/30 hover:scale-[1.02] transition-all active:scale-95"
+                >
+                    Entendido, cerrar
+                </button>
+            </div>
+        </div>
+      )}
     </div>
   );
 }

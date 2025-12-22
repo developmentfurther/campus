@@ -8,6 +8,7 @@ import { UsersProvider } from '@/contexts/UserContext';
 
 // 👇 1. Importar el componente
 import {GlobalPodcast}  from '@/components/podcast/GlobalPodcast'; 
+import { ChatProvider } from '@/contexts/ChatContext';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -26,6 +27,7 @@ export default function RootLayout({
       <body className={`${inter.className} relative`}> {/* Agregué relative por seguridad */}
         <I18nProvider>
           <AuthProvider>
+            <ChatProvider>
             <UsersProvider>
               
               <main className="min-h-screen bg-gray-50">
@@ -39,6 +41,7 @@ export default function RootLayout({
               <GlobalPodcast />
 
             </UsersProvider>
+            </ChatProvider>
           </AuthProvider>
         </I18nProvider>
       </body>

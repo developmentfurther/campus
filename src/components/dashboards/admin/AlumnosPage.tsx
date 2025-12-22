@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   FiSearch,
   FiUser,
@@ -28,24 +28,19 @@ export default function StudentsPage() {
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
+  const debouncedSearch = useDebounce(search, 300);
+
 
   const PAGE_SIZE = 25;
 
   /* 🔍 FILTRADO CORREGIDO */
   const filteredAlumnos = useMemo(() => {
     if (!Array.isArray(alumnos)) return [];
-
-    console.log("🔍 Filtrando alumnos:", {
-      total: alumnos.length,
-      languageFilter,
-      levelFilter,
-      search,
-    });
-
+    
     return alumnos
       .filter((a) => {
-        if (!search) return true;
-        return a?.email?.toLowerCase().includes(search.toLowerCase());
+        if (!debouncedSearch) return true; // <--- Cambio aquí
+        return a?.email?.toLowerCase().includes(debouncedSearch.toLowerCase()); // <--- Cambio aquí
       })
       .filter((a) => {
         if (!languageFilter) return true;
@@ -71,7 +66,7 @@ export default function StudentsPage() {
         }
         return match;
       });
-  }, [alumnos, search, languageFilter, levelFilter]);
+  },[alumnos, debouncedSearch, languageFilter, levelFilter]);
 
   /* 📄 PAGINADO */
   const totalPages = Math.ceil(filteredAlumnos.length / PAGE_SIZE) || 1;
@@ -786,4 +781,14 @@ const ConfirmModal = () => (
       )}
     </div>
   );
+}
+
+// 1. Agrega este hook simple al final de tu archivo (o en un archivo useDebounce.ts)
+function useDebounce(value: string, delay: number) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
 }

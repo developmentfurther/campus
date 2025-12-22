@@ -9,16 +9,24 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
   const router = useRouter();
 
   useEffect(() => {
-    // Si la autenticación cargó y no hay usuario, chao
+    // Solo redirigir si ya terminamos de cargar todo (authReady) y no hay usuario
     if (authReady && !loading && !user) {
-      router.replace("/"); // O '/login' si tu login está ahí
+      router.replace("/");
     }
   }, [user, authReady, loading, router]);
 
-  // Mientras carga o si no hay usuario, mostramos loader
-  if (!authReady || loading || !user) {
+  // CASO 1: Aún cargando el estado inicial de Auth
+  if (!authReady || loading) {
     return <LoaderUi />;
   }
 
+  // CASO 2: Ya cargó, pero no hay usuario (estamos redirigiendo en el useEffect)
+  // 🔥 IMPORTANTE: No mostrar Loader aquí si ya sabemos que no hay user.
+  // Devolver null evita el parpadeo o el loader infinito visual mientras redirige.
+  if (!user) {
+    return null; 
+  }
+
+  // CASO 3: Todo ok
   return <>{children}</>;
 }

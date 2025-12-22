@@ -1,7 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
 import { useDashboardUI } from "@/stores/useDashboardUI";
-import HomeDashboard from "../HomeDashboard";
 
 import AlumnoCoursesPage from "./AlumnoCoursesPage";
 import AlumnoHome from "./AlumnoHome";
@@ -16,9 +16,17 @@ import PodcastSection from "@/components/podcast/PodcastSection";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function AlumnoDashboard() {
-  const { section } = useDashboardUI();
+  // 👇 2. Extraemos también 'setSection'
+  const { section, setSection } = useDashboardUI();
   const { user } = useAuth();
 
+  /* ==========================================================
+     🔥 FIX: Resetear al Home al montar el dashboard
+     Esto asegura que siempre empiecen en el inicio al loguearse
+     ========================================================== */
+  useEffect(() => {
+    setSection("home");
+  }, []); // El array vacío [] asegura que solo corra 1 vez al inicio
   switch (section) {
     case "home":
       return <AlumnoHome />;
