@@ -8,9 +8,10 @@ import { db } from "@/lib/firebase";
 import Image from "next/image";
 import { toast } from "sonner";
 import { FiCheck, FiShield, FiLogOut } from "react-icons/fi";
+import Cookies from "js-cookie";
 
 export default function TwoFactorPage() {
-  const { user, role, loading, logout } = useAuth(); // 🔥 Añadimos signOut
+  const { user, role, loading, logout } = useAuth();
   const router = useRouter();
 
   const [step, setStep] = useState<"loading" | "setup" | "verify">("loading");
@@ -20,9 +21,7 @@ export default function TwoFactorPage() {
   const [verifying, setVerifying] = useState(false);
   
   const hasVerified = useRef(false);
-  const isRedirecting = useRef(false);
 
-  // Función para logout
   const handleLogout = async () => {
     try {
       await logout();
@@ -34,10 +33,8 @@ export default function TwoFactorPage() {
     }
   };
 
-  // 1. Verificar estado inicial del usuario
   useEffect(() => {
-    if (hasVerified.current || isRedirecting.current) return;
-    if (loading) return;
+    if (hasVerified.current || loading) return;
     
     if (!user || role !== "admin") {
       router.replace("/dashboard");
@@ -49,13 +46,11 @@ export default function TwoFactorPage() {
         const ref = doc(db, "2fa", user.uid);
         const snap = await getDoc(ref);
 
-        // 🔥 CORRECCIÓN: Si ya existe el secret, solo verificar
         if (snap.exists() && snap.data().twoFactorSecret) {
           console.log("✅ Usuario ya tiene 2FA configurado");
           setSecret(snap.data().twoFactorSecret);
-          setStep("verify"); // Solo mostrar input de código
+          setStep("verify");
         } else {
-          // 🆕 Primera vez: Generar QR nuevo
           console.log("🆕 Generando 2FA por primera vez");
           const res = await fetch("/api/auth/2fa", {
             method: "POST",
@@ -63,9 +58,7 @@ export default function TwoFactorPage() {
             body: JSON.stringify({ action: "generate" }),
           });
           
-          if (!res.ok) {
-            throw new Error("Error al generar QR");
-          }
+          if (!res.ok) throw new Error("Error al generar QR");
           
           const data = await res.json();
           setSecret(data.secret);
@@ -81,26 +74,24 @@ export default function TwoFactorPage() {
     checkSetup();
   }, [user, role, loading, router]);
 
-  // 2. Manejar el envío del código
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (verifying || isRedirecting.current) return;
+    if (verifying || hasVerified.current) return;
     
     setVerifying(true);
 
     try {
       console.log("🔐 Verificando código 2FA...");
-      console.log("📝 Secret usado:", secret.substring(0, 8) + "...");
       
-      // A. Validar con la API usando el secret correcto
       const res = await fetch("/api/auth/2fa", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include", // 🔥 Importante para cookies
         body: JSON.stringify({ 
           action: "verify", 
           token, 
-          secret // 🔥 Este es el secret de Firestore o el recién generado
+          secret
         }),
       });
 
@@ -112,7 +103,7 @@ export default function TwoFactorPage() {
 
       console.log("✅ Código válido");
 
-      // B. Si estamos en setup (primera vez), guardar en Firestore
+      // Si es primera vez, guardar en Firestore
       if (step === "setup" && user) {
         console.log("💾 Guardando secret en Firestore...");
         await setDoc(doc(db, "2fa", user.uid), {
@@ -123,26 +114,42 @@ export default function TwoFactorPage() {
           displayName: user.displayName || "Admin",
           createdAt: new Date().toISOString(),
         }, { merge: true });
-        
-        console.log("✅ Secret guardado en Firestore");
       }
 
-      // C. Marcar como verificado y redirigir
       hasVerified.current = true;
-      isRedirecting.current = true;
+
+      // 🔥 SOLUCIÓN: Establecer cookie manualmente también desde el cliente
+      Cookies.set("admin_2fa_valid", "true", {
+        expires: 7, // 7 días
+        path: "/",
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+      });
+
+      console.log("🍪 Cookie establecida desde cliente");
 
       toast.success("✅ Verificado correctamente");
-      console.log("🚀 Redirigiendo a dashboard...");
       
-      // Pequeño delay para que la cookie se establezca
-      setTimeout(() => {
-        router.push("/dashboard");
-      }, 500);
+      // 🔥 Verificar que la cookie existe antes de redirigir
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const cookieCheck = Cookies.get("admin_2fa_valid");
+      console.log("🔍 Verificando cookie antes de redirigir:", cookieCheck);
+
+      if (cookieCheck === "true") {
+        console.log("🚀 Cookie confirmada, redirigiendo...");
+        // Usar replace para evitar historial
+        window.location.href = "/dashboard";
+      } else {
+        throw new Error("Cookie no se estableció correctamente");
+      }
 
     } catch (err: any) {
       console.error("❌ Error en verificación:", err);
       toast.error(err.message || "Error en la verificación");
       setToken("");
+      hasVerified.current = false;
+    } finally {
       setVerifying(false);
     }
   };
@@ -162,7 +169,6 @@ export default function TwoFactorPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <div className="bg-white max-w-md w-full rounded-2xl shadow-xl p-8 border border-gray-100 text-center animate-in fade-in zoom-in duration-300 relative">
         
-        {/* 🔥 Botón de logout en la esquina superior derecha */}
         <button
           onClick={handleLogout}
           className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all group"
@@ -185,7 +191,6 @@ export default function TwoFactorPage() {
             : "Ingresa el código de 6 dígitos de tu aplicación autenticadora."}
         </p>
 
-        {/* 🔥 Solo mostrar QR si es primera vez (setup) */}
         {step === "setup" && qrCode && (
           <div className="mb-6 p-4 border-2 border-dashed border-gray-200 rounded-xl inline-block bg-gray-50">
             <Image src={qrCode} alt="QR Code" width={160} height={160} />
@@ -209,12 +214,20 @@ export default function TwoFactorPage() {
             disabled={token.length !== 6 || verifying}
             className="w-full py-4 bg-[#0C212D] text-white rounded-xl font-bold hover:bg-[#112C3E] transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl active:scale-95"
           >
-            {verifying ? "Verificando..." : "Validar Acceso"}
-            {!verifying && <FiCheck size={20} />}
+            {verifying ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Verificando...
+              </>
+            ) : (
+              <>
+                Validar Acceso
+                <FiCheck size={20} />
+              </>
+            )}
           </button>
         </form>
         
-        {/* 🔥 Solo mostrar código manual en setup (primera vez) */}
         {step === "setup" && (
           <p className="text-xs text-gray-400 mt-6 border-t border-gray-100 pt-4">
             Si no puedes escanear, el código manual es: <br/>
@@ -222,7 +235,6 @@ export default function TwoFactorPage() {
           </p>
         )}
 
-        {/* 🔥 Botón alternativo de logout abajo (opcional, más visible) */}
         <button
           onClick={handleLogout}
           className="mt-6 text-sm text-gray-400 hover:text-gray-600 transition-colors flex items-center justify-center gap-2 mx-auto group"

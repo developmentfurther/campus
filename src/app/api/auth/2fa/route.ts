@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticator } from "otplib";
 import qrcode from "qrcode";
-import { cookies } from "next/headers"; // 👈 Importar cookies
 
 export async function POST(req: NextRequest) {
   try {
@@ -25,25 +24,30 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: false, error: "Código inválido" }, { status: 400 });
       }
 
-      // 🔥 CORRECCIÓN CRÍTICA PARA NEXT.JS 15:
-      // Ahora debemos esperar a que cookies() se resuelva
-      const cookieStore = await cookies(); 
+      console.log("✅ Código válido - Estableciendo cookie...");
 
-      cookieStore.set("admin_2fa_valid", "true", {
-        maxAge: 60 * 60 * 24 * 7, // 7 días
-        path: "/",
-        // Recuerda: false en localhost para que no falle por falta de HTTPS
-        secure: process.env.NODE_ENV === "production", 
-        sameSite: "lax",
-        httpOnly: false, 
-      });
+      // 🔥 SOLUCIÓN: Crear response con cookie en headers
+      const response = NextResponse.json({ ok: true });
 
-      return NextResponse.json({ ok: true });
+      // Configuración de cookie optimizada para producción
+      const cookieOptions = [
+        'admin_2fa_valid=true',
+        'Max-Age=604800', // 7 días en segundos
+        'Path=/',
+        'SameSite=Lax',
+        process.env.NODE_ENV === 'production' ? 'Secure' : '', // Solo HTTPS en producción
+      ].filter(Boolean).join('; ');
+
+      response.headers.set('Set-Cookie', cookieOptions);
+
+      console.log("🍪 Cookie establecida:", cookieOptions);
+
+      return response;
     }
 
     return NextResponse.json({ error: "Acción no válida" }, { status: 400 });
   } catch (error: any) {
-    console.error("Error 2FA:", error);
+    console.error("❌ Error 2FA:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

@@ -5,27 +5,33 @@ import type { NextRequest } from 'next/server';
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
+  console.log("🔍 Middleware ejecutándose en:", pathname);
+  
   // Rutas que requieren 2FA
   const requiresAdmin = pathname.startsWith('/dashboard');
   const is2FAPage = pathname === '/2fa';
   
+  // Si no es ruta protegida o es la página de 2FA, permitir
   if (!requiresAdmin || is2FAPage) {
     return NextResponse.next();
   }
 
-  // Verificar si tiene cookie de 2FA válida
+  // Verificar cookie de 2FA
   const has2FA = request.cookies.get('admin_2fa_valid')?.value === 'true';
   
-  // Si intenta acceder al dashboard sin 2FA, redirigir
+  console.log("🍪 Cookie 2FA:", has2FA ? "✅ Válida" : "❌ No encontrada");
+  
+  // Si no tiene 2FA válido, redirigir
   if (!has2FA) {
-    console.log('🚫 Middleware: Sin 2FA, redirigiendo a /2fa');
-    return NextResponse.redirect(new URL('/2fa', request.url));
+    console.log("🚫 Redirigiendo a /2fa");
+    const url = new URL('/2fa', request.url);
+    return NextResponse.redirect(url);
   }
 
+  console.log("✅ Acceso permitido a dashboard");
   return NextResponse.next();
 }
 
-// Configurar qué rutas debe interceptar el middleware
 export const config = {
   matcher: [
     '/dashboard/:path*',
