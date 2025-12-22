@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
-import { validateUserStatus } from '@/lib/userValidation'; // 👈 IMPORTAR VALIDACIÓN
+import { validateUserStatus } from '@/lib/userValidation';
+import { doc, getDoc } from 'firebase/firestore';
 import { FiMail, FiLock, FiArrowRight, FiZap, FiAlertCircle } from "react-icons/fi";
 import LoaderUi from '@/components/ui/LoaderUi';
 import FancyBackground from '@/components/ui/FancyBackground';
@@ -26,8 +27,6 @@ export default function LoginPage() {
       router.replace('/dashboard');
     }
   }, [authReady, user, router]);
-
-
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,34 +53,40 @@ export default function LoginPage() {
       console.log("🔍 Validando estado del usuario:", email);
       const validation = await validateUserStatus(email);
 
-      // Usuario no existe en el sistema
       if (!validation.exists) {
-        console.warn("⚠️ Usuario no registrado en el sistema");
-        setError("Este correo no está registrado en Further Campus. Contactá a coordinacionacademica@furtherenglish.com ");
+        setError("Este correo no está registrado en Further Campus. Contactá a coordinacionacademica@furtherenglish.com");
         setLoading(false);
         return;
       }
 
-      // Usuario existe pero está dado de baja
       if (!validation.isActive) {
-        console.warn("⛔ Usuario inactivo/dado de baja");
         setShowBajaModal(true);
         setLoading(false);
         return;
       }
 
       // =====================================
-      // ✅ PASO 2: USUARIO VÁLIDO → PERMITIR LOGIN
+      // ✅ PASO 2: LOGIN EXITOSO
       // =====================================
       console.log("✅ Usuario válido, procediendo con login...");
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
       
-      // El onAuthStateChanged del AuthContext se encargará del resto
+      // 🔥 VERIFICAR SI ES ADMIN Y NECESITA 2FA
+      const userDoc = await getDoc(doc(db, 'usuarios', userCredential.user.uid));
+      const isAdmin = userDoc.exists() && userDoc.data()?.role === 'admin';
+
+      if (isAdmin) {
+        console.log("🔐 Usuario admin detectado, redirigiendo a 2FA...");
+        // El middleware interceptará y redirigirá a /2fa si no tiene cookie
+        router.push('/dashboard');
+      } else {
+        console.log("✅ Usuario regular, acceso directo al dashboard");
+        router.push('/dashboard');
+      }
 
     } catch (err: any) {
       console.error("❌ Error en autenticación:", err);
       
-      // Mensajes de error específicos
       if (err.code === "auth/user-not-found") {
         setError("No existe una cuenta con este correo.");
       } else if (err.code === "auth/wrong-password") {
@@ -100,7 +105,6 @@ export default function LoginPage() {
     }
   };
 
-  // Loading inicial
   if (!authReady) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -111,12 +115,13 @@ export default function LoginPage() {
       </div>
     );
   }
-if (loggingOut) return <LoaderUi />;
+
+  if (loggingOut) return <LoaderUi />;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gray-100 px-4 relative overflow-hidden">
+      <FancyBackground />
 
-<FancyBackground />
       {/* 🔥 MODAL USUARIO DADO DE BAJA */}
       {showBajaModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
