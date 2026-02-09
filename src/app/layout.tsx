@@ -1,6 +1,5 @@
 // src/app/layout.tsx
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { I18nProvider } from "@/contexts/I18nContext";
@@ -10,7 +9,6 @@ import { UsersProvider } from '@/contexts/UserContext';
 import {GlobalPodcast}  from '@/components/podcast/GlobalPodcast'; 
 import { ChatProvider } from '@/contexts/ChatContext';
 
-const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'Further Campus – Tu espacio para aprender',
@@ -24,7 +22,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body className={`${inter.className} relative`}> {/* Agregué relative por seguridad */}
+      <body className="relative"> {/* Agregué relative por seguridad */}
         <I18nProvider>
           <AuthProvider>
             <ChatProvider>

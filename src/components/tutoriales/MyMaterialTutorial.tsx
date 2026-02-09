@@ -66,7 +66,11 @@ const TUTORIAL_STEPS = [
   },
 ];
 
-export default function MyMaterialTutorial() {
+export default function MyMaterialTutorial({
+  onFinish,
+}: {
+  onFinish: () => void;
+}) {
   const [isActive, setIsActive] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);
   const [highlightRect, setHighlightRect] = useState(null);
@@ -190,6 +194,7 @@ export default function MyMaterialTutorial() {
 
   const handleClose = () => {
     setIsActive(false);
+    onFinish();
   };
 
   // 📍 Cálculo del transform del tooltip basado en currentPosition

@@ -12,7 +12,7 @@ import SuccessModal from "@/components/ui/SuccessModal";
 import { useI18n } from "@/contexts/I18nContext";
 
 export default function AlumnoProfilePage() {
-  const { user, userProfile, authReady, setUserProfile } = useAuth();
+  const { user, userProfile, authReady, setUserProfile, tutorialsSeen, markTutorialAsSeen } = useAuth();
   const { t } = useI18n();
 
   const [loading, setLoading] = useState(true);
@@ -20,6 +20,9 @@ export default function AlumnoProfilePage() {
   const [saving, setSaving] = useState(false);
 
   const [tutorialKey, setTutorialKey] = useState(0);
+
+  const TUTORIAL_ID = "profile";
+const shouldShowTutorial = !tutorialsSeen?.[TUTORIAL_ID];
 
   const [form, setForm] = useState({
     firstName: "",
@@ -134,7 +137,12 @@ export default function AlumnoProfilePage() {
   // ============================================================
   return (
     <>
-      <ProfileTutorial key={tutorialKey} />
+      {shouldShowTutorial && (
+  <ProfileTutorial
+    key={tutorialKey}
+    onFinish={() => markTutorialAsSeen(TUTORIAL_ID)}
+  />
+)}
 
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white p-4 md:p-8 space-y-6 md:space-y-8">
         

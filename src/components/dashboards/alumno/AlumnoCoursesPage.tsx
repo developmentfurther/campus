@@ -6,10 +6,13 @@ import { useRouter } from "next/navigation";
 import { useI18n } from "@/contexts/I18nContext";
 import MyMaterialTutorial from "@/components/tutoriales/MyMaterialTutorial"; // 👈 IMPORTANTE
 
+
 export default function AlumnoCoursesPage() {
-  const { misCursos, loadingCursos } = useAuth();
+  const { misCursos, loadingCursos, tutorialsSeen, markTutorialAsSeen  } = useAuth();
   const router = useRouter();
   const { t } = useI18n();
+  const TUTORIAL_ID = "material";
+const shouldShowTutorial = !tutorialsSeen?.[TUTORIAL_ID];
 
   if (loadingCursos)
     return (
@@ -24,8 +27,11 @@ export default function AlumnoCoursesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white p-6 md:p-10">
       
-      {/* 👇 INTEGRACIÓN DEL TUTORIAL */}
-      {misCursos.length > 0 && <MyMaterialTutorial />}
+      {misCursos.length > 0 && shouldShowTutorial && (
+  <MyMaterialTutorial
+    onFinish={() => markTutorialAsSeen(TUTORIAL_ID)}
+  />
+)}
 
       {/* HEADER con diseño asimétrico */}
       <div 

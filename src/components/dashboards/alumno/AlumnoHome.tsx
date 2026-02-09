@@ -30,10 +30,13 @@ export default function AlumnoHome() {
     userProfile,
     anuncios,
     loadingAnuncios,
+    tutorialsSeen, markTutorialAsSeen
   } = useAuth();
 
   const { t, lang } = useI18n();
   const { setSection } = useDashboardUI();
+  const TUTORIAL_ID = "home";
+const shouldShowTutorial = !tutorialsSeen?.[TUTORIAL_ID];
 
   const localeMap: Record<string, string> = {
     es: "es-ES",
@@ -133,7 +136,11 @@ export default function AlumnoHome() {
   return (
     <div className="min-h-screen bg-gray-50">
 
-      <HomeTutorial />
+      {shouldShowTutorial && (
+  <HomeTutorial
+    onFinish={() => markTutorialAsSeen(TUTORIAL_ID)}
+  />
+)}
         {/* Padding reducido en mobile: p-4 vs p-8 */}
       <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-6 md:space-y-8 pb-24">
 

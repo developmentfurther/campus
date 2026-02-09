@@ -17,10 +17,16 @@ import { GAMES_MAP } from "@/app/gaming/games";
 import { useI18n } from "@/contexts/I18nContext";
 import Image from "next/image";
 import GamingTutorial from "@/components/tutoriales/GamingTutorial";
+import { useAuth } from "@/contexts/AuthContext";
+
 
 export default function GamingHub() {
   const router = useRouter();
   const { t } = useI18n();
+  const { tutorialsSeen, markTutorialAsSeen } = useAuth();
+  const TUTORIAL_ID = "gaming";
+
+  const shouldShowTutorial = !tutorialsSeen?.[TUTORIAL_ID];
   const [hoveredGame, setHoveredGame] = useState<string | null>(null);
   const [hoveredHelp, setHoveredHelp] = useState<string | null>(null);
 
@@ -126,7 +132,11 @@ const handlePlay = (slug: string) => {
     <div className="min-h-[80vh] px-6 py-20 relative overflow-hidden">
       {/* Floating geometric shapes */}
 
-      <GamingTutorial />
+      {shouldShowTutorial && (
+  <GamingTutorial
+    onFinish={() => markTutorialAsSeen(TUTORIAL_ID)}
+  />
+)}
       <div className="absolute top-20 left-10 w-72 h-72 rounded-full bg-gradient-to-br from-[#EE7203]/10 to-[#FF3816]/5 blur-3xl animate-pulse"></div>
       <div
         className="absolute bottom-20 right-10 w-96 h-96 rounded-full bg-gradient-to-tl from-[#0C212D]/5 to-[#112C3E]/10 blur-3xl animate-pulse"

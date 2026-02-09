@@ -54,7 +54,11 @@ const TUTORIAL_STEPS = [
 ];
 
 
-export default function InfoTutorial() {
+export default function InfoTutorial({
+  onFinish,
+}: {
+  onFinish: () => void;
+}) {
   const [isActive, setIsActive] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);
   const [highlightedElement, setHighlightedElement] = useState(null);
@@ -125,6 +129,7 @@ export default function InfoTutorial() {
     setIsActive(false);
     setHighlightedElement(null);
     setHighlightRect(null);
+     onFinish();
   };
 
   const getTooltipPosition = () => {

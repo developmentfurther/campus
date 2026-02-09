@@ -14,13 +14,19 @@ const formatDuration = (ms: number): string => {
 
 export default function PodcastsSection() {
   const { playPodcast } = useDashboardUI(); 
-  const { podcastEpisodes, loadingPodcast } = useAuth();
+  const { podcastEpisodes, loadingPodcast, tutorialsSeen, markTutorialAsSeen } = useAuth();
 
+  const TUTORIAL_ID = "podcast";
+const shouldShowTutorial = !tutorialsSeen?.[TUTORIAL_ID];
   return (
     <div className="min-h-full w-full bg-gray-50 p-6 md:p-12 pb-40">
       
       
-      <PodcastsTutorial />
+      {shouldShowTutorial && (
+  <PodcastsTutorial
+    onFinish={() => markTutorialAsSeen(TUTORIAL_ID)}
+  />
+)}
 
       {/* --- HEADER --- */}
       <div className="mb-10 max-w-4xl mx-auto text-center" data-tutorial="podcasts-header">

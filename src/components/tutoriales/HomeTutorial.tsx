@@ -53,7 +53,12 @@ const TUTORIAL_STEPS = [
   },
 ];
 
-export default function HomeTutorial() {
+export default function HomeTutorial({
+  onFinish,
+}: {
+  onFinish: () => void;
+}) {
+
   const [isActive, setIsActive] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);
   const [highlightRect, setHighlightRect] = useState(null);
@@ -156,6 +161,7 @@ export default function HomeTutorial() {
 
   const handleClose = () => {
     setIsActive(false);
+    onFinish(); 
   };
 
   // 📍 Cálculo del transform del tooltip

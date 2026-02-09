@@ -53,7 +53,11 @@ const TUTORIAL_STEPS = [
   },
 ];
 
-export default function ProfileTutorial() {
+export default function ProfileTutorial({
+  onFinish,
+}: {
+  onFinish: () => void;
+}) {
   const [isActive, setIsActive] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);
   const [highlightRect, setHighlightRect] = useState(null);
@@ -156,6 +160,7 @@ export default function ProfileTutorial() {
 
   const handleClose = () => {
     setIsActive(false);
+    onFinish();
   };
 
   // 📍 Cálculo del transform del tooltip

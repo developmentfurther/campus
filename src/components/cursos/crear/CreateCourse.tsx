@@ -39,7 +39,7 @@ import ContentTimelineEditor from "../cursoItem/Content/ContentTimeLineEditor";
 import UnitBlockToolbar from "../cursoItem/blocks/UnitToolbar";
 import LessonItem from "../cursoItem/LessonItem"; // ✅ IMPORTADO
 import { db, storage } from "@/lib/firebase";
-
+import useAutoSave from "@/hooks/useAutoSave";
 /* ----------------- Interfaces ----------------- */
 
 interface LessonBlock {
@@ -75,6 +75,8 @@ interface Unidad {
     videoUrl?: string;
   };
 }
+
+
 
 interface ExamenFinal {
   introTexto: string;
@@ -150,13 +152,53 @@ export default function CrearCurso({ onClose }: { onClose?: () => void }) {
   const [activeMainTab, setActiveMainTab] = useState<string>("general");
   const [uploading, setUploading] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  // Estado para el texto del JSON
+const [jsonImportText, setJsonImportText] = useState("");
+// Estado para mostrar/ocultar el panel de importación (opcional, si quieres que sea un popup)
+const [showImportModal, setShowImportModal] = useState(false);
 
   // --- Filtros Alumnos ---
   const [filterIdioma, setFilterIdioma] = useState("");
   const [filterNivel, setFilterNivel] = useState("");
   const [filterNombre, setFilterNombre] = useState("");
   const [filterCursoId, setFilterCursoId] = useState("");
-  
+  // 1. Agrupar todo lo que queremos salvar
+
+// --- Estado para el Modal de Confirmación de Salida ---
+  const [showExitModal, setShowExitModal] = useState(false);
+
+  // Función para verificar si hay cambios antes de cerrar
+  const handleAttemptClose = () => {
+    // Verificamos si hay algo de información relevante cargada
+    const hasData = curso.titulo || curso.descripcion || unidades.length > 0;
+
+    if (hasData) {
+      // Si hay datos, mostramos la pregunta
+      setShowExitModal(true);
+    } else {
+      // Si está vacío, cerramos directamente sin preguntar
+      onClose?.();
+    }
+  };
+
+  // Actualizar el listener de la tecla Escape para usar la nueva lógica
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        // Si el modal de confirmación ya está abierto, lo cerramos con Escape
+        if (showExitModal) {
+            setShowExitModal(false);
+        } else {
+            // Si no, intentamos cerrar el curso
+            handleAttemptClose();
+        }
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose, curso, unidades, showExitModal]);
+
+
 
   /* ==============================================================
      LOGICA DE FILTRADO
@@ -221,10 +263,8 @@ export default function CrearCurso({ onClose }: { onClose?: () => void }) {
     setCurso((p) => ({ ...p, cursantes: [] }));
   };
 
-  /* ==============================================================
-     HANDLERS DE CONTENIDO
-     ============================================================== */
-  
+
+
   const agregarUnidad = () => {
     const nueva: Unidad = {
       id: makeId(),
@@ -540,6 +580,10 @@ export default function CrearCurso({ onClose }: { onClose?: () => void }) {
     }
   };
 
+
+
+
+
   // --- UX Close ---
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose?.();
@@ -557,13 +601,82 @@ export default function CrearCurso({ onClose }: { onClose?: () => void }) {
       { id: "cursantes", label: "Students", icon: <FiUsers /> },
   ];
 
+  // 📥 FUNCIÓN PARA CARGAR JSON (Importar)
+const handleLoadFromJsonText = () => {
+  if (!jsonImportText.trim()) {
+    toast.error("El campo está vacío");
+    return;
+  }
+
+  try {
+    // 1. Intentar convertir el texto a objeto JS
+    const data = JSON.parse(jsonImportText);
+
+    // 2. Validaciones básicas de estructura
+    if (!data.curso || !Array.isArray(data.unidades)) {
+      throw new Error("El JSON no tiene la estructura correcta (faltan 'curso' o 'unidades').");
+    }
+
+    // 3. Restaurar estados (Misma lógica que antes)
+    setCurso({
+        titulo: data.curso.titulo || "",
+        descripcion: data.curso.descripcion || "",
+        nivel: data.curso.nivel || "",
+        idioma: data.curso.idioma || "",
+        publico: data.curso.publico ?? true,
+        videoPresentacion: data.curso.videoPresentacion || "",
+        urlImagen: data.curso.urlImagen || "",
+        cursantes: Array.isArray(data.curso.cursantes) ? data.curso.cursantes : [],
+        textoFinalCurso: data.curso.textoFinalCurso || "",
+        textoFinalCursoVideoUrl: data.curso.textoFinalCursoVideoUrl || "",
+        contentTimeline: Array.isArray(data.curso.contentTimeline) ? data.curso.contentTimeline : []
+    });
+
+    setUnidades(data.unidades);
+
+    if (data.examenFinal) setExamenFinal(data.examenFinal);
+    if (data.capstone) setCapstone(data.capstone);
+
+    // 4. Feedback visual
+    toast.success("✅ Datos cargados correctamente");
+    setJsonImportText(""); // Limpiar el campo
+    setShowImportModal(false); // Cerrar el modal si lo usas
+    
+    // Forzar actualización de vista
+    if (data.curso.contentTimeline?.length > 0) {
+        setSelectedItemId(data.curso.contentTimeline[0].id);
+    }
+
+  } catch (error) {
+    console.error(error);
+    toast.error("❌ Error de sintaxis JSON. Revisa que no falten comillas o llaves.");
+  }
+};
+
+// 📤 FUNCIÓN HELPER PARA DESCARGAR (Para que pruebes la estructura)
+const handleExportJson = () => {
+    const backupData = {
+        curso: curso,         // Tu estado 'curso' actual
+        unidades: unidades,   // Tu estado 'unidades' actual
+        examenFinal: examenFinal,
+        capstone: capstone
+    };
+
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", `curso_backup_${Date.now()}.json`);
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+};
   return (
     <div className="flex items-center justify-center">
         <div className="relative flex w-full max-w-6xl max-h-[95vh] flex-col overflow-hidden rounded-2xl shadow-2xl border border-[#112C3E]/30 bg-gradient-to-br from-white to-[#F9FAFB]">
             
             {/* Header */}
             <header className="px-8 py-6 border-b bg-gradient-to-r from-[#0C212D] via-[#112C3E] to-[#0C212D] text-white shadow-md relative">
-                 <button type="button" onClick={onClose} className="absolute right-6 top-6 p-2 rounded-xl bg-white/10 hover:bg-white/20"><FiX size={20}/></button>
+                 <button type="button" onClick={handleAttemptClose} className="absolute right-6 top-6 p-2 rounded-xl bg-white/10 hover:bg-white/20"><FiX size={20}/></button>
                  <div className="flex items-center gap-2 mb-1">
                      <div className="p-2 rounded-xl bg-gradient-to-br from-[#EE7203] to-[#FF3816] shadow-lg"><FiBookOpen size={22}/></div>
                      <h2 className="text-2xl font-black">Create Material Academy</h2>
@@ -624,6 +737,85 @@ export default function CrearCurso({ onClose }: { onClose?: () => void }) {
                     {/* --- CONTENT TAB (TIMELINE) --- */}
                     {activeMainTab === "content" && (
                         <div className="space-y-6">
+{/* --- COMPONENTE IMPORTAR JSON --- */}
+<div className="mb-8 overflow-hidden rounded-2xl border-2 border-[#EE7203]/30 bg-gradient-to-br from-[#0C212D] to-[#112C3E] shadow-2xl">
+  
+  {/* Header de la tarjeta */}
+  <div className="relative overflow-hidden border-b-2 border-[#EE7203]/20 bg-gradient-to-r from-[#112C3E] to-[#0C212D] px-6 py-5">
+    {/* Decoración de fondo */}
+    <div className="absolute top-0 right-0 w-32 h-32 bg-[#EE7203]/10 rounded-full blur-3xl"></div>
+    <div className="absolute bottom-0 left-0 w-24 h-24 bg-[#FF3816]/10 rounded-full blur-2xl"></div>
+    
+    <div className="relative flex items-center gap-3">
+      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#EE7203] to-[#FF3816] flex items-center justify-center shadow-lg">
+        <FiClipboard className="text-white" size={20} />
+      </div>
+      <div>
+        <h3 className="font-black text-white text-base tracking-wide">
+          IMPORTAR DATOS DESDE JSON
+        </h3>
+        <p className="text-xs text-white/60 font-medium">
+          Autocompleta todos los campos del curso
+        </p>
+      </div>
+    </div>
+  </div>
+
+  {/* Cuerpo de la tarjeta */}
+  <div className="p-6 space-y-4">
+    <div className="bg-[#EE7203]/5 border-l-4 border-[#EE7203] rounded-r-lg p-4">
+      <p className="text-sm text-white/80 leading-relaxed">
+        Pega aquí el objeto JSON del curso para autocompletar todos los campos automáticamente.
+      </p>
+    </div>
+    
+    <div className="relative group">
+      {/* Glow effect */}
+      <div className="absolute -inset-0.5 bg-gradient-to-r from-[#EE7203] to-[#FF3816] rounded-xl blur opacity-20 group-hover:opacity-40 transition-opacity"></div>
+      
+      <textarea
+        value={jsonImportText}
+        onChange={(e) => setJsonImportText(e.target.value)}
+        className="relative w-full min-h-[180px] rounded-xl border-2 border-[#EE7203]/30 bg-[#0C212D] p-4 font-mono text-sm text-[#EE7203] placeholder:text-white/30 focus:border-[#EE7203] focus:outline-none focus:ring-2 focus:ring-[#EE7203]/50 transition-all shadow-inner"
+        placeholder='{
+  "curso": {
+    "titulo": "Mi Curso Avanzado",
+    "descripcion": "Descripción completa..."
+  },
+  "unidades": [...]
+}'
+        spellCheck={false}
+      />
+    </div>
+
+    <div className="flex items-center gap-3">
+      <button
+        type="button"
+        onClick={handleLoadFromJsonText}
+        className="group relative px-8 py-3 rounded-xl font-black text-sm text-white transition-all hover:scale-105 active:scale-95 uppercase tracking-wider shadow-xl bg-gradient-to-r from-[#EE7203] to-[#FF3816] hover:shadow-2xl hover:shadow-[#EE7203]/50 overflow-hidden"
+      >
+        {/* Shimmer effect */}
+        <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+        
+        <span className="relative flex items-center gap-2">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+          </svg>
+          Cargar Datos
+        </span>
+      </button>
+
+      {/* Badge informativo */}
+      <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10">
+        <div className="w-2 h-2 rounded-full bg-[#EE7203] animate-pulse"></div>
+        <span className="text-xs text-white/70 font-medium">
+          Formato JSON válido
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+
                             <ContentTimelineEditor 
                                 items={curso.contentTimeline}
                                 onChange={newTl => setCurso(prev => ({...prev, contentTimeline: newTl}))}
@@ -809,6 +1001,43 @@ export default function CrearCurso({ onClose }: { onClose?: () => void }) {
                 </form>
             </div>
         </div>
+        {/* --- MODAL DE CONFIRMACIÓN DE SALIDA --- */}
+{showExitModal && (
+  <div className="fixed inset-0 z-[9999] flex items-center justify-center  p-4 animate-fadeIn">
+    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-100 transform transition-all scale-100">
+      
+      {/* Header del Modal */}
+      <div className="bg-orange-50 p-6 border-b border-orange-100 flex items-center gap-4">
+        <div className="bg-orange-100 p-3 rounded-full text-[#EE7203]">
+          <FiFlag size={24} />
+        </div>
+        <div>
+          <h3 className="text-lg font-bold text-[#0C212D]">¿Salir sin guardar?</h3>
+          <p className="text-sm text-gray-500">Perderás todos los cambios realizados.</p>
+        </div>
+      </div>
+
+      {/* Acciones */}
+      <div className="p-6 flex gap-3 justify-end bg-white">
+        <button
+          onClick={() => setShowExitModal(false)}
+          className="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+        >
+          Cancelar
+        </button>
+        <button
+          onClick={() => {
+            setShowExitModal(false);
+            onClose?.(); // 👈 Aquí cerramos definitivamente
+          }}
+          className="px-4 py-2 text-sm font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg shadow-md transition-all transform active:scale-95"
+        >
+          Sí, salir y descartar
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }

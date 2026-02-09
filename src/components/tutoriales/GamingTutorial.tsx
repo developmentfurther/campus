@@ -98,7 +98,12 @@ const TUTORIAL_STEPS = [
 ];
 
 
-export default function GamingTutorial() {
+export default function GamingTutorial({
+  onFinish,
+}: {
+  onFinish: () => void;
+}) {
+
   const [isActive, setIsActive] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);
   const [highlightedElement, setHighlightedElement] = useState(null);
@@ -170,10 +175,12 @@ export default function GamingTutorial() {
   };
 
   const handleClose = () => {
-    setIsActive(false);
-    setHighlightedElement(null);
-    setHighlightRect(null);
-  };
+  setIsActive(false);
+  setHighlightedElement(null);
+  setHighlightRect(null);
+  onFinish(); // 👈 AVISA al padre
+};
+
 
   // 📍 Posición del tooltip
   const getTooltipPosition = () => {

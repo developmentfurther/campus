@@ -17,6 +17,8 @@ import {
 } from "react-icons/fi";
 import { useI18n } from "@/contexts/I18nContext";
 import InfoTutorial from "@/components/tutoriales/InfoTutorial";
+import { useAuth } from "@/contexts/AuthContext";
+
 
 interface AlumnoInfoProps {
   userEmail?: string;
@@ -24,6 +26,11 @@ interface AlumnoInfoProps {
 
 export default function AlumnoInfo({ userEmail = "test@gmail.com" }: AlumnoInfoProps) {
   const { t } = useI18n();
+
+  const { tutorialsSeen, markTutorialAsSeen } = useAuth();
+
+const TUTORIAL_ID = "info";
+const shouldShowTutorial = !tutorialsSeen?.[TUTORIAL_ID];
 
   const [expandedSection, setExpandedSection] = useState<string | null>("welcome");
 
@@ -432,7 +439,11 @@ export default function AlumnoInfo({ userEmail = "test@gmail.com" }: AlumnoInfoP
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4">
       <div className="max-w-4xl mx-auto">
 
-        <InfoTutorial />
+        {shouldShowTutorial && (
+  <InfoTutorial
+    onFinish={() => markTutorialAsSeen(TUTORIAL_ID)}
+  />
+)}
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}

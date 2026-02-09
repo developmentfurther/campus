@@ -195,7 +195,15 @@ export default function EditCourseForm({
   const [resumeItem, setResumeItem] = useState<{ id: string; name: string } | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
+// ✅ NUEVO: Estado para confirmación de salida
+  const [showExitModal, setShowExitModal] = useState(false);
 
+  // ✅ NUEVO: Lógica para intentar cerrar
+  const handleAttemptClose = () => {
+    // En modo edición, asumimos que siempre puede haber cambios pendientes.
+    // Preguntamos siempre para seguridad del usuario.
+    setShowExitModal(true);
+  };
   /* =========================================================
      PERSISTENCIA DE POSICIÓN (BASE DE DATOS)
      ========================================================= */
@@ -837,16 +845,31 @@ const deleteContentItem = (itemId: string) => {
 
   const removeAllSelected = () => setCurso((p) => (p ? { ...p, cursantes: [] } : p));
 
-  // UX: Close on ESC
+  // UX: Close on ESC (Actualizado)
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose?.();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        // Si el modal de éxito está abierto, cerrar todo
+        if (showSuccessModal) {
+            onClose?.();
+            return;
+        }
+        // Si el modal de confirmación está abierto, cerrarlo (volver al form)
+        if (showExitModal) {
+            setShowExitModal(false);
+            return;
+        }
+        // Si no hay modales, intentar cerrar (mostrar confirmación)
+        handleAttemptClose();
+      }
+    };
     document.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = "auto";
     };
-  }, [onClose]);
+  }, [onClose, showSuccessModal, showExitModal]);
 
 
   // Constantes visuales
@@ -878,7 +901,7 @@ const deleteContentItem = (itemId: string) => {
         
         {/* HEADER */}
         <header className="relative px-8 py-6 border-b bg-gradient-to-r from-[#0C212D] via-[#112C3E] to-[#0C212D] text-white shadow-xl">
-          <button type="button" onClick={onClose} className="absolute right-6 top-6 flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white hover:bg-white/20 transition-all backdrop-blur-md shadow-lg">
+          <button type="button" onClick={handleAttemptClose} className="absolute right-6 top-6 flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white hover:bg-white/20 transition-all backdrop-blur-md shadow-lg">
             <FiX size={20} />
           </button>
           <div className="flex flex-col gap-1">
@@ -1132,6 +1155,45 @@ const deleteContentItem = (itemId: string) => {
                     Entendido, cerrar
                 </button>
             </div>
+        </div>
+      )}
+      {/* === MODAL DE CONFIRMACIÓN DE SALIDA (SIN GUARDAR) === */}
+      {showExitModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center  p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-100 transform transition-all scale-100">
+            
+            {/* Header del Modal */}
+            <div className="bg-orange-50 p-6 border-b border-orange-100 flex items-center gap-4">
+              <div className="bg-orange-100 p-3 rounded-full text-[#EE7203]">
+                <FiFlag size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-[#0C212D]">¿Salir sin guardar?</h3>
+                <p className="text-sm text-gray-500">Se perderán los cambios no guardados en esta sesión.</p>
+              </div>
+            </div>
+
+            {/* Acciones */}
+            <div className="p-6 flex gap-3 justify-end bg-white">
+              <button
+                type="button"
+                onClick={() => setShowExitModal(false)}
+                className="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowExitModal(false);
+                  onClose?.(); // 👈 Cierra el formulario descartando cambios
+                }}
+                className="px-4 py-2 text-sm font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg shadow-md transition-all transform active:scale-95"
+              >
+                Sí, salir y descartar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

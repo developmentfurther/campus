@@ -61,7 +61,11 @@ const TUTORIAL_STEPS = [
   },
 ];
 
-export default function PodcastsTutorial() {
+export default function PodcastsTutorial({
+  onFinish,
+}: {
+  onFinish: () => void;
+}) {
   const [isActive, setIsActive] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);
   const [highlightRect, setHighlightRect] = useState(null);
@@ -210,7 +214,7 @@ export default function PodcastsTutorial() {
     if (!isFirstStep) setCurrentStep(prev => prev - 1);
   };
 
-  const handleClose = () => setIsActive(false);
+  const handleClose = () => {setIsActive(false); onFinish();}
 
   // 📍 Transform
   const getTooltipTransform = () => {

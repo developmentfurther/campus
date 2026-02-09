@@ -22,6 +22,9 @@ import {
   FiDownload,
   FiLoader,
   FiBook,
+  FiClock,
+  FiAward,
+  FiTarget
 } from "react-icons/fi";
 import { useAuth } from "@/contexts/AuthContext";
 import { db as firestore, storage } from "@/lib/firebase";
@@ -39,9 +42,9 @@ import LoaderUi from "@/components/ui/LoaderUi";
 import MarkdownWYSIWYG from "@/components/cursos/cursoItem/blocks/MarkdownWYSIWYG";
 import CoursePlayerVideoModal from "@/components/ui/CoursePlayerVideoModal"; 
 import CoursePlayerTutorial from "@/components/material-academico/CoursePlayerTutorial";
-
-
-
+import DownloadBibliographyButton from "@/hooks/DownloadBibliographyButton";
+import React from "react";
+import { memo } from "react";
 
 
 
@@ -131,7 +134,7 @@ export default function CoursePlayerPage() {
   const router = useRouter();
   const params = useParams();
   const courseId = params?.id?.toString?.() || "";
-  const { user, role, authReady, loading: authLoading, userProfile, saveCourseProgress, getCourseProgress, hasSeenCoursePlayerTutorial, markCoursePlayerTutorialAsSeen, loadingCoursePlayerTutorialStatus } = useAuth();
+  const { user, role, authReady, loading: authLoading, userProfile, saveCourseProgress, getCourseProgress, hasSeenCoursePlayerTutorial, markCoursePlayerTutorialAsSeen, loadingCoursePlayerTutorialStatus,allDataLoaded  } = useAuth();
   const { t } = useI18n();
 
 
@@ -143,8 +146,10 @@ export default function CoursePlayerPage() {
   const [activeU, setActiveU] = useState(0);
   const [activeL, setActiveL] = useState(0);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [contentReady, setContentReady] = useState(false);
 
   const [activeTab, setActiveTab] = useState("theory");
+  const [isProgressReady, setIsProgressReady] = useState(false);
 
 
   // 🔸 Progreso del usuario
@@ -154,6 +159,9 @@ export default function CoursePlayerPage() {
   const [resolvedVideoUrl, setResolvedVideoUrl] = useState<string | null>(null);
   const [videoEnded, setVideoEnded] = useState(false);
   const [pdfModalOpen, setPdfModalOpen] = useState(false);
+  const [showExerciseWarningModal, setShowExerciseWarningModal] = useState(false);
+  const [unitsReady, setUnitsReady] = useState(false);
+
 
 
 
@@ -188,26 +196,18 @@ export default function CoursePlayerPage() {
   
 
 
-/* =========================================================
-   🔹 Normalizar unidades (OPTIMIZADO con useMemo)
-   ========================================================= */
 const normalizedUnits = useMemo(() => {
   if (!curso) return [];
 
-  console.log("📦 Normalizando curso (raw):", curso);
-
   const normalized: any[] = [];
 
-  // 1️⃣ Detectar si el curso ya tiene contentTimeline
   const hasTimeline =
     Array.isArray((curso as any).contentTimeline) &&
     (curso as any).contentTimeline.length > 0;
 
-  // 2️⃣ Construir una "timeline" base
   const timeline = hasTimeline
     ? (curso as any).contentTimeline
-    : // 🔙 MODO LEGACY: si no hay contentTimeline, armamos uno simple
-      (curso.unidades || []).map((u: any, idx: number) => ({
+    : (curso.unidades || []).map((u: any, idx: number) => ({
         type: "unit",
         refId: u.id || `unit-${idx + 1}`,
       }));
@@ -223,11 +223,14 @@ const normalizedUnits = useMemo(() => {
 
     const unitId = u.id || `unit-${idxTimeline + 1}`;
 
-    // Procesar lecciones...
-    const lessons = (u.lecciones || []).map((l: any, idxL: number) => {
-      const lessonId = l.id || `lesson-${idxTimeline + 1}-${idxL + 1}`;
+    // 🔥 FILTRAR INTROS EXISTENTES UNA SOLA VEZ
+    const leccionesSinIntro = (u.lecciones || []).filter(
+      (l: any) => l.id !== "intro" && l.id !== "introduction"
+    );
 
-      // Detectar si es estructura nueva (blocks) o legacy
+    // Procesar lecciones normales
+    const lessons = leccionesSinIntro.map((l: any, idxL: number) => {
+      const lessonId = l.id || `lesson-${idxTimeline + 1}-${idxL + 1}`;
       const isNewStructure = Array.isArray(l.blocks) && l.blocks.length > 0;
 
       let title = "";
@@ -239,7 +242,6 @@ const normalizedUnits = useMemo(() => {
       const ejercicios: any[] = [];
 
       if (isNewStructure) {
-        // 🆕 NUEVA ESTRUCTURA: blocks[]
         l.blocks.forEach((block: any) => {
           switch (block.type) {
             case "title":
@@ -268,14 +270,12 @@ const normalizedUnits = useMemo(() => {
           }
         });
       } else {
-        // 🔙 LEGACY: campos directos
         title = l.titulo || "";
         description = l.descripcion || "";
         theory = l.teoria || "";
         videoUrl = l.urlVideo || "";
         pdfUrl = l.pdfUrl || "";
         vocabulary = l.vocabulary || null;
-
         if (Array.isArray(l.ejercicios)) {
           ejercicios.push(...l.ejercicios);
         }
@@ -287,7 +287,7 @@ const normalizedUnits = useMemo(() => {
         unitId,
         title: title || `Lección ${idxL + 1}`,
         description,
-        text: "", // obsoleto, lo dejamos vacío
+        text: "",
         theory,
         videoUrl,
         pdfUrl,
@@ -296,24 +296,24 @@ const normalizedUnits = useMemo(() => {
       };
     });
 
-    // Introducción
-    if (u.urlVideo || u.descripcion) {
-  lessons.unshift({
-    key: buildKey(unitId, "intro"),
-    id: "intro",
-    unitId,
-    title: t("coursePlayer.sidebar.introduction"),
-    description: u.descripcion || "",
-    videoUrl: u.introVideo || "",
-    ejercicios: [],
-    pdfUrl: "",
-    theory: "",
-    // 🆕 Agregamos el resumen de la unidad
-    unitSummary: u.titulo || "",
-    lessonsCount: (u.lecciones || []).length,
-  });
-}
-
+    // 🔥 AGREGAR INTRO SOLO SI HAY CONTENIDO (UNA SOLA VEZ)
+    const hasIntroContent = !!(u.introVideo || (u.descripcion && u.descripcion.trim().length > 0));
+    
+    if (hasIntroContent) {
+      lessons.unshift({
+        key: buildKey(unitId, "intro"),
+        id: "intro",
+        unitId,
+        title: "Introduction",
+        description: u.descripcion || "",
+        videoUrl: u.introVideo || "",
+        ejercicios: [],
+        pdfUrl: "",
+        theory: "",
+        unitSummary: u.titulo || "",
+        lessonsCount: leccionesSinIntro.length,
+      });
+    }
 
     normalized.push({
       id: unitId,
@@ -323,7 +323,7 @@ const normalizedUnits = useMemo(() => {
     });
   });
 
-  // FINAL EXAM
+  // 🔥 FINAL EXAM (sin cambios)
   if (timeline.some(i => i.type === "final_exam") && curso.examenFinal) {
     const ex = curso.examenFinal;
     normalized.push({
@@ -345,7 +345,7 @@ const normalizedUnits = useMemo(() => {
     });
   }
 
-  // CAPSTONE PROJECT
+  // 🔥 CAPSTONE (sin cambios)
   if (timeline.some(i => i.type === "project") && curso.capstone) {
     const cap = curso.capstone;
     normalized.push({
@@ -367,10 +367,11 @@ const normalizedUnits = useMemo(() => {
     });
   }
 
-  // CLOSING
-  if (timeline.some(i => i.type === "closing") &&
-     (curso.textoFinalCurso || curso.textoFinalCursoVideoUrl)) 
-  {
+  // 🔥 CLOSING - Solo agregar si existe en timeline O si hay contenido de cierre
+  const hasClosingInTimeline = timeline.some(i => i.type === "closing");
+  const hasClosingContent = curso.textoFinalCurso || curso.textoFinalCursoVideoUrl;
+
+  if (hasClosingInTimeline && hasClosingContent) {
     normalized.push({
       id: "closing",
       title: "Closing Section",
@@ -388,13 +389,8 @@ const normalizedUnits = useMemo(() => {
         }
       ]
     });
-  }
-
-  // ⚠️ LEGACY: Si no hay contentTimeline y hay cierre de curso
-  const hasClosingTimelineItem = hasTimeline &&
-    (curso as any).contentTimeline?.some((it: any) => it.type === "closing");
-
-  if (!hasClosingTimelineItem && (curso.textoFinalCurso || curso.textoFinalCursoVideoUrl)) {
+  } else if (!hasClosingInTimeline && hasClosingContent) {
+    // 🔙 LEGACY: Solo si NO hay timeline y hay contenido de cierre
     normalized.push({
       id: "closing-course",
       title: "Cierre del Curso",
@@ -413,14 +409,20 @@ const normalizedUnits = useMemo(() => {
   }
 
   console.log("✅ Unidades normalizadas (final):", normalized);
-  return normalized;
-}, [curso]); // 👈 Solo depende de 'curso', NO de 't'
 
-// 🔥 Efecto separado para setear units y expandir primera unidad
+  return normalized;
+}, [curso?.id, curso?.unidades?.length]); // 👈 CAMBIO CRÍTICO
+
+
+// 🔥 Reemplaza tu useEffect actual por este:
+const unitsSetRef = useRef(false);
+
 useEffect(() => {
-  setUnits(normalizedUnits);
-  if (normalizedUnits.length > 0) {
+  if (normalizedUnits.length > 0 && !unitsSetRef.current) {
+    setUnits(normalizedUnits);
     setExpandedUnits({ 0: true });
+    unitsSetRef.current = true;
+    setUnitsReady(true); // ✅
   }
 }, [normalizedUnits]);
 
@@ -431,49 +433,48 @@ useEffect(() => {
 const progressLoadedRef = useRef(false);
 const progressCacheRef = useRef<Record<string, any>>({});
 
+
+
+
+
+// Modificar el useEffect de progreso para marcar cuando esté listo:
 useEffect(() => {
   async function loadProgress() {
     if (!user?.uid || !courseId || !getCourseProgress) return;
 
-    // 🔥 Si ya cargamos progreso para este curso, no volver a traerlo
     const cacheKey = `${user.uid}-${courseId}`;
     if (progressLoadedRef.current && progressCacheRef.current[cacheKey]) {
-      console.log("✅ Usando progreso en caché");
       setProgress(progressCacheRef.current[cacheKey]);
+      setIsProgressReady(true);
+      setContentReady(true); // 👈 AGREGAR
       return;
     }
 
-    console.log("📚 Cargando progreso del curso desde Firestore...");
-    
     try {
       const data = await getCourseProgress(user.uid, courseId);
-
       if (data?.byLesson) {
-        // ✅ Normalizamos todas las keys para evitar duplicados en memoria
         const normalized: Record<string, any> = {};
         Object.entries(data.byLesson || {}).forEach(([key, val]) => {
-          normalized[key] = val; // NO TOCAR KEYS
+          normalized[key] = val;
         });
-
-        // 🔥 Guardar en caché y marcar como cargado
         progressCacheRef.current[cacheKey] = normalized;
         progressLoadedRef.current = true;
         setProgress(normalized);
-        
-        console.log("✅ Progreso cargado y cacheado:", Object.keys(normalized).length, "lecciones");
       } else {
-        console.log("⚠️ No hay progreso previo guardado.");
         setProgress({});
         progressLoadedRef.current = true;
       }
     } catch (err) {
       console.error("❌ Error cargando progreso:", err);
       setProgress({});
+    } finally {
+      setIsProgressReady(true);
+      setContentReady(true); // 👈 AGREGAR
     }
   }
 
   loadProgress();
-}, [user?.uid, courseId]); // 👈 SOLO estas dependencias
+}, [user?.uid, courseId]);
 
 // 🔥 Limpiar caché cuando el usuario cambia de curso
 useEffect(() => {
@@ -574,6 +575,19 @@ if (url.startsWith("http")) {
   load();
 }, [activeLesson?.videoUrl]);
 
+useEffect(() => {
+  console.log("🔍 INTRO DEBUG:", {
+    activeLesson: activeLesson?.id,
+    unitId: activeLesson?.unitId,
+    activeU,
+    currentUnitId: units[activeU]?.id,
+    allIntros: units.map((u, idx) => ({
+      unitIndex: idx,
+      lessons: u.lessons.filter(l => l.id === "intro")
+    }))
+  });
+}, [activeLesson, activeU, units]);
+
 
 
 function RenderVocabularyBlock({ vocab }: { vocab: any }) {
@@ -671,21 +685,19 @@ const indexOfLesson = useCallback(
   [units]
 );
 
-const goNextLesson = async () => {
+const goNextLesson = useCallback(async () => {
   const currentIdx = indexOfLesson(activeU, activeL);
   const currentLesson = flatLessons[currentIdx];
 
-  // 1️⃣ NAVEGACIÓN INSTANTÁNEA (sin esperar Firebase)
+  // 1️⃣ NAVEGACIÓN INSTANTÁNEA
   const nextIdx = currentIdx + 1;
   if (nextIdx < flatLessons.length) {
     const next = flatLessons[nextIdx];
     
-    // 🟢 Actualizar UI INMEDIATAMENTE
     setActiveU(next.uIdx);
     setActiveL(next.lIdx);
     setExpandedUnits((p) => ({ ...p, [next.uIdx]: true }));
     
-    // 🎯 Actualizar progreso local ANTES de Firebase
     if (currentLesson?.key && activeLesson?.id !== "intro") {
       setProgress((prev) => ({
         ...prev,
@@ -702,23 +714,31 @@ const goNextLesson = async () => {
     router.push("/dashboard");
   }
 
-  // 2️⃣ GUARDADO EN FIREBASE (en segundo plano, sin bloquear)
+  // 2️⃣ GUARDADO EN FIREBASE
   if (
     currentLesson?.key &&
     activeLesson?.id !== "intro" &&
     user?.uid &&
     saveCourseProgress
   ) {
-    // 🔥 NO USAR AWAIT - deja que corra en paralelo
     saveCourseProgress(user.uid, courseId, {
       [currentLesson.key]: { videoEnded: true },
     }).catch((err) => {
       console.error("❌ Error guardando progreso (silent):", err);
-      // Opcional: podrías revertir el cambio local si falla
-      // pero generalmente es mejor dejarlo así (optimistic)
     });
   }
-};
+}, [
+  // Dependencias necesarias para que no se "rompa" la función
+  indexOfLesson, 
+  activeU, 
+  activeL, 
+  flatLessons, 
+  activeLesson, 
+  user?.uid, 
+  courseId, 
+  saveCourseProgress, 
+  router
+]);
 
 function makeKey(exId: string, qId?: string) {
   return qId ? `${exId}::${qId}` : exId;
@@ -736,6 +756,35 @@ const currentLessonStatus = useMemo(() => {
   
   return 'in_progress';
 }, [activeLesson?.key, progress]);
+
+/* =========================================================
+     🔥 OPTIMIZACIÓN INTRO: Pre-calcular estadísticas
+     ========================================================= */
+  const introDataStable = useMemo(() => {
+    // Si no es la intro, no calculamos nada para ahorrar memoria
+    if (activeLesson?.id !== "intro") return null;
+
+    const currentUnit = units[activeU];
+    const lessons = currentUnit?.lessons || [];
+    
+    // Filtramos lecciones reales (sin intro)
+    const realLessons = lessons.filter(l => l.id !== "intro");
+    const total = realLessons.length;
+    
+    // Contamos completadas basándonos en el objeto progress
+    const completed = realLessons.filter(l => 
+      progress[l.key]?.videoEnded || progress[l.key]?.exSubmitted
+    ).length;
+
+    return {
+      title: activeLesson.unitSummary || currentUnit?.title || "",
+      description: activeLesson.description || "",
+      total,
+      completed,
+      // Generamos lecciones para la lista "What you will learn" (solo títulos y keys)
+      previewLessons: lessons.slice(1, 5).map(l => ({ key: l.key, title: l.title }))
+    };
+  }, [activeLesson, units, activeU, progress]); // Solo recalcula si cambian datos reales
 
   /* =========================================================
    🧱 Helpers de progreso y Firestore
@@ -804,22 +853,27 @@ function computeStats(byLesson: any, totalLessons: number) {
 function ExerciseRunner({
   ejercicios,
   lessonKey,
-  exerciseIndex,
+  exerciseId, // 👈 Cambiar de exerciseIndex a exerciseId
   courseId,
   batchId,
   userKey,
+  savedData,
   onSubmit,
 }: {
   ejercicios: any[];
   lessonKey: string;
-  exerciseIndex: number;
+  exerciseId: string; // 👈 Ahora es string
   courseId: string;
   batchId: string;
   userKey: string;
+  savedData?: any;
   onSubmit?: (r: { correct: number; total: number }) => void;
 }) {
+  // 🟢 INICIALIZACIÓN DIRECTA
   const [answers, setAnswers] = useState<Record<string, any>>({});
+  
   const [submitted, setSubmitted] = useState(false);
+  
   const [feedback, setFeedback] = useState<{
     ok: boolean;
     msg: string;
@@ -827,12 +881,12 @@ function ExerciseRunner({
     total?: number;
   } | null>(null);
 
-  const { user, saveCourseProgress, getCourseProgress } = useAuth();
+  const { user, saveCourseProgress } = useAuth();
 
   // 🔥 KEY GLOBAL ÚNICA
   const currentExerciseKey = useMemo(
-    () => `${lessonKey}::ex${exerciseIndex}`,
-    [lessonKey, exerciseIndex]
+    () => `${lessonKey}::${exerciseId}`, // 👈 Usar exerciseId
+    [lessonKey, exerciseId]
   );
 
   // 🔑 KEYS INTERNAS (input-level)
@@ -841,74 +895,26 @@ function ExerciseRunner({
       ? `${currentExerciseKey}::${exId}::${subId}`
       : `${currentExerciseKey}::${exId}`;
 
-  /** =====================================================================================
-   * 🧠 RESTORE ESTADO ANTES GUARDADO
-   ===================================================================================== */
+  // 🔥 EFECTO CRÍTICO: Cargar datos guardados cuando estén disponibles
   useEffect(() => {
-    async function load() {
-    if (!user?.uid) return;
-
-    // 🛑 Si el padre ya tiene progreso cargado → NO refetch
-    const parentProgress = progress?.[currentExerciseKey];
-    if (parentProgress) {
-      console.log("⏭ No refetch — progreso ya cargado en padre");
-      return;
-    }
-      console.log("⟳ Fetching progreso desde Firestore...");
-    const prev = await getCourseProgress(user.uid, courseId);
-
-      if (!prev?.exSubmitted) {
-        setSubmitted(false);
-        setAnswers({});
-        setFeedback(null);
-        return;
+    if (savedData) {
+      // Restaurar respuestas
+      if (savedData.score?.answers) {
+        setAnswers(savedData.score.answers);
       }
-
-      // 🟢 Ya había respondido → restaurar
-      setSubmitted(true);
-
-      const ex = ejercicios[0];
-      const restored: Record<string, any> = {};
-
-      if (!ex) return;
-
-      // restore según tipo
-      if (ex.type === "reading" || ex.type === "listening") {
-        ex.questions.forEach((q: any) => {
-          const key = makeLocalKey(ex.id, q.id);
-          restored[key] = prev.score?.answers?.[key];
+      
+      // Restaurar estado de submitted
+      if (savedData.exSubmitted) {
+        setSubmitted(true);
+        setFeedback({
+          ok: savedData.exPassed || false,
+          msg: savedData.exPassed ? "✔️ ¡Correcto!" : "❌ Intento registrado",
+          correct: savedData.score?.correct,
+          total: savedData.score?.total,
         });
-      } else if (ex.type === "fill_blank") {
-        const key = makeLocalKey(ex.id);
-        restored[key] = prev.score?.answers?.[key] || [];
-      } else if (ex.type === "matching") {
-        ex.pairs.forEach((_: any, idx: number) => {
-          const key = makeLocalKey(ex.id, String(idx));
-          restored[key] = prev.score?.answers?.[key];
-        });
-      } else if (ex.type === "reflection") {
-        const n = ex.ideasCount || 3;
-        for (let i = 0; i < n; i++) {
-          const key = makeLocalKey(ex.id, `idea${i}`);
-          restored[key] = prev.score?.answers?.[key];
-        }
-      } else {
-        const key = makeLocalKey(ex.id);
-        restored[key] = prev.score?.answers?.[key];
       }
-
-      setAnswers(restored);
-
-      setFeedback({
-        ok: prev.exPassed,
-        msg: prev.exPassed ? "Ejercicio aprobado" : "Intento previo guardado",
-        correct: prev.score.correct,
-        total: prev.score.total,
-      });
     }
-
-    load();
-  }, [user?.uid, courseId, currentExerciseKey, ejercicios]);
+  }, [savedData]); // 👈 Se ejecuta cuando savedData cambie
 
 /* ============================================================
    🧠 EVALUATE — versión limpia y estable
@@ -2079,9 +2085,9 @@ const prevExercise = () => {
   /* =========================================================
      🔹 Guards de acceso
      ========================================================= */
-  if (!authReady || authLoading || loading) {
-    return <LoaderUi />
-  }
+if (!authReady || authLoading || loading || !allDataLoaded) {
+  return <LoaderUi />
+}
 
   const canAccess =
     role === "admin" ||
@@ -2222,633 +2228,614 @@ function CapstoneForm({
 
 const currentUnit = units[activeU];
 
-function DownloadBibliographyButton({ unit, courseTitle }) {
-  const [loading, setLoading] = useState(false);
+// function DownloadBibliographyButton({ unit, courseTitle }) {
+//   const [loading, setLoading] = useState(false);
 
-  const generatePDF = async () => {
-    setLoading(true);
+//   const generatePDF = async () => {
+//     setLoading(true);
     
-    try {
-      const doc = new jsPDF();
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 20;
-      let yPosition = 20;
+//     try {
+//       const doc = new jsPDF();
+//       const pageWidth = doc.internal.pageSize.getWidth();
+//       const pageHeight = doc.internal.pageSize.getHeight();
+//       const margin = 20;
+//       let yPosition = 20;
 
-      // ==========================================
-      // 🎨 HEADER CON LOGO Y TÍTULO
-      // ==========================================
+//       // ==========================================
+//       // 🎨 HEADER CON LOGO Y TÍTULO
+//       // ==========================================
       
-      // Logo "Further" (texto a la izquierda)
-      doc.setFontSize(24);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(238, 114, 3);
-      doc.text("Further", margin, yPosition);
+//       // Logo "Further" (texto a la izquierda)
+//       doc.setFontSize(24);
+//       doc.setFont("helvetica", "bold");
+//       doc.setTextColor(238, 114, 3);
+//       doc.text("Further", margin, yPosition);
       
-      // Logo (imagen en esquina derecha)
-      const imgWidth = 40;
-      const imgHeight = 25;
-      doc.addImage(
-        FURTHER_LOGO_BASE64,
-        "PNG",
-        pageWidth - margin - imgWidth,
-        yPosition - 22,
-        imgWidth,
-        imgHeight
-      );
+//       // Logo (imagen en esquina derecha)
+//       const imgWidth = 40;
+//       const imgHeight = 25;
+//       doc.addImage(
+//         FURTHER_LOGO_BASE64,
+//         "PNG",
+//         pageWidth - margin - imgWidth,
+//         yPosition - 22,
+//         imgWidth,
+//         imgHeight
+//       );
       
-      // Línea decorativa
-      doc.setDrawColor(238, 114, 3);
-      doc.setLineWidth(2);
-      doc.line(margin, yPosition + 3, pageWidth - margin, yPosition + 3);
+//       // Línea decorativa
+//       doc.setDrawColor(238, 114, 3);
+//       doc.setLineWidth(2);
+//       doc.line(margin, yPosition + 3, pageWidth - margin, yPosition + 3);
       
-      yPosition += 15;
+//       yPosition += 15;
 
-      // Título del curso
-      doc.setFontSize(16);
-      doc.setTextColor(12, 33, 45);
-      doc.setFont("helvetica", "bold");
-      doc.text(courseTitle || "Curso", margin, yPosition);
-      yPosition += 10;
+//       // Título del curso
+//       doc.setFontSize(16);
+//       doc.setTextColor(12, 33, 45);
+//       doc.setFont("helvetica", "bold");
+//       doc.text(courseTitle || "Curso", margin, yPosition);
+//       yPosition += 10;
 
-      // Título de la unidad
-      doc.setFontSize(14);
-      doc.setTextColor(17, 44, 62);
-      doc.text(`Unit: ${unit.title}`, margin, yPosition);
-      yPosition += 15;
+//       // Título de la unidad
+//       doc.setFontSize(14);
+//       doc.setTextColor(17, 44, 62);
+//       doc.text(`Unit: ${unit.title}`, margin, yPosition);
+//       yPosition += 15;
 
-      // ==========================================
-      // 📚 CONTENIDO DE CADA LECCIÓN
-      // ==========================================
+//       // ==========================================
+//       // 📚 CONTENIDO DE CADA LECCIÓN
+//       // ==========================================
       
-      unit.lessons?.forEach((lesson, idx) => {
-        // Ignorar intro y closing
-        if (lesson.id === "intro" || lesson.id === "closing") return;
+//       unit.lessons?.forEach((lesson, idx) => {
+//         // Ignorar intro y closing
+//         if (lesson.id === "intro" || lesson.id === "closing") return;
 
-        // Check si necesitamos nueva página
-        if (yPosition > pageHeight - 40) {
-          doc.addPage();
-          yPosition = 20;
-        }
+//         // Check si necesitamos nueva página
+//         if (yPosition > pageHeight - 40) {
+//           doc.addPage();
+//           yPosition = 20;
+//         }
 
-        // Número y título de lección
-        doc.setFontSize(12);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(238, 114, 3);
-        doc.text(`${idx + 1}. ${lesson.title}`, margin, yPosition);
-        yPosition += 8;
+//         // Número y título de lección
+//         doc.setFontSize(12);
+//         doc.setFont("helvetica", "bold");
+//         doc.setTextColor(238, 114, 3);
+//         doc.text(`${idx + 1}. ${lesson.title}`, margin, yPosition);
+//         yPosition += 8;
 
-        // Descripción
-        if (lesson.description) {
-          doc.setFontSize(10);
-          doc.setFont("helvetica", "normal");
-          doc.setTextColor(60, 60, 60);
-          const descLines = doc.splitTextToSize(
-            lesson.description,
-            pageWidth - 2 * margin
-          );
-          doc.text(descLines, margin + 5, yPosition);
-          yPosition += descLines.length * 5 + 5;
-        }
+//         // Descripción
+//         if (lesson.description) {
+//           doc.setFontSize(10);
+//           doc.setFont("helvetica", "normal");
+//           doc.setTextColor(60, 60, 60);
+//           const descLines = doc.splitTextToSize(
+//             lesson.description,
+//             pageWidth - 2 * margin
+//           );
+//           doc.text(descLines, margin + 5, yPosition);
+//           yPosition += descLines.length * 5 + 5;
+//         }
 
-        // Teoría/Contenido
-        if (lesson.theory) {
-          if (yPosition > pageHeight - 60) {
-            doc.addPage();
-            yPosition = 20;
-          }
+//         // Teoría/Contenido
+//         if (lesson.theory) {
+//           if (yPosition > pageHeight - 60) {
+//             doc.addPage();
+//             yPosition = 20;
+//           }
 
-          doc.setFontSize(10);
-          doc.setFont("helvetica", "normal");
-          doc.setTextColor(40, 40, 40);
+//           doc.setFontSize(10);
+//           doc.setFont("helvetica", "normal");
+//           doc.setTextColor(40, 40, 40);
           
-          // Limpiar markdown básico
-          const cleanTheory = lesson.theory
-            .replace(/[#*_`]/g, "")
-            .replace(/\n{3,}/g, "\n\n")
-            .substring(0, 1500);
+//           // Limpiar markdown básico
+//           const cleanTheory = lesson.theory
+//             .replace(/[#*_`]/g, "")
+//             .replace(/\n{3,}/g, "\n\n")
+//             .substring(0, 1500);
           
-          const theoryLines = doc.splitTextToSize(
-            cleanTheory + (lesson.theory.length > 1500 ? "..." : ""),
-            pageWidth - 2 * margin
-          );
+//           const theoryLines = doc.splitTextToSize(
+//             cleanTheory + (lesson.theory.length > 1500 ? "..." : ""),
+//             pageWidth - 2 * margin
+//           );
           
-          doc.text(theoryLines, margin + 5, yPosition);
-          yPosition += theoryLines.length * 5 + 3;
-        }
+//           doc.text(theoryLines, margin + 5, yPosition);
+//           yPosition += theoryLines.length * 5 + 3;
+//         }
 
-        // Vocabulario
-        if (lesson.vocabulary?.entries) {
-          if (yPosition > pageHeight - 40) {
-            doc.addPage();
-            yPosition = 20;
-          }
+//         // Vocabulario
+//         if (lesson.vocabulary?.entries) {
+//           if (yPosition > pageHeight - 40) {
+//             doc.addPage();
+//             yPosition = 20;
+//           }
 
-          doc.setFontSize(10);
-          doc.setFont("helvetica", "bold");
-          doc.setTextColor(238, 114, 3);
-          doc.text("Vocabulary:", margin + 5, yPosition);
-          yPosition += 6;
+//           doc.setFontSize(10);
+//           doc.setFont("helvetica", "bold");
+//           doc.setTextColor(238, 114, 3);
+//           doc.text("Vocabulary:", margin + 5, yPosition);
+//           yPosition += 6;
 
-          doc.setFont("helvetica", "normal");
-          doc.setTextColor(60, 60, 60);
+//           doc.setFont("helvetica", "normal");
+//           doc.setTextColor(60, 60, 60);
           
-          lesson.vocabulary.entries.slice(0, 20).forEach((entry) => {
-            if (yPosition > pageHeight - 20) {
-              doc.addPage();
-              yPosition = 20;
-            }
-            const vocabLine = `• ${entry.term}: ${entry.translation || entry.meaning}`;
-            const lines = doc.splitTextToSize(vocabLine, pageWidth - 2 * margin - 10);
-            doc.text(lines, margin + 10, yPosition);
-            yPosition += lines.length * 5;
-          });
-        }
+//           lesson.vocabulary.entries.slice(0, 20).forEach((entry) => {
+//             if (yPosition > pageHeight - 20) {
+//               doc.addPage();
+//               yPosition = 20;
+//             }
+//             const vocabLine = `• ${entry.term}: ${entry.translation || entry.meaning}`;
+//             const lines = doc.splitTextToSize(vocabLine, pageWidth - 2 * margin - 10);
+//             doc.text(lines, margin + 10, yPosition);
+//             yPosition += lines.length * 5;
+//           });
+//         }
 
-        // ==========================================
-        // 🧠 EJERCICIOS DE LA LECCIÓN
-        // ==========================================
-        if (lesson.ejercicios && lesson.ejercicios.length > 0) {
-          if (yPosition > pageHeight - 40) {
-            doc.addPage();
-            yPosition = 20;
-          }
+//         // ==========================================
+//         // 🧠 EJERCICIOS DE LA LECCIÓN
+//         // ==========================================
+//         if (lesson.ejercicios && lesson.ejercicios.length > 0) {
+//           if (yPosition > pageHeight - 40) {
+//             doc.addPage();
+//             yPosition = 20;
+//           }
 
-          // Título de sección de ejercicios
-          doc.setFontSize(11);
-          doc.setFont("helvetica", "bold");
-          doc.setTextColor(238, 114, 3);
-          doc.text("Ejercicios:", margin + 5, yPosition);
-          yPosition += 8;
+//           // Título de sección de ejercicios
+//           doc.setFontSize(11);
+//           doc.setFont("helvetica", "bold");
+//           doc.setTextColor(238, 114, 3);
+//           doc.text("Ejercicios:", margin + 5, yPosition);
+//           yPosition += 8;
 
-          lesson.ejercicios.forEach((ex, exIdx) => {
-            if (yPosition > pageHeight - 30) {
-              doc.addPage();
-              yPosition = 20;
-            }
+//           lesson.ejercicios.forEach((ex, exIdx) => {
+//             if (yPosition > pageHeight - 30) {
+//               doc.addPage();
+//               yPosition = 20;
+//             }
 
-            // Número de ejercicio
-            doc.setFontSize(10);
-            doc.setFont("helvetica", "bold");
-            doc.setTextColor(60, 60, 60);
-            doc.text(`Ejercicio ${exIdx + 1}:`, margin + 10, yPosition);
-            yPosition += 6;
+//             // Número de ejercicio
+//             doc.setFontSize(10);
+//             doc.setFont("helvetica", "bold");
+//             doc.setTextColor(60, 60, 60);
+//             doc.text(`Ejercicio ${exIdx + 1}:`, margin + 10, yPosition);
+//             yPosition += 6;
 
-            doc.setFont("helvetica", "normal");
-            doc.setTextColor(50, 50, 50);
+//             doc.setFont("helvetica", "normal");
+//             doc.setTextColor(50, 50, 50);
 
-            // Renderizar según tipo de ejercicio
-            switch (ex.type) {
-              case "multiple_choice":
-                if (ex.question) {
-                  const qLines = doc.splitTextToSize(ex.question, pageWidth - 2 * margin - 15);
-                  doc.text(qLines, margin + 15, yPosition);
-                  yPosition += qLines.length * 5 + 3;
-                }
-                ex.options?.forEach((opt, i) => {
-                  if (yPosition > pageHeight - 15) {
-                    doc.addPage();
-                    yPosition = 20;
-                  }
-                  const optLine = `${String.fromCharCode(65 + i)}) ${opt}`;
-                  const lines = doc.splitTextToSize(optLine, pageWidth - 2 * margin - 20);
-                  doc.text(lines, margin + 20, yPosition);
-                  yPosition += lines.length * 5;
-                });
-                yPosition += 3;
-                break;
+//             // Renderizar según tipo de ejercicio
+//             switch (ex.type) {
+//               case "multiple_choice":
+//                 if (ex.question) {
+//                   const qLines = doc.splitTextToSize(ex.question, pageWidth - 2 * margin - 15);
+//                   doc.text(qLines, margin + 15, yPosition);
+//                   yPosition += qLines.length * 5 + 3;
+//                 }
+//                 ex.options?.forEach((opt, i) => {
+//                   if (yPosition > pageHeight - 15) {
+//                     doc.addPage();
+//                     yPosition = 20;
+//                   }
+//                   const optLine = `${String.fromCharCode(65 + i)}) ${opt}`;
+//                   const lines = doc.splitTextToSize(optLine, pageWidth - 2 * margin - 20);
+//                   doc.text(lines, margin + 20, yPosition);
+//                   yPosition += lines.length * 5;
+//                 });
+//                 yPosition += 3;
+//                 break;
 
-              case "true_false":
-                if (ex.statement) {
-                  const stLines = doc.splitTextToSize(ex.statement, pageWidth - 2 * margin - 15);
-                  doc.text(stLines, margin + 15, yPosition);
-                  yPosition += stLines.length * 5 + 3;
-                }
-                doc.text("☐ Verdadero    ☐ Falso", margin + 20, yPosition);
-                yPosition += 7;
-                break;
+//               case "true_false":
+//                 if (ex.statement) {
+//                   const stLines = doc.splitTextToSize(ex.statement, pageWidth - 2 * margin - 15);
+//                   doc.text(stLines, margin + 15, yPosition);
+//                   yPosition += stLines.length * 5 + 3;
+//                 }
+//                 doc.text("☐ Verdadero    ☐ Falso", margin + 20, yPosition);
+//                 yPosition += 7;
+//                 break;
 
-              case "fill_blank":
-                if (ex.sentence) {
-                  const sentence = ex.sentence.replace(/\*\*\*/g, "_____");
-                  const sentLines = doc.splitTextToSize(sentence, pageWidth - 2 * margin - 15);
-                  doc.text(sentLines, margin + 15, yPosition);
-                  yPosition += sentLines.length * 5 + 5;
-                }
-                break;
+//               case "fill_blank":
+//                 if (ex.sentence) {
+//                   const sentence = ex.sentence.replace(/\*\*\*/g, "_____");
+//                   const sentLines = doc.splitTextToSize(sentence, pageWidth - 2 * margin - 15);
+//                   doc.text(sentLines, margin + 15, yPosition);
+//                   yPosition += sentLines.length * 5 + 5;
+//                 }
+//                 break;
 
-              case "reading":
-              case "listening":
-                if (ex.title) {
-                  doc.setFont("helvetica", "bold");
-                  const titleLines = doc.splitTextToSize(ex.title, pageWidth - 2 * margin - 15);
-                  doc.text(titleLines, margin + 15, yPosition);
-                  yPosition += titleLines.length * 5 + 2;
-                }
-                if (ex.text) {
-                  doc.setFont("helvetica", "normal");
-                  const textLines = doc.splitTextToSize(
-                    ex.text.substring(0, 500) + (ex.text.length > 500 ? "..." : ""),
-                    pageWidth - 2 * margin - 15
-                  );
-                  doc.text(textLines, margin + 15, yPosition);
-                  yPosition += textLines.length * 5 + 3;
-                }
+//               case "reading":
+//               case "listening":
+//                 if (ex.title) {
+//                   doc.setFont("helvetica", "bold");
+//                   const titleLines = doc.splitTextToSize(ex.title, pageWidth - 2 * margin - 15);
+//                   doc.text(titleLines, margin + 15, yPosition);
+//                   yPosition += titleLines.length * 5 + 2;
+//                 }
+//                 if (ex.text) {
+//                   doc.setFont("helvetica", "normal");
+//                   const textLines = doc.splitTextToSize(
+//                     ex.text.substring(0, 500) + (ex.text.length > 500 ? "..." : ""),
+//                     pageWidth - 2 * margin - 15
+//                   );
+//                   doc.text(textLines, margin + 15, yPosition);
+//                   yPosition += textLines.length * 5 + 3;
+//                 }
                 
-                // Preguntas del reading/listening
-                if (ex.questions && ex.questions.length > 0) {
-                  ex.questions.forEach((q, qIdx) => {
-                    if (yPosition > pageHeight - 25) {
-                      doc.addPage();
-                      yPosition = 20;
-                    }
+//                 // Preguntas del reading/listening
+//                 if (ex.questions && ex.questions.length > 0) {
+//                   ex.questions.forEach((q, qIdx) => {
+//                     if (yPosition > pageHeight - 25) {
+//                       doc.addPage();
+//                       yPosition = 20;
+//                     }
                     
-                    doc.setFont("helvetica", "bold");
-                    const promptLines = doc.splitTextToSize(
-                      `${qIdx + 1}. ${q.prompt}`,
-                      pageWidth - 2 * margin - 20
-                    );
-                    doc.text(promptLines, margin + 20, yPosition);
-                    yPosition += promptLines.length * 5 + 2;
+//                     doc.setFont("helvetica", "bold");
+//                     const promptLines = doc.splitTextToSize(
+//                       `${qIdx + 1}. ${q.prompt}`,
+//                       pageWidth - 2 * margin - 20
+//                     );
+//                     doc.text(promptLines, margin + 20, yPosition);
+//                     yPosition += promptLines.length * 5 + 2;
 
-                    doc.setFont("helvetica", "normal");
-                    if (q.kind === "mc" && q.options) {
-                      q.options.forEach((opt, i) => {
-                        if (yPosition > pageHeight - 15) {
-                          doc.addPage();
-                          yPosition = 20;
-                        }
-                        const optLine = `${String.fromCharCode(65 + i)}) ${opt}`;
-                        const lines = doc.splitTextToSize(optLine, pageWidth - 2 * margin - 25);
-                        doc.text(lines, margin + 25, yPosition);
-                        yPosition += lines.length * 5;
-                      });
-                    } else if (q.kind === "tf") {
-                      doc.text("☐ True    ☐ False", margin + 25, yPosition);
-                      yPosition += 5;
-                    }
-                    yPosition += 3;
-                  });
-                }
-                break;
+//                     doc.setFont("helvetica", "normal");
+//                     if (q.kind === "mc" && q.options) {
+//                       q.options.forEach((opt, i) => {
+//                         if (yPosition > pageHeight - 15) {
+//                           doc.addPage();
+//                           yPosition = 20;
+//                         }
+//                         const optLine = `${String.fromCharCode(65 + i)}) ${opt}`;
+//                         const lines = doc.splitTextToSize(optLine, pageWidth - 2 * margin - 25);
+//                         doc.text(lines, margin + 25, yPosition);
+//                         yPosition += lines.length * 5;
+//                       });
+//                     } else if (q.kind === "tf") {
+//                       doc.text("☐ True    ☐ False", margin + 25, yPosition);
+//                       yPosition += 5;
+//                     }
+//                     yPosition += 3;
+//                   });
+//                 }
+//                 break;
 
-              case "text":
-                if (ex.prompt) {
-                  const promptLines = doc.splitTextToSize(ex.prompt, pageWidth - 2 * margin - 15);
-                  doc.text(promptLines, margin + 15, yPosition);
-                  yPosition += promptLines.length * 5 + 3;
-                }
-                doc.text("____________________________________________________", margin + 15, yPosition);
-                yPosition += 5;
-                doc.text("____________________________________________________", margin + 15, yPosition);
-                yPosition += 5;
-                doc.text("____________________________________________________", margin + 15, yPosition);
-                yPosition += 7;
-                break;
+//               case "text":
+//                 if (ex.prompt) {
+//                   const promptLines = doc.splitTextToSize(ex.prompt, pageWidth - 2 * margin - 15);
+//                   doc.text(promptLines, margin + 15, yPosition);
+//                   yPosition += promptLines.length * 5 + 3;
+//                 }
+//                 doc.text("____________________________________________________", margin + 15, yPosition);
+//                 yPosition += 5;
+//                 doc.text("____________________________________________________", margin + 15, yPosition);
+//                 yPosition += 5;
+//                 doc.text("____________________________________________________", margin + 15, yPosition);
+//                 yPosition += 7;
+//                 break;
 
-              case "matching":
-                doc.text("Emparejar:", margin + 15, yPosition);
-                yPosition += 5;
-                ex.pairs?.forEach((pair, i) => {
-                  if (yPosition > pageHeight - 15) {
-                    doc.addPage();
-                    yPosition = 20;
-                  }
-                  doc.text(`${i + 1}. ${pair.left} → ___________`, margin + 20, yPosition);
-                  yPosition += 5;
-                });
-                yPosition += 3;
-                break;
+//               case "matching":
+//                 doc.text("Emparejar:", margin + 15, yPosition);
+//                 yPosition += 5;
+//                 ex.pairs?.forEach((pair, i) => {
+//                   if (yPosition > pageHeight - 15) {
+//                     doc.addPage();
+//                     yPosition = 20;
+//                   }
+//                   doc.text(`${i + 1}. ${pair.left} → ___________`, margin + 20, yPosition);
+//                   yPosition += 5;
+//                 });
+//                 yPosition += 3;
+//                 break;
 
-              case "reflection":
-                if (ex.prompt) {
-                  const promptLines = doc.splitTextToSize(ex.prompt, pageWidth - 2 * margin - 15);
-                  doc.text(promptLines, margin + 15, yPosition);
-                  yPosition += promptLines.length * 5 + 3;
-                }
-                const ideasCount = ex.ideasCount || 3;
-                for (let i = 0; i < ideasCount; i++) {
-                  if (yPosition > pageHeight - 15) {
-                    doc.addPage();
-                    yPosition = 20;
-                  }
-                  doc.text(`Idea ${i + 1}: ________________________________________`, margin + 15, yPosition);
-                  yPosition += 7;
-                }
-                break;
+//               case "reflection":
+//                 if (ex.prompt) {
+//                   const promptLines = doc.splitTextToSize(ex.prompt, pageWidth - 2 * margin - 15);
+//                   doc.text(promptLines, margin + 15, yPosition);
+//                   yPosition += promptLines.length * 5 + 3;
+//                 }
+//                 const ideasCount = ex.ideasCount || 3;
+//                 for (let i = 0; i < ideasCount; i++) {
+//                   if (yPosition > pageHeight - 15) {
+//                     doc.addPage();
+//                     yPosition = 20;
+//                   }
+//                   doc.text(`Idea ${i + 1}: ________________________________________`, margin + 15, yPosition);
+//                   yPosition += 7;
+//                 }
+//                 break;
 
-              case "sentence_correction":
-                if (ex.incorrect) {
-                  doc.text("Frase incorrecta:", margin + 15, yPosition);
-                  yPosition += 5;
-                  const incorrectLines = doc.splitTextToSize(`"${ex.incorrect}"`, pageWidth - 2 * margin - 15);
-                  doc.text(incorrectLines, margin + 20, yPosition);
-                  yPosition += incorrectLines.length * 5 + 3;
-                }
-                doc.text("Corrección: _________________________________________", margin + 15, yPosition);
-                yPosition += 7;
-                break;
+//               case "sentence_correction":
+//                 if (ex.incorrect) {
+//                   doc.text("Frase incorrecta:", margin + 15, yPosition);
+//                   yPosition += 5;
+//                   const incorrectLines = doc.splitTextToSize(`"${ex.incorrect}"`, pageWidth - 2 * margin - 15);
+//                   doc.text(incorrectLines, margin + 20, yPosition);
+//                   yPosition += incorrectLines.length * 5 + 3;
+//                 }
+//                 doc.text("Corrección: _________________________________________", margin + 15, yPosition);
+//                 yPosition += 7;
+//                 break;
 
-              case "speaking":
-                if (ex.title) {
-                  const titleLines = doc.splitTextToSize(ex.title, pageWidth - 2 * margin - 15);
-                  doc.text(titleLines, margin + 15, yPosition);
-                  yPosition += titleLines.length * 5 + 3;
-                }
-                ex.bullets?.forEach((bullet) => {
-                  if (yPosition > pageHeight - 15) {
-                    doc.addPage();
-                    yPosition = 20;
-                  }
-                  const bulletLines = doc.splitTextToSize(`• ${bullet}`, pageWidth - 2 * margin - 20);
-                  doc.text(bulletLines, margin + 20, yPosition);
-                  yPosition += bulletLines.length * 5;
-                });
-                yPosition += 5;
-                break;
+//               case "speaking":
+//                 if (ex.title) {
+//                   const titleLines = doc.splitTextToSize(ex.title, pageWidth - 2 * margin - 15);
+//                   doc.text(titleLines, margin + 15, yPosition);
+//                   yPosition += titleLines.length * 5 + 3;
+//                 }
+//                 ex.bullets?.forEach((bullet) => {
+//                   if (yPosition > pageHeight - 15) {
+//                     doc.addPage();
+//                     yPosition = 20;
+//                   }
+//                   const bulletLines = doc.splitTextToSize(`• ${bullet}`, pageWidth - 2 * margin - 20);
+//                   doc.text(bulletLines, margin + 20, yPosition);
+//                   yPosition += bulletLines.length * 5;
+//                 });
+//                 yPosition += 5;
+//                 break;
 
-              default:
-                doc.text("(Ejercicio interactivo)", margin + 15, yPosition);
-                yPosition += 7;
-            }
+//               default:
+//                 doc.text("(Ejercicio interactivo)", margin + 15, yPosition);
+//                 yPosition += 7;
+//             }
 
-            yPosition += 5; // Espacio entre ejercicios
-          });
-        }
+//             yPosition += 5; // Espacio entre ejercicios
+//           });
+//         }
 
-        yPosition += 8; // Espacio entre lecciones
-      });
+//         yPosition += 8; // Espacio entre lecciones
+//       });
 
-      // ==========================================
-      // 🔚 FOOTER EN TODAS LAS PÁGINAS
-      // ==========================================
-      const totalPages = doc.internal.pages.length - 1;
-      for (let i = 1; i <= totalPages; i++) {
-        doc.setPage(i);
-        doc.setFontSize(8);
-        doc.setTextColor(150, 150, 150);
-        doc.text(
-          `Página ${i} de ${totalPages}`,
-          pageWidth / 2,
-          pageHeight - 10,
-          { align: "center" }
-        );
-      }
+//       // ==========================================
+//       // 🔚 FOOTER EN TODAS LAS PÁGINAS
+//       // ==========================================
+//       const totalPages = doc.internal.pages.length - 1;
+//       for (let i = 1; i <= totalPages; i++) {
+//         doc.setPage(i);
+//         doc.setFontSize(8);
+//         doc.setTextColor(150, 150, 150);
+//         doc.text(
+//           `Página ${i} de ${totalPages}`,
+//           pageWidth / 2,
+//           pageHeight - 10,
+//           { align: "center" }
+//         );
+//       }
 
-      // ==========================================
-      // 💾 GUARDAR PDF
-      // ==========================================
-      const filename = `${courseTitle}_${unit.title}_Bibliografia.pdf`
-        .replace(/[^a-zA-Z0-9_\s]/g, "")
-        .replace(/\s+/g, "_")
-        .substring(0, 60);
+//       // ==========================================
+//       // 💾 GUARDAR PDF
+//       // ==========================================
+//       const filename = `${courseTitle}_${unit.title}_Bibliografia.pdf`
+//         .replace(/[^a-zA-Z0-9_\s]/g, "")
+//         .replace(/\s+/g, "_")
+//         .substring(0, 60);
       
-      doc.save(filename);
-      toast.success("📥 Bibliografía descargada correctamente");
+//       doc.save(filename);
+//       toast.success("📥 Bibliografía descargada correctamente");
       
-    } catch (error) {
-      console.error("Error generando PDF:", error);
-      toast.error("Hubo un error al generar el PDF");
-    } finally {
-      setLoading(false);
-    }
-  };
+//     } catch (error) {
+//       console.error("Error generando PDF:", error);
+//       toast.error("Hubo un error al generar el PDF");
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
 
+//   return (
+//     <button
+//       onClick={generatePDF}
+//       disabled={loading || !unit}
+//       className="relative w-full bg-white hover:bg-gray-50 border-2 border-gray-200 rounded-2xl p-5 
+//                  transition-all group hover:border-[#EE7203]/30 disabled:opacity-50 disabled:cursor-not-allowed"
+//     >
+//       <div className="flex items-center justify-between">
+//         <div className="flex items-center gap-3">
+//           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0C212D] to-[#112C3E] 
+//                           flex items-center justify-center group-hover:shadow-lg transition-shadow">
+
+//             {loading ? (
+//               <FiLoader className="animate-spin text-[#EE7203]" size={18} />
+//             ) : (
+//               <FiDownload className="text-[#EE7203]" size={18} />
+//             )}
+
+//           </div>
+
+//           <div className="text-left">
+//             <p className="text-sm font-black text-[#0C212D]">Academic Material</p>
+//             <p className="text-xs text-slate-500">
+//               {loading ? "Generating PDF..." : "Download PDF"}
+//             </p>
+//           </div>
+//         </div>
+
+//         {!loading && (
+//           <FiChevronRight className="text-slate-400 group-hover:text-[#EE7203] group-hover:translate-x-1 transition-all" />
+//         )}
+//       </div>
+//     </button>
+//   );
+// }
+
+// ✅ Función de comparación personalizada
+function arePropsEqual(prevProps, nextProps) {
   return (
-    <button
-      onClick={generatePDF}
-      disabled={loading || !unit}
-      className="relative w-full bg-white hover:bg-gray-50 border-2 border-gray-200 rounded-2xl p-5 
-                 transition-all group hover:border-[#EE7203]/30 disabled:opacity-50 disabled:cursor-not-allowed"
-    >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0C212D] to-[#112C3E] 
-                          flex items-center justify-center group-hover:shadow-lg transition-shadow">
-
-            {loading ? (
-              <FiLoader className="animate-spin text-[#EE7203]" size={18} />
-            ) : (
-              <FiDownload className="text-[#EE7203]" size={18} />
-            )}
-
-          </div>
-
-          <div className="text-left">
-            <p className="text-sm font-black text-[#0C212D]">Academic Material</p>
-            <p className="text-xs text-slate-500">
-              {loading ? "Generating PDF..." : "Download PDF"}
-            </p>
-          </div>
-        </div>
-
-        {!loading && (
-          <FiChevronRight className="text-slate-400 group-hover:text-[#EE7203] group-hover:translate-x-1 transition-all" />
-        )}
-      </div>
-    </button>
+    prevProps.title === nextProps.title &&
+    prevProps.description === nextProps.description &&
+    prevProps.total === nextProps.total &&
+    prevProps.completed === nextProps.completed &&
+    // Comparamos el array de lecciones por longitud y keys (más rápido que referencia)
+    prevProps.previewLessons.length === nextProps.previewLessons.length &&
+    prevProps.previewLessons[0]?.key === nextProps.previewLessons[0]?.key
   );
 }
 
-// Componente de introducción mejorada
-function EnhancedCourseIntro({ 
-  activeLesson, 
-  units, 
-  activeU, 
-  progress, 
+// 🔥 Componente auxiliar para las tarjetas de estadísticas
+const StatCard = React.memo(({ icon: Icon, value, label, color }) => {
+  const colors = {
+    purple: "from-purple-50 to-purple-100 border-purple-200 bg-purple-500 text-purple-700 text-purple-900",
+    emerald: "from-emerald-50 to-emerald-100 border-emerald-200 bg-emerald-500 text-emerald-700 text-emerald-900",
+    orange: "from-orange-50 to-orange-100 border-orange-200 bg-[#EE7203] text-orange-700 text-orange-900"
+  };
+
+  const [bgFrom, bgTo, borderColor, iconBg, labelColor, valueColor] = colors[color].split(' ');
+
+  return (
+    <div className={`bg-gradient-to-br ${bgFrom} ${bgTo} border-2 ${borderColor} rounded-xl md:rounded-2xl p-4 md:p-6 flex sm:block items-center justify-between sm:justify-start hover:scale-105 transition-transform`}>
+      <div className="flex items-center gap-3 sm:mb-3">
+        <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl ${iconBg} flex items-center justify-center shadow-lg`}>
+          <Icon className="text-white" size={20} />
+        </div>
+        <p className={`sm:hidden text-sm font-bold ${labelColor}`}>{label}</p>
+      </div>
+      <div className="text-right sm:text-left">
+        <div className={`text-2xl md:text-4xl font-black ${valueColor}`}>{value}</div>
+        <p className={`hidden sm:block text-xs md:text-sm font-bold ${labelColor} mt-1`}>{label}</p>
+      </div>
+    </div>
+  );
+});
+
+// 🔥 Componente Memoizado con Comparación Estricta
+const EnhancedCourseIntro = memo(function EnhancedCourseIntro({ 
+  title,
+  description,
+  total,
+  completed,
+  previewLessons,
   goNextLesson,
   t 
 }) {
-  if (!activeLesson || activeLesson.id !== "intro") return null;
-
-  const currentUnit = units[activeU];
-  const completedLessons = currentUnit?.lessons
-  ?.filter(l => l.id !== "intro") // ⬅️ excluir intro
-  ?.filter(l => 
-    progress[l.key]?.videoEnded || progress[l.key]?.exSubmitted
-  ).length || 0;
-
-
-  const totalLessons = (currentUnit?.lessons?.length || 1) - 1;
-  const estimatedHours = Math.ceil((totalLessons * 15) / 60);
-
+  const progress = total > 0 ? (completed / total) * 100 : 0;
 
   return (
-  <motion.div
-    initial={{ opacity: 0, y: 30 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.6 }}
-    className="space-y-4 md:space-y-6"
-  >
-    <div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl md:rounded-3xl shadow-xl border-2 border-[#EE7203]/20 overflow-hidden">
-      
-      {/* Header decorativo */}
-      {/* Padding reducido: p-5 en móvil vs p-8 en desktop */}
-      <div className="bg-gradient-to-r from-[#0C212D] to-[#112C3E] p-5 md:p-8 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 md:w-64 md:h-64 bg-[#EE7203]/10 rounded-full blur-3xl"></div>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="h-full w-full flex flex-col"
+    >
+      <div className="flex-1 bg-gradient-to-br from-white to-slate-50 rounded-2xl md:rounded-3xl shadow-xl border-2 border-[#EE7203]/20 overflow-hidden flex flex-col">
         
-        {/* Flex-col en móvil para alinear icono y texto verticalmente si es necesario */}
-        <div className="relative flex flex-col md:flex-row items-start md:items-center gap-4">
-          {/* Icono más pequeño en móvil */}
-          <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-gradient-to-br from-[#EE7203] to-[#FF3816] flex items-center justify-center shadow-lg shrink-0">
-            <span className="text-2xl md:text-4xl">🎯</span>
-          </div>
-          <div>
-            <p className="text-[#EE7203] text-xs md:text-sm font-bold uppercase tracking-wider mb-1">
-              {t("coursePlayer.intro.welcomeToUnit")}
-            </p>
-            {/* Texto responsive */}
-            <h2 className="text-2xl md:text-3xl font-black text-white leading-tight">
-              {activeLesson.unitSummary || currentUnit?.title}
-            </h2>
-          </div>
-        </div>
-      </div>
-
-      {/* Contenido Principal */}
-      <div className="p-4 md:p-8 space-y-4 md:space-y-6">
-        
-        {/* Descripción de la unidad */}
-        {activeLesson?.description && (
-          <div className="bg-blue-50 border-l-4 border-blue-500 rounded-r-xl md:rounded-r-2xl p-4 md:p-6">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center flex-shrink-0 mt-1">
-                <span className="text-lg md:text-xl">📖</span>
-              </div>
-              <div className="flex-1">
-                <h3 className="text-base md:text-lg font-black text-blue-900 mb-1 md:mb-2">
-                  {t("coursePlayer.intro.aboutThisUnit")}
-                </h3>
-                <p className="text-sm md:text-base text-blue-800 leading-relaxed">
-                  {activeLesson.description}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Grid de estadísticas */}
-        {/* En móvil usamos grid-cols-1 con gap pequeño, en md grid-cols-3 */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
-          {/* Lecciones */}
-          <div className="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200 rounded-xl md:rounded-2xl p-4 md:p-6 flex sm:block items-center justify-between sm:justify-start">
-            <div className="flex items-center gap-3 sm:mb-3">
-              <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-purple-500 flex items-center justify-center">
-                <span className="text-lg md:text-2xl">📚</span>
-              </div>
-              {/* En móvil mostramos el texto al lado, en desktop abajo */}
-              <p className="sm:hidden text-sm font-bold text-purple-700">
-                {t("coursePlayer.intro.lessonsInUnit")}
-              </p>
-            </div>
-            <div className="text-right sm:text-left">
-              <div className="text-2xl md:text-4xl font-black text-purple-900">
-                {totalLessons}
-              </div>
-              <p className="hidden sm:block text-sm font-bold text-purple-700">
-                {t("coursePlayer.intro.lessonsInUnit")}
-              </p>
-            </div>
-          </div>
-
-          {/* Progreso */}
-          <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-2 border-emerald-200 rounded-xl md:rounded-2xl p-4 md:p-6 flex sm:block items-center justify-between sm:justify-start">
-            <div className="flex items-center gap-3 sm:mb-3">
-              <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-emerald-500 flex items-center justify-center">
-                <span className="text-lg md:text-2xl">✅</span>
-              </div>
-              <p className="sm:hidden text-sm font-bold text-emerald-700">
-                {t("coursePlayer.intro.completedLessons")}
-              </p>
-            </div>
-            <div className="text-right sm:text-left">
-              <div className="text-2xl md:text-4xl font-black text-emerald-900">
-                {completedLessons}
-              </div>
-              <p className="hidden sm:block text-sm font-bold text-emerald-700">
-                {t("coursePlayer.intro.completedLessons")}
-              </p>
-            </div>
-          </div>
-
-          {/* Secciones restantes */}
-          <div className="bg-gradient-to-br from-orange-50 to-orange-100 border-2 border-orange-200 rounded-xl md:rounded-2xl p-4 md:p-6 flex sm:block items-center justify-between sm:justify-start">
-            <div className="flex items-center gap-3 sm:mb-3">
-              <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-orange-500 flex items-center justify-center">
-                <span className="text-lg md:text-2xl">📋</span>
-              </div>
-              <p className="sm:hidden text-sm font-bold text-orange-700">
-                 {t("coursePlayer.intro.remainingSections")}
-              </p>
-            </div>
-            <div className="text-right sm:text-left">
-              <div className="text-2xl md:text-4xl font-black text-orange-900">
-                {totalLessons - completedLessons}
-              </div>
-              <p className="hidden sm:block text-sm font-bold text-orange-700">
-                {t("coursePlayer.intro.remainingSections")}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Objetivos de aprendizaje */}
-        <div className="bg-gradient-to-br from-slate-50 to-slate-100 border-2 border-slate-200 rounded-xl md:rounded-2xl p-4 md:p-6">
-          <div className="flex flex-col md:flex-row items-start gap-4">
-            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-[#0C212D] to-[#112C3E] flex items-center justify-center flex-shrink-0">
-              <span className="text-xl md:text-2xl">🎓</span>
+        {/* Header */}
+        <div className="bg-gradient-to-r from-[#0C212D] via-[#112C3E] to-[#0C212D] p-5 md:p-8 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 md:w-64 md:h-64 bg-[#EE7203]/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-32 h-32 md:w-48 md:h-48 bg-[#FF3816]/10 rounded-full blur-3xl"></div>
+          
+          <div className="relative flex flex-col md:flex-row items-start md:items-center gap-4">
+            <div className="w-14 h-14 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-[#EE7203] to-[#FF3816] flex items-center justify-center shadow-2xl shadow-[#EE7203]/30 shrink-0">
+              <FiTarget className="text-white" size={32} />
             </div>
             <div className="flex-1 w-full">
-              <h3 className="text-lg md:text-xl font-black text-slate-900 mb-3">
-                {t("coursePlayer.intro.whatYouWillLearn")}
-              </h3>
-              <div className="space-y-2">
-                {currentUnit?.lessons?.slice(1, 5).map((lesson, idx) => (
-                  <div key={idx} className="flex items-start gap-3">
-                    <div className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-[#EE7203] flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <span className="text-white text-[10px] md:text-xs font-bold">{idx + 1}</span>
-                    </div>
-                    <p className="text-sm md:text-base text-slate-700 font-medium line-clamp-2 md:line-clamp-1">{lesson.title}</p>
-                  </div>
-                ))}
-                {(currentUnit?.lessons?.length || 0) > 6 && (
-                  <p className="text-slate-500 text-xs md:text-sm italic ml-8 md:ml-9">
-                    {t("coursePlayer.intro.andMore", { 
-                      count: (currentUnit?.lessons?.length || 0) - 5 
-                    })}
-                  </p>
-                )}
+              <div className="flex items-center gap-3 mb-2">
+                <div className="h-px flex-1 bg-gradient-to-r from-[#EE7203]/50 to-transparent hidden md:block"></div>
+                <p className="text-[#EE7203] text-xs md:text-sm font-bold uppercase tracking-wider">
+                  {t("coursePlayer.intro.welcomeToUnit")}
+                </p>
+                <div className="h-px flex-1 bg-gradient-to-l from-[#EE7203]/50 to-transparent hidden md:block"></div>
+              </div>
+              <h2 className="text-2xl md:text-4xl font-black text-white leading-tight mb-3 md:mb-4">
+                {title}
+              </h2>
+              {/* Progress bar */}
+              <div className="mt-3 md:mt-4">
+                <div className="flex items-center justify-between text-xs text-slate-300 mb-2">
+                  <span className="font-semibold">Overall Progress</span>
+                  <span className="font-bold">{Math.round(progress)}%</span>
+                </div>
+                <div className="h-2 bg-[#0C212D]/50 rounded-full overflow-hidden">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progress}%` }}
+                    transition={{ duration: 1, ease: "easeOut" }}
+                    className="h-full bg-gradient-to-r from-[#EE7203] to-[#FF3816] rounded-full shadow-lg shadow-[#EE7203]/50"
+                  />
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* CTA para empezar */}
-        <div className="relative overflow-hidden rounded-xl md:rounded-2xl">
+        {/* Contenido - scrollable */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-4 md:space-y-6">
+          
+          {/* Descripción */}
+          {description && (
+            <div className="bg-white border-l-4 border-[#EE7203] rounded-r-xl md:rounded-r-2xl p-4 md:p-6 shadow-lg">
+              <div className="flex items-start gap-3 md:gap-4">
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-[#EE7203] to-[#FF3816] flex items-center justify-center flex-shrink-0 shadow-md">
+                  <FiBook className="text-white" size={20} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-base md:text-xl font-black text-[#0C212D] mb-2 md:mb-3">
+                    {t("coursePlayer.intro.aboutThisUnit")}
+                  </h3>
+                  <p className="text-sm md:text-base text-slate-700 leading-relaxed">
+                    {description}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
+            <StatCard icon={FiBook} value={total} label={t("coursePlayer.intro.lessonsInUnit")} color="purple" />
+            <StatCard icon={FiCheckCircle} value={completed} label={t("coursePlayer.intro.completedLessons")} color="emerald" />
+            <StatCard icon={FiClock} value={total - completed} label={t("coursePlayer.intro.remainingSections")} color="orange" />
+          </div>
+
+          {/* Learning Objectives */}
+          <div className="bg-gradient-to-br from-slate-50 to-slate-100 border-2 border-slate-200 rounded-xl md:rounded-2xl p-4 md:p-6 shadow-lg">
+            <div className="flex flex-col md:flex-row items-start gap-4">
+              <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-gradient-to-br from-[#0C212D] to-[#112C3E] flex items-center justify-center flex-shrink-0 shadow-lg">
+                <FiAward className="text-[#EE7203]" size={24} />
+              </div>
+              <div className="flex-1 w-full">
+                <h3 className="text-lg md:text-2xl font-black text-slate-900 mb-3 md:mb-4">
+                  {t("coursePlayer.intro.whatYouWillLearn")}
+                </h3>
+                <div className="space-y-2 md:space-y-3">
+                  {previewLessons.map((lesson, idx) => (
+                    <div key={lesson.key} className="flex items-start gap-3 md:gap-4 group hover:bg-white -mx-2 px-2 py-2 rounded-lg transition-all">
+                      <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-[#EE7203] to-[#FF3816] flex items-center justify-center flex-shrink-0 shadow-md group-hover:scale-110 transition-transform">
+                        <span className="text-white text-xs md:text-sm font-bold">{idx + 1}</span>
+                      </div>
+                      <p className="text-sm md:text-base text-slate-700 font-medium leading-relaxed flex-1">
+                        {lesson.title}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* CTA - Fixed at bottom */}
+        <div className="relative overflow-hidden rounded-b-2xl md:rounded-b-3xl">
           <div className="absolute inset-0 bg-gradient-to-r from-[#EE7203] to-[#FF3816] opacity-10"></div>
           <div className="relative bg-gradient-to-br from-[#0C212D] to-[#112C3E] p-6 md:p-8 text-center">
-            <h3 className="text-xl md:text-2xl font-black text-white mb-2 md:mb-3">
+            <h3 className="text-xl md:text-3xl font-black text-white mb-2 md:mb-3">
               {t("coursePlayer.intro.readyToStart")}
             </h3>
             <p className="text-xs md:text-base text-slate-300 mb-4 md:mb-6 max-w-2xl mx-auto">
               {t("coursePlayer.intro.clickNextLesson")}
             </p>
-            {/* Botón full width en mobile */}
             <button
               onClick={goNextLesson}
-              className="w-full md:w-auto group px-6 py-3 md:px-8 md:py-4 bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white font-black text-base md:text-lg rounded-xl md:rounded-2xl shadow-lg hover:scale-105 transition-all inline-flex items-center justify-center gap-3"
+              className="w-full md:w-auto group px-6 py-3 md:px-10 md:py-4 bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white font-black text-base md:text-lg rounded-xl md:rounded-2xl shadow-2xl shadow-[#EE7203]/30 hover:shadow-[#EE7203]/50 hover:scale-105 transition-all inline-flex items-center justify-center gap-3"
             >
               <span>{t("coursePlayer.intro.startFirstLesson")}</span>
-              <FiChevronRight className="group-hover:translate-x-1 transition-transform" size={20} />
+              <FiChevronRight className="group-hover:translate-x-2 transition-transform" size={20} />
             </button>
           </div>
         </div>
-
       </div>
-    </div>
-  </motion.div>
-);
-}
+    </motion.div>
+  );
+}, arePropsEqual); // 👈 Pasamos la función de comparación aquí
+
+
 
 
   /* =========================================================
@@ -2857,7 +2844,6 @@ function EnhancedCourseIntro({
  return (
  <div className="flex h-screen overflow-hidden bg-gradient-to-br from-gray-50 to-white text-slate-900">
    
-    {/* ======================= SIDEBAR IZQUIERDA ======================= */}
       {/* ======================= SIDEBAR IZQUIERDA (CORREGIDO) ======================= */}
 {/* CAMBIOS: 
     1. Quitamos 'sticky' y 'top-0' (no son necesarios en este layout flex).
@@ -3017,31 +3003,33 @@ function EnhancedCourseIntro({
 </aside>
     {/* ======================= CONTENIDO PRINCIPAL ======================= */}
     {/* Agregado w-full para asegurar que ocupe el ancho en mobile */}
-    <main className="flex-1 w-full overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-slate-50 relative z-0">
-      
-      {/* Ajustado padding horizontal px-4 para mobile, px-6 o px-8 en desktop */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 md:space-y-10 pb-24">
-       
-        {/* INTRODUCCIÓN ESPECIAL DE LA UNIDAD */}
-        <EnhancedCourseIntro
-          activeLesson={activeLesson}
-          units={units}
-          activeU={activeU}
-          progress={progress}
-          goNextLesson={goNextLesson}
-          t={t}
-        />
-
-        {activeLesson?.id !== "intro" && (
-          <>
-          {/* Header Hero */}
-            <motion.div 
-            data-tutorial="lesson-header"
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: "easeOut" }}
-              className="relative overflow-hidden mt-12 xl:mt-0" // Margen top en mobile para no chocar con el hamburger menu si es flotante
-            >
+  <main className="flex-1 w-full overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-slate-50 relative z-0">
+  
+  {/* INTRODUCCIÓN ESPECIAL DE LA UNIDAD */}
+  {activeLesson?.id === "intro" && introDataStable && isProgressReady ? (
+    // Sin max-w-6xl para que ocupe todo el ancho
+    <div className="px-4 sm:px-6 py-6 h-full">
+      <EnhancedCourseIntro
+        title={introDataStable.title}
+        description={introDataStable.description}
+        total={introDataStable.total}
+        completed={introDataStable.completed}
+        previewLessons={introDataStable.previewLessons}
+        goNextLesson={goNextLesson}
+        t={t}
+      />
+    </div>
+  ) : (
+    // El resto del contenido SÍ tiene max-w-6xl
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 md:space-y-10 pb-24">
+      {/* Header Hero */}
+      <motion.div 
+        data-tutorial="lesson-header"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className="relative overflow-hidden mt-12 xl:mt-0"
+      >
               <div className="absolute inset-0 bg-gradient-to-r from-[#0C212D] via-[#112C3E] to-[#0C212D] rounded-3xl blur-2xl opacity-5"></div>
               {/* Padding reducido en mobile: p-5 vs p-8 */}
               <div className="relative bg-gradient-to-br from-[#0C212D] to-[#112C3E] rounded-3xl p-5 md:p-8 shadow-2xl border border-[#EE7203]/20">
@@ -3081,7 +3069,7 @@ function EnhancedCourseIntro({
                   </div>
                 </div>
               </div>
-            </motion.div>
+        </motion.div>
 
           {/* VIDEO */}
             {resolvedVideoUrl && (
@@ -3289,29 +3277,40 @@ function EnhancedCourseIntro({
                           </div>
                           <div className="px-4 py-2 md:px-6 md:py-3 bg-gradient-to-r from-[#0C212D] to-[#112C3E] text-white rounded-2xl shadow-lg self-start md:self-auto">
                             <span className="text-xl md:text-2xl font-black">{activeLesson.ejercicios.length}</span>
-                            <span className="text-slate-300 font-medium"> ejercicios</span>
+                            <span className="text-slate-300 font-medium"> Exercises</span>
                           </div>
                         </div>
 
-                        {/* 🔥 TODOS LOS EJERCICIOS EN CASCADA */}
-                        {activeLesson.ejercicios.map((_, exerciseIndex) => (
-                          <motion.div
-                            key={exerciseIndex}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.4, delay: exerciseIndex * 0.1 }}
-                          >
-                            <ExerciseRunner
-                              ejercicios={[activeLesson.ejercicios[exerciseIndex]]}
-                              lessonKey={activeLesson.key}
-                              exerciseIndex={exerciseIndex}
-                              batchId={userProfile?.batchId}
-                              userKey={userProfile?.userKey}
-                              courseId={courseId}
-                              onSubmit={() => {}}
-                            />
-                          </motion.div>
-                        ))}
+{activeLesson.ejercicios.map((ejercicio, exerciseIndex) => {
+  // 🔥 Si el ejercicio tiene un campo 'id', úsalo. Si no, usa el índice
+  const ejercicioId = ejercicio.id || `ex${exerciseIndex}`;
+  const exerciseKey = `${activeLesson.key}::${ejercicioId}`;
+
+  
+  
+  const savedData = progress[exerciseKey];
+
+  
+  return (
+    <motion.div
+      key={ejercicioId}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: exerciseIndex * 0.1 }}
+    >
+      <ExerciseRunner
+        ejercicios={[ejercicio]}
+        lessonKey={activeLesson.key}
+        exerciseId={ejercicioId} // 👈 Pasar ID en lugar de index
+        batchId={userProfile?.batchId}
+        userKey={userProfile?.userKey}
+        courseId={courseId}
+        savedData={savedData} 
+        onSubmit={() => {}}
+      />
+    </motion.div>
+  );
+})}
                       </div>
                     </motion.div>
                   )}
@@ -3361,9 +3360,9 @@ function EnhancedCourseIntro({
                 </div>
               </button>
             </motion.div>
-          </>
-        )}
       </div>
+         
+        )}
     </main>
 
     {/* ======================= SIDEBAR DERECHA (Desktop) ======================= */}

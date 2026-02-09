@@ -30,6 +30,79 @@ import { toast } from "sonner";
 
    -Define que datos y funciones van a estar disponibles en toda la app
    ========================================================== */
+/* ==========================================================
+   🔧 UTILIDADES DE RETRY Y TIMEOUT
+   ========================================================== */
+
+/**
+ * Ejecuta una promesa con timeout
+ */
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  errorMsg: string = "Timeout"
+): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(errorMsg)), timeoutMs)
+    ),
+  ]);
+}
+
+/**
+ * Reintenta una función asíncrona con backoff exponencial
+ */
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  initialDelay: number = 1000,
+  timeoutMs: number = 30000
+): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const result = await withTimeout(fn(), timeoutMs, `Timeout after ${timeoutMs}ms`);
+      return result;
+    } catch (error: any) {
+      lastError = error;
+      console.warn(`⚠️ Attempt ${attempt + 1}/${maxRetries} failed:`, error.message);
+
+      if (attempt === maxRetries - 1) {
+        throw error;
+      }
+
+      const delay = initialDelay * Math.pow(2, attempt);
+      console.log(`⏳ Retrying in ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  throw lastError || new Error("Unknown error in retryWithBackoff");
+}
+
+/**
+ * Ejecuta múltiples promesas con timeout individual
+ */
+async function safePromiseAll<T>(
+  promises: Array<() => Promise<T>>,
+  timeoutMs: number = 15000
+): Promise<Array<T | null>> {
+  const results = await Promise.allSettled(
+    promises.map(fn => withTimeout(fn(), timeoutMs, "Operation timeout"))
+  );
+
+  return results.map((result, index) => {
+    if (result.status === "fulfilled") {
+      return result.value;
+    } else {
+      console.error(`❌ Promise ${index} failed:`, result.reason);
+      return null;
+    }
+  });
+}
+
 
 interface SpotifyImage {
   height: number;
@@ -119,23 +192,89 @@ podcastEpisodes: SpotifyEpisode[];
   loadAlumnos?: () => Promise<void>;  
   setUserProfile?: (data: any) => void;
 
+  tutorialsSeen: Record<string, boolean>;
+markTutorialAsSeen: (tutorialId: string) => Promise<void>;
+allDataLoaded: boolean;
+
 }
 
 
 const AuthContext = createContext<AuthContextType>({
+  // --- Auth base ---
   user: null,
   role: null,
   authReady: false,
   loading: true,
-  alumnos: [],
-  misCursos: [],
-  loadingCursos: false,
+  dataReady: false,
   userProfile: null,
-  loggingOut: false,
-logout: async () => {},
+
+  // --- Datos académicos ---
+  alumnos: [],
+  alumnosRaw: [],
+  misCursos: [],
+  allCursos: [],
+
+  loadingCursos: false,
+  loadingAllCursos: false,
+
+  reloadData: async () => {},
+  loadMisCursos: async () => {},
+  loadAllCursos: async () => {},
+
+  // 🎬 Video Dashboard
+  hasSeenWelcomeVideo: false,
+  markWelcomeVideoAsSeen: async () => {},
+  loadingVideoStatus: false,
+
+  // 🤖 Video Chatbot
+  hasSeenChatbotVideo: false,
+  markChatbotVideoAsSeen: async () => {},
+  loadingChatbotVideoStatus: false,
+
+  // 📚 Video Course Player
+  hasSeenCoursePlayerVideo: false,
+  markCoursePlayerVideoAsSeen: async () => {},
+  loadingCoursePlayerVideoStatus: false,
+
+  // 🤖 Tutorial Chatbot (legacy)
+  hasSeenChatbotTutorial: false,
+  markChatbotTutorialAsSeen: async () => {},
+  loadingChatbotTutorialStatus: false,
+
+  // 📚 Tutorial Course Player (legacy)
   hasSeenCoursePlayerTutorial: false,
   markCoursePlayerTutorialAsSeen: async () => {},
   loadingCoursePlayerTutorialStatus: false,
+
+  // 🎓 NUEVO sistema genérico de tutoriales
+  tutorialsSeen: {},
+  markTutorialAsSeen: async () => {},
+
+  // 🎙️ Podcast
+  podcastEpisodes: [],
+  loadingPodcast: false,
+  loadPodcastEpisodes: async () => {},
+
+  // 📈 Cursos
+  saveCourseProgress: async () => {},
+  getCourseProgress: async () => ({}),
+
+  // --- Profesores ---
+  profesores: [],
+  loadingProfesores: false,
+  loadProfesores: async () => {},
+
+  // --- Alumnos ---
+  loadAlumnos: async () => {},
+
+  // --- Logout ---
+  loggingOut: false,
+  logout: async () => {},
+
+  // --- Utils ---
+  firestore: null,
+  setUserProfile: () => {},
+   allDataLoaded: false, // 👈 AGREGAR
 });
 
 /* ==========================================================
@@ -175,6 +314,9 @@ const [loadingChatbotTutorialStatus, setLoadingChatbotTutorialStatus] = useState
 const [hasSeenCoursePlayerTutorial, setHasSeenCoursePlayerTutorial] = useState(false);
 const [loadingCoursePlayerTutorialStatus, setLoadingCoursePlayerTutorialStatus] = useState(false);
 
+const [tutorialsSeen, setTutorialsSeen] = useState<Record<string, boolean>>({});
+
+
 
   const [profesores, setProfesores] = useState<any[]>([]);
   const [loadingProfesores, setLoadingProfesores] = useState(false);
@@ -191,41 +333,46 @@ const [loadingPodcast, setLoadingPodcast] = useState(false);
 
   const [loggingOut, setLoggingOut] = useState(false);
 
+  const [allDataLoaded, setAllDataLoaded] = useState(false);
 
 
 
-  // 🔥 NUEVA FUNCIÓN: Carga datos sin bloquear la UI
-  const fetchInitialData = async (uid: string, userRole: string) => {
-    console.log(`⚡ Iniciando carga de datos en background para: ${userRole}`);
-    
-    // Usamos Promise.allSettled para que si falla Spotify, no rompa la app
-    const promises = [];
+const fetchInitialData = async (uid: string, userRole: string) => {
+  console.log(`⚡ Iniciando carga de datos para: ${userRole}`);
 
-    // 1. Cargas comunes (ligeras)
-    promises.push(loadChatSessions(uid));
-    promises.push(loadAnuncios());
-    promises.push(loadPodcastEpisodes());
+  try {
+    const dataLoaders: Array<() => Promise<any>> = [];
 
-    // 2. Cargas según Rol (AQUÍ ESTÁ EL AHORRO DE LECTURAS)
+    // Cargas comunes
+    dataLoaders.push(() => loadChatSessions(uid));
+    dataLoaders.push(() => loadAnuncios());
+    dataLoaders.push(() => loadPodcastEpisodes());
+
+    // Cargas según rol
     if (userRole === "alumno") {
-        // Alumno: Solo sus cursos. NO carga lista de alumnos.
-        promises.push(loadMisCursos(uid));
-    } 
-    else if (userRole === "profesor") {
-        promises.push(loadAllCursos());
-        promises.push(loadProfesores());
-    }
-    else if (userRole === "admin") {
-        // Admin: Carga todo
-        promises.push(loadAllCursos());
-        promises.push(loadProfesores());
-        promises.push(loadAlumnos()); // ⚠️ Solo el admin gasta estas lecturas
+      dataLoaders.push(() => loadMisCursos(uid));
+    } else if (userRole === "profesor") {
+      dataLoaders.push(() => loadAllCursos());
+      dataLoaders.push(() => loadProfesores());
+    } else if (userRole === "admin") {
+      dataLoaders.push(() => loadAllCursos());
+      dataLoaders.push(() => loadProfesores());
+      dataLoaders.push(() => loadAlumnos());
     }
 
-    await Promise.allSettled(promises);
-    setDataReady(true); // Avisamos que los datos ya están
-    console.log("✅ Datos cargados.");
-  };
+    await safePromiseAll(dataLoaders, 15000);
+
+    setDataReady(true);
+    setAllDataLoaded(true); // 👈 NUEVO
+    console.log("✅ Datos cargados correctamente");
+
+  } catch (error) {
+    console.error("❌ Error en fetchInitialData:", error);
+    setDataReady(true);
+    setAllDataLoaded(true); // 👈 Marcar como cargado incluso si falla
+    toast.error("Algunos datos no se pudieron cargar. Intenta recargar.");
+  }
+};
  /* ==========================================================
      🔹 Logout => Cierra sesion y REDIRECCIONA
      ========================================================== */
@@ -262,6 +409,7 @@ const logout = async () => {
 // Modificar loadAlumnos para guardar ambos por separado
 const loadAlumnos = async () => {
   try {
+    await retryWithBackoff(async () => {
     const alumnosCampus = []; 
     const alumnosRawList = [];  // 👈 renombrado
 
@@ -335,24 +483,28 @@ const loadAlumnos = async () => {
     setAlumnos(all);           // 👈 Todos mezclados (para UI general)
     setAlumnosRaw(alumnosRawList); // 👈 Solo raw (para filtro de curso)
     
-    console.log("✅ Alumnos cargados:", all.length);
-    console.log("📦 Alumnos raw:", alumnosRawList.length);
+    }, 3, 1000, 20000); // 3 reintentos, 1s inicial, timeout 20s
 
   } catch (err) {
     console.error("❌ [AuthContext] Error cargando alumnos:", err);
+    setAlumnos([]);
+    setAlumnosRaw([]);
   }
 };
 
 const loadPodcastEpisodes = async () => {
   setLoadingPodcast(true);
   try {
+    await retryWithBackoff(async () => {
     const res = await fetch('/api/spotify');
     if (!res.ok) throw new Error('Failed to fetch podcast episodes');
     const data = await res.json();
     setPodcastEpisodes(data);
     console.log("🎙️ Episodios de podcast cargados:", data.length);
+     }, 2, 1000, 10000); // 2 reintentos, timeout 10s
   } catch (error) {
     console.error("❌ Error cargando episodios del podcast:", error);
+    setPodcastEpisodes([]);
   } finally {
     setLoadingPodcast(false);
   }
@@ -443,200 +595,263 @@ async function loadRecentActivity(uid: string, profile: any, cursos: any[]) {
   setLoadingActivity(false);
 }
 
-// // 🎬 Marcar video del dashboard como visto (tu función existente)
-//   const markWelcomeVideoAsSeen = async () => {
-//     if (!user || !userProfile?.batchId || !userProfile?.userKey) {
-//       console.error("❌ No se puede marcar video dashboard: faltan datos");
-//       return;
-//     }
+// 🎬 Marcar video del dashboard como visto (tu función existente)
+  const markWelcomeVideoAsSeen = async () => {
+    if (!user || !userProfile?.batchId || !userProfile?.userKey) {
+      console.error("❌ No se puede marcar video dashboard: faltan datos");
+      return;
+    }
 
-//     try {
-//       const batchRef = doc(db, "alumnos", userProfile.batchId);
-//       const snap = await getDoc(batchRef);
+    try {
+      const batchRef = doc(db, "alumnos", userProfile.batchId);
+      const snap = await getDoc(batchRef);
       
-//       if (!snap.exists()) throw new Error("Batch no existe");
+      if (!snap.exists()) throw new Error("Batch no existe");
 
-//       const batchData = snap.data();
-//       const userData = batchData[userProfile.userKey] || {};
+      const batchData = snap.data();
+      const userData = batchData[userProfile.userKey] || {};
 
-//       await setDoc(
-//         batchRef,
-//         {
-//           [userProfile.userKey]: {
-//             ...userData,
-//             hasSeenWelcomeVideo: true,
-//             welcomeVideoSeenAt: new Date().toISOString(),
-//           },
-//         },
-//         { merge: true }
-//       );
+      await setDoc(
+        batchRef,
+        {
+          [userProfile.userKey]: {
+            ...userData,
+            hasSeenWelcomeVideo: true,
+            welcomeVideoSeenAt: new Date().toISOString(),
+          },
+        },
+        { merge: true }
+      );
 
-//       setHasSeenWelcomeVideo(true);
-//       setUserProfile({
-//         ...userProfile,
-//         hasSeenWelcomeVideo: true,
-//         welcomeVideoSeenAt: new Date().toISOString(),
-//       });
+      setHasSeenWelcomeVideo(true);
+      setUserProfile({
+        ...userProfile,
+        hasSeenWelcomeVideo: true,
+        welcomeVideoSeenAt: new Date().toISOString(),
+      });
 
-//       console.log("✅ Video dashboard marcado como visto");
-//     } catch (err) {
-//       console.error("❌ Error al marcar video dashboard:", err);
-//       toast.error("Error al guardar el progreso del video");
-//     }
-//   };
+      console.log("✅ Video dashboard marcado como visto");
+    } catch (err) {
+      console.error("❌ Error al marcar video dashboard:", err);
+      toast.error("Error al guardar el progreso del video");
+    }
+  };
 
-//   // 🤖 Marcar video del CHATBOT como visto (NUEVA FUNCIÓN)
-//   const markChatbotVideoAsSeen = async () => {
-//     if (!user || !userProfile?.batchId || !userProfile?.userKey) {
-//       console.error("❌ No se puede marcar video chatbot: faltan datos");
-//       return;
-//     }
+  // 🤖 Marcar video del CHATBOT como visto (NUEVA FUNCIÓN)
+  const markChatbotVideoAsSeen = async () => {
+    if (!user || !userProfile?.batchId || !userProfile?.userKey) {
+      console.error("❌ No se puede marcar video chatbot: faltan datos");
+      return;
+    }
 
-//     try {
-//       const batchRef = doc(db, "alumnos", userProfile.batchId);
-//       const snap = await getDoc(batchRef);
+    try {
+      const batchRef = doc(db, "alumnos", userProfile.batchId);
+      const snap = await getDoc(batchRef);
       
-//       if (!snap.exists()) throw new Error("Batch no existe");
+      if (!snap.exists()) throw new Error("Batch no existe");
 
-//       const batchData = snap.data();
-//       const userData = batchData[userProfile.userKey] || {};
+      const batchData = snap.data();
+      const userData = batchData[userProfile.userKey] || {};
 
-//       await setDoc(
-//         batchRef,
-//         {
-//           [userProfile.userKey]: {
-//             ...userData,
-//             hasSeenChatbotVideo: true, // 👈 Campo diferente
-//             chatbotVideoSeenAt: new Date().toISOString(),
-//           },
-//         },
-//         { merge: true }
-//       );
+      await setDoc(
+        batchRef,
+        {
+          [userProfile.userKey]: {
+            ...userData,
+            hasSeenChatbotVideo: true, // 👈 Campo diferente
+            chatbotVideoSeenAt: new Date().toISOString(),
+          },
+        },
+        { merge: true }
+      );
 
-//       setHasSeenChatbotVideo(true);
-//       setUserProfile({
-//         ...userProfile,
-//         hasSeenChatbotVideo: true,
-//         chatbotVideoSeenAt: new Date().toISOString(),
-//       });
+      setHasSeenChatbotVideo(true);
+      setUserProfile({
+        ...userProfile,
+        hasSeenChatbotVideo: true,
+        chatbotVideoSeenAt: new Date().toISOString(),
+      });
 
-//       console.log("✅ Video chatbot marcado como visto");
-//     } catch (err) {
-//       console.error("❌ Error al marcar video chatbot:", err);
-//       toast.error("Error al guardar el progreso del video");
-//     }
-//   };
+      console.log("✅ Video chatbot marcado como visto");
+    } catch (err) {
+      console.error("❌ Error al marcar video chatbot:", err);
+      toast.error("Error al guardar el progreso del video");
+    }
+  };
 
-//   // 📚 Marcar video del COURSE PLAYER como visto (NUEVA FUNCIÓN)
-//   const markCoursePlayerVideoAsSeen = async () => {
-//     if (!user || !userProfile?.batchId || !userProfile?.userKey) {
-//       console.error("❌ No se puede marcar video course player: faltan datos");
-//       return;
-//     }
+  // 📚 Marcar video del COURSE PLAYER como visto (NUEVA FUNCIÓN)
+  const markCoursePlayerVideoAsSeen = async () => {
+    if (!user || !userProfile?.batchId || !userProfile?.userKey) {
+      console.error("❌ No se puede marcar video course player: faltan datos");
+      return;
+    }
 
-//     try {
-//       const batchRef = doc(db, "alumnos", userProfile.batchId);
-//       const snap = await getDoc(batchRef);
+    try {
+      const batchRef = doc(db, "alumnos", userProfile.batchId);
+      const snap = await getDoc(batchRef);
       
-//       if (!snap.exists()) throw new Error("Batch no existe");
+      if (!snap.exists()) throw new Error("Batch no existe");
 
-//       const batchData = snap.data();
-//       const userData = batchData[userProfile.userKey] || {};
+      const batchData = snap.data();
+      const userData = batchData[userProfile.userKey] || {};
 
-//       await setDoc(
-//         batchRef,
-//         {
-//           [userProfile.userKey]: {
-//             ...userData,
-//             hasSeenCoursePlayerVideo: true, // 👈 Campo específico
-//             coursePlayerVideoSeenAt: new Date().toISOString(),
-//           },
-//         },
-//         { merge: true }
-//       );
+      await setDoc(
+        batchRef,
+        {
+          [userProfile.userKey]: {
+            ...userData,
+            hasSeenCoursePlayerVideo: true, // 👈 Campo específico
+            coursePlayerVideoSeenAt: new Date().toISOString(),
+          },
+        },
+        { merge: true }
+      );
 
-//       setHasSeenCoursePlayerVideo(true);
-//       setUserProfile({
-//         ...userProfile,
-//         hasSeenCoursePlayerVideo: true,
-//         coursePlayerVideoSeenAt: new Date().toISOString(),
-//       });
+      setHasSeenCoursePlayerVideo(true);
+      setUserProfile({
+        ...userProfile,
+        hasSeenCoursePlayerVideo: true,
+        coursePlayerVideoSeenAt: new Date().toISOString(),
+      });
 
-//       console.log("✅ Video course player marcado como visto");
-//     } catch (err) {
-//       console.error("❌ Error al marcar video course player:", err);
-//       toast.error("Error al guardar el progreso del video");
-//     }
-//   };
+      console.log("✅ Video course player marcado como visto");
+    } catch (err) {
+      console.error("❌ Error al marcar video course player:", err);
+      toast.error("Error al guardar el progreso del video");
+    }
+  };
 
-// // 🎓 Marcar tutorial del CHATBOT como visto (NUEVA FUNCIÓN)
-// const markChatbotTutorialAsSeen = async () => {
-//   if (!user || !userProfile?.batchId || !userProfile?.userKey) {
-//     console.error("❌ No se puede marcar tutorial chatbot: faltan datos");
-//     return;
-//   }
-
-//   try {
-//     const batchRef = doc(db, "alumnos", userProfile.batchId);
-//     const snap = await getDoc(batchRef);
-    
-//     if (!snap.exists()) throw new Error("Batch no existe");
-
-//     const batchData = snap.data();
-//     const userData = batchData[userProfile.userKey] || {};
-
-//     await setDoc(
-//       batchRef,
-//       {
-//         [userProfile.userKey]: {
-//           ...userData,
-//           hasSeenChatbotTutorial: true, // 👈 Campo específico
-//           chatbotTutorialSeenAt: new Date().toISOString(),
-//         },
-//       },
-//       { merge: true }
-//     );
-
-//     setHasSeenChatbotTutorial(true);
-//     setUserProfile({
-//       ...userProfile,
-//       hasSeenChatbotTutorial: true,
-//       chatbotTutorialSeenAt: new Date().toISOString(),
-//     });
-
-//     console.log("✅ Tutorial chatbot marcado como visto");
-//   } catch (err) {
-//     console.error("❌ Error al marcar tutorial chatbot:", err);
-//     toast.error("Error al guardar el progreso del tutorial");
-//   }
-// };
-
-
-// BORRAR ESTAS FUNCIONES LUEGO DE LAS DEMOS Y DESCOMENTAR LO DE ARRIBA
+// 🎓 Marcar tutorial del CHATBOT como visto (NUEVA FUNCIÓN)
 const markChatbotTutorialAsSeen = async () => {
-  console.log("⚠️ Función deshabilitada - video siempre visible");
-  // No hace nada
-};
-const markWelcomeVideoAsSeen = async () => {
-  console.log("⚠️ Función deshabilitada - video siempre visible");
-  // No hace nada
+  if (!user || !userProfile?.batchId || !userProfile?.userKey) {
+    console.error("❌ No se puede marcar tutorial chatbot: faltan datos");
+    return;
+  }
+
+  try {
+    const batchRef = doc(db, "alumnos", userProfile.batchId);
+    const snap = await getDoc(batchRef);
+    
+    if (!snap.exists()) throw new Error("Batch no existe");
+
+    const batchData = snap.data();
+    const userData = batchData[userProfile.userKey] || {};
+
+    await setDoc(
+      batchRef,
+      {
+        [userProfile.userKey]: {
+          ...userData,
+          hasSeenChatbotTutorial: true, // 👈 Campo específico
+          chatbotTutorialSeenAt: new Date().toISOString(),
+        },
+      },
+      { merge: true }
+    );
+
+    setHasSeenChatbotTutorial(true);
+    setUserProfile({
+      ...userProfile,
+      hasSeenChatbotTutorial: true,
+      chatbotTutorialSeenAt: new Date().toISOString(),
+    });
+
+    console.log("✅ Tutorial chatbot marcado como visto");
+  } catch (err) {
+    console.error("❌ Error al marcar tutorial chatbot:", err);
+    toast.error("Error al guardar el progreso del tutorial");
+  }
 };
 
-const markChatbotVideoAsSeen = async () => {
-  console.log("⚠️ Función deshabilitada - video siempre visible");
-  // No hace nada
-};
-
-const markCoursePlayerVideoAsSeen = async () => {
-  console.log("⚠️ Función deshabilitada - video siempre visible");
-  // No hace nada
-};
-
-// BORRAR ESTAS FUNCIONES LUEGO DE LAS DEMOS Y DESCOMENTAR LO DE ARRIBA
+// 📚 Marcar tutorial del COURSE PLAYER como visto (NUEVA FUNCIÓN)
 const markCoursePlayerTutorialAsSeen = async () => {
-  console.log("⚠️ Función deshabilitada - tutorial siempre visible");
-  // No hace nada
+  if (!user || !userProfile?.batchId || !userProfile?.userKey) {
+    console.error("❌ No se puede marcar tutorial course player: faltan datos");
+    return;
+  }
+
+  try {
+    const batchRef = doc(db, "alumnos", userProfile.batchId);
+    const snap = await getDoc(batchRef);
+    
+    if (!snap.exists()) throw new Error("Batch no existe");
+
+    const batchData = snap.data();
+    const userData = batchData[userProfile.userKey] || {};
+
+    await setDoc(
+      batchRef,
+      {
+        [userProfile.userKey]: {
+          ...userData,
+          hasSeenCoursePlayerTutorial: true, // 👈 Campo específico
+          coursePlayerTutorialSeenAt: new Date().toISOString(),
+        },
+      },
+      { merge: true }
+    );
+
+    setHasSeenCoursePlayerTutorial(true);
+    setUserProfile({
+      ...userProfile,
+      hasSeenCoursePlayerTutorial: true,
+      coursePlayerTutorialSeenAt: new Date().toISOString(),
+    });
+
+    console.log("✅ Tutorial course player marcado como visto");
+  } catch (err) {
+    console.error("❌ Error al marcar tutorial course player:", err);
+    toast.error("Error al guardar el progreso del tutorial");
+  }
 };
+
+const markTutorialAsSeen = async (tutorialId: string) => {
+  if (!user || !userProfile?.batchId || !userProfile?.userKey) return;
+
+  try {
+    const batchRef = doc(db, "alumnos", userProfile.batchId);
+    const snap = await getDoc(batchRef);
+    if (!snap.exists()) return;
+
+    const batchData = snap.data();
+    const userData = batchData[userProfile.userKey] || {};
+
+    await setDoc(
+      batchRef,
+      {
+        [userProfile.userKey]: {
+          ...userData,
+          tutorialsSeen: {
+            ...(userData.tutorialsSeen || {}),
+            [tutorialId]: true,
+          },
+        },
+      },
+      { merge: true }
+    );
+
+    setTutorialsSeen(prev => ({
+      ...prev,
+      [tutorialId]: true,
+    }));
+
+    setUserProfile(prev => ({
+      ...prev,
+      tutorialsSeen: {
+        ...(prev?.tutorialsSeen || {}),
+        [tutorialId]: true,
+      },
+    }));
+  } catch (err) {
+    console.error("Error guardando tutorial:", err);
+  }
+};
+
+
+
+
+
+
   /* ==========================================================
    🔹 Cargar cursos + progreso real del alumno
    ========================================================== */
@@ -644,6 +859,7 @@ const loadMisCursos = async (uid: string) => {
   setLoadingCursos(true);
 
   try {
+    await retryWithBackoff(async () => {
     const profile = await fetchUserFromBatchesByUid(uid);
     if (!profile) {
       setMisCursos([]);
@@ -699,10 +915,12 @@ const loadMisCursos = async (uid: string) => {
     }
 
     setMisCursos(cursosAlumno);
+    }, 3, 1000, 15000);
 
   } catch (err) {
     console.error("❌ Error cargando cursos del alumno:", err);
     toast.error("Error cargando tus cursos");
+    setMisCursos([]);
   } finally {
     setLoadingCursos(false);
   }
@@ -714,31 +932,37 @@ const loadMisCursos = async (uid: string) => {
      🔹 Cargar todos los cursos (admin/profesor)
      ========================================================== */
   const loadAllCursos = async () => {
-    setLoadingAllCursos(true);
-    try {
+  setLoadingAllCursos(true);
+  try {
+    await retryWithBackoff(async () => {
       const snap = await getDocs(collection(db, "cursos"));
       const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       setAllCursos(all);
-    } catch (err) {
-      console.error("❌ Error cargando todos los cursos:", err);
-      toast.error("Error cargando lista de cursos");
-    } finally {
-      setLoadingAllCursos(false);
-    }
-  };
+    }, 3, 1000, 15000);
 
+  } catch (err) {
+    console.error("❌ Error fatal cargando todos los cursos:", err);
+    toast.error("Error cargando lista de cursos");
+    setAllCursos([]);
+  } finally {
+    setLoadingAllCursos(false);
+  }
+};
 
   const loadAnuncios = async () => {
   setLoadingAnuncios(true);
   try {
+    await retryWithBackoff(async () => {
     const snap = await getDocs(collection(db, "anuncios"));
 
     // El admin debe recibir TODOS los anuncios, visibles y ocultos.
     const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
     setAnuncios(list);
+    }, 2, 1000, 10000);
   } catch (err) {
     console.error("❌ Error cargando anuncios:", err);
+    setAnuncios([]);
   } finally {
     setLoadingAnuncios(false);
   }
@@ -769,6 +993,7 @@ const getCourseById = async (id: string) => {
 const loadProfesores = async () => {
   setLoadingProfesores(true);
   try {
+    await retryWithBackoff(async () => {
     const profesoresList = [];
 
     const alumnosRef = collection(db, "alumnos");
@@ -801,10 +1026,12 @@ const loadProfesores = async () => {
 
     setProfesores(profesoresList);
     console.log("👨‍🏫 Profesores cargados:", profesoresList.length);
+    }, 3, 1000, 15000);
 
   } catch (err) {
     console.error("❌ Error cargando profesores:", err);
     toast.error("Error cargando profesores");
+    setProfesores([]);
   } finally {
     setLoadingProfesores(false);
   }
@@ -820,6 +1047,7 @@ const loadChatSessions = async (uid: string) => {
   setLoadingChatSessions(true);
 
   try {
+    await retryWithBackoff(async () => {
     const ref = collection(db, "conversaciones", uid, "sessions");
     const q = query(ref, orderBy("endedAt", "desc"));
     const snap = await getDocs(q);
@@ -850,8 +1078,10 @@ const loadChatSessions = async (uid: string) => {
     }
 
     setChatSessions(list);
+     }, 2, 1000, 10000);
   } catch (err) {
     console.error("❌ Error loading chat sessions:", err);
+    setChatSessions([]);
   } finally {
     setLoadingChatSessions(false);
   }
@@ -994,30 +1224,42 @@ useEffect(() => {
           // FASE 1: Identidad (Bloqueante, pero rápida)
           // -----------------------------------------------------------
           
-          // 1. Buscar perfil en batches
-          let profile = await fetchUserFromBatchesByUid(firebaseUser.uid);
+          const profile = await withTimeout(
+  (async () => {
+    let p = await fetchUserFromBatchesByUid(firebaseUser.uid);
+    
+    if (!p) {
+      console.log("⚠️ Usuario nuevo detectado, creando...");
+      await addUserToBatch(firebaseUser, "alumno");
+      p = await fetchUserFromBatchesByUid(firebaseUser.uid);
+    }
 
-          // 2. Si es nuevo, crearlo
-          if (!profile) {
-            console.log("⚠️ Usuario nuevo detectado, creando...");
-            await addUserToBatch(firebaseUser, "alumno");
-            profile = await fetchUserFromBatchesByUid(firebaseUser.uid);
-          }
+    if (p?.batchId) {
+      const batchRef = doc(db, "alumnos", p.batchId);
+      const snap = await getDoc(batchRef);
+      if (snap.exists()) {
+        const data = snap.data()[p.userKey] || {};
+        p = { ...p, ...data };
+      }
+    }
 
-          // 3. Completar datos del perfil
-          if (profile?.batchId) {
-            const batchRef = doc(db, "alumnos", profile.batchId);
-            const snap = await getDoc(batchRef);
-            if (snap.exists()) {
-               const data = snap.data()[profile.userKey] || {};
-               profile = { ...profile, ...data };
-            }
-          }
+    return p;
+  })(),
+  10000,
+  "Timeout cargando perfil de usuario"
+);
 
           // 4. Determinar Rol e Idioma
           const resolvedRole = profile?.role || "alumno";
           setRole(resolvedRole);
           setUserProfile(profile);
+
+          setTutorialsSeen(profile?.tutorialsSeen || {});
+          setHasSeenWelcomeVideo(profile?.hasSeenWelcomeVideo === true);
+setHasSeenChatbotVideo(profile?.hasSeenChatbotVideo === true);
+setHasSeenCoursePlayerVideo(profile?.hasSeenCoursePlayerVideo === true);
+setHasSeenCoursePlayerTutorial(profile?.hasSeenCoursePlayerTutorial === true);
+setLoadingVideoStatus(false);
 
           const lang = resolvedRole === "profesor" ? "en" : (profile.learningLanguage || "en");
           setLang(lang);
@@ -1041,13 +1283,18 @@ useEffect(() => {
           setAuthReady(true);
           setLoading(false);
         }
-      } catch (error) {
-        console.error("❌ Error Auth:", error);
-        setLoading(false);
-        setAuthReady(true); // Dejar entrar para mostrar error
+      } catch (error) {  // 👈 ESTE ES EL CATCH QUE YA EXISTE
+      console.error("❌ Error Auth:", error);
+      
+      // 🔥 AGREGAR ESTAS 4 LÍNEAS AQUÍ:
+      if (error.message.includes("Timeout")) {
+        toast.error("La carga está tomando más tiempo de lo normal. Reintentando...");
       }
-    });
-
+      
+      setLoading(false);
+      setAuthReady(true); // 👈 Esto probablemente ya estaba, si no, agrégalo
+    }
+  });
     return () => unsubscribe();
   }, []);
 
@@ -1124,7 +1371,10 @@ const value = useMemo(
     markChatbotTutorialAsSeen,
     loadingChatbotTutorialStatus,
 
-    // 📚 Tutorial Course Player (NUEVO)
+    tutorialsSeen,
+markTutorialAsSeen,
+
+
     hasSeenCoursePlayerTutorial,
     markCoursePlayerTutorialAsSeen,
     loadingCoursePlayerTutorialStatus,
@@ -1151,6 +1401,7 @@ const value = useMemo(
   if (!user || !userProfile) return;
   return loadRecentActivity(user.uid, userProfile, misCursos);
 },
+allDataLoaded,
 
 
 
@@ -1174,6 +1425,7 @@ const value = useMemo(
     loadingActivity,
     anuncios,               // 👈 NECESARIO
     loadingAnuncios,        // 👈 NECESARIO
+    allDataLoaded,
   ]
 );
 
@@ -1263,3 +1515,4 @@ export function getCourseProgressStats(
 
   return { totalLessons, completedCount, progressPercent };
 }
+
