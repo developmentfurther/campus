@@ -2,1196 +2,720 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
-  doc,
-  getDoc,
-  updateDoc,
-  arrayUnion,
-  Timestamp,
-  serverTimestamp,
+  doc, getDoc, updateDoc, arrayUnion,
+  Timestamp, serverTimestamp,
 } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import Exercises, { Exercise } from "../cursoItem/exercises/Exercises";
-import {
-  FiPlus,
-  FiTrash2,
-  FiVideo,
-  FiSave,
-  FiX,
-  FiChevronDown,
-  FiImage,
-  FiLayers,
-  FiTag,
-  FiLink2,
-  FiClipboard,
-  FiUsers,
-  FiSearch,
-  FiCheck,
-  FiBookOpen,
-  FiFlag,
-  FiGlobe,
-  FiClock, FiArrowRight, FiCheckCircle
-} from "react-icons/fi";
-import VocabularyEditor from "../cursoItem/VocabularyEditor";
-import BlockEditor from "../cursoItem/blocks/BlockEditor";
-import ContentTimelineEditor from "../cursoItem/Content/ContentTimeLineEditor"; // ✅ Importado
-import UnitBlockToolbar from "../cursoItem/blocks/UnitToolbar"; // ✅ Importado
 import LessonItem from "../cursoItem/LessonItem";
+import ContentTimelineEditor from "../cursoItem/Content/ContentTimeLineEditor";
 
-/* ----------------- Interfaces ----------------- */
-
-interface LessonBlock {
-  type:
-    | "title"
-    | "description"
-    | "theory"
-    | "video"
-    | "pdf"
-    | "vocabulary"
-    | "exercise";
-  [key: string]: any;
-}
-
-interface Leccion {
-  id: string;
-  blocks: LessonBlock[];
-}
-
-interface ContentItem {
-  id: string;
-  type: "unit" | "final_exam" | "project" | "closing";
-  refId?: string;
-}
-
-interface Unidad {
-  id: string;
-  titulo: string;
-  descripcion: string;
-  introVideo?: string;
-  urlImagen: string;
-  ejercicios: Exercise[];
-  textoCierre: string;
-  lecciones: Leccion[];
-  closing?: {
-    examIntro?: string;
-    examExercises?: Exercise[];
-    closingText?: string;
-    pdfUrl?: string;
-    videoUrl?: string;
-  };
-}
-
-interface ExamenFinal {
-  introTexto: string;
-  ejercicios: Exercise[];
-}
-
-interface Capstone {
-  videoUrl: string;
-  instrucciones: string;
-  checklist: string[];
-}
-
-interface Curso {
-  titulo: string;
-  descripcion: string;
-  nivel: string;
-  idioma: string;
-  publico: boolean;
-  videoPresentacion: string;
-  urlImagen: string;
-  cursantes: string[];
-  textoFinalCurso: string;
-  textoFinalCursoVideoUrl: string;
-  unidades?: Unidad[];
-  examenFinal?: ExamenFinal;
-  capstone?: Capstone;
-  contentTimeline?: ContentItem[]; // ✅ Nuevo campo
-  createdAt?: Timestamp | null;
-  updatedAt?: Timestamp | null;
-}
-
-/* ----------------- Helpers ----------------- */
-const makeId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-const isValidUrl = (s: string) => {
-  try {
-    const u = new URL(s);
-    return u.protocol === "http:" || u.protocol === "https:";
-  } catch {
-    return false;
-  }
-};
-const uploadFile = async (storage: any, path: string, file: File): Promise<string> => {
-  const storageRef = ref(storage, path);
-  await uploadBytes(storageRef, file);
-  return await getDownloadURL(storageRef);
+// ─── Icons ────────────────────────────────────────────────────────────────────
+const Icon = {
+  X: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+  Plus: () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+  Trash: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>,
+  Save: () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>,
+  Upload: () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
+  ChevronDown: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>,
+  Layers: () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>,
+  Clipboard: () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>,
+  Flag: () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>,
+  Check: () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+  CheckCircle: () => <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
+  Clock: () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+  ArrowRight: () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>,
+  Search: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+  Tag: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>,
 };
 
-// Crea un bloque vacío según el tipo
-const defaultBlock = (type: string): LessonBlock => {
-  switch (type) {
-    case "title":
-      return { type: "title", value: "" };
-    case "description":
-      return { type: "description", value: "" };
-    case "theory":
-      return { type: "theory", value: "" };
-    case "video":
-      return { type: "video", url: "" };
-    case "pdf":
-      return { type: "pdf", url: "" };
-    case "vocabulary":
-      return { type: "vocabulary", entries: [] };
-    case "exercise":
-      return { type: "exercise", exercise: null };
-    default:
-      return { type: "description", value: "" };
-  }
-};
+// ─── UI Primitives — idénticos a CrearMaterial ────────────────────────────────
 
-/* ==============================================================
-   COMPONENTE PRINCIPAL
-   ============================================================== */
-export default function EditCourseForm({
-  courseId,
-  initialData,
-  loading,
-  onClose,
-}: {
-  courseId: string;
-  initialData?: any;
-  loading?: boolean;
-  onClose?: () => void;
+function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button type="button" onClick={onClick}
+      className={`px-5 py-2 text-sm font-semibold rounded-lg transition-all ${active ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function SectionCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <div className={`bg-white rounded-2xl border border-slate-200 p-6 ${className}`}>{children}</div>;
+}
+
+function Label({ children }: { children: React.ReactNode }) {
+  return <label className="block text-sm font-medium text-slate-700 mb-1.5">{children}</label>;
+}
+
+function Input({ value, onChange, placeholder, type = "text", required }: {
+  value: string; onChange: (v: string) => void;
+  placeholder?: string; type?: string; required?: boolean;
 }) {
+  return (
+    <input type={type} value={value} onChange={e => onChange(e.target.value)}
+      placeholder={placeholder} required={required}
+      className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition"
+    />
+  );
+}
+
+function Textarea({ value, onChange, placeholder, rows = 3 }: {
+  value: string; onChange: (v: string) => void; placeholder?: string; rows?: number;
+}) {
+  return (
+    <textarea value={value} onChange={e => onChange(e.target.value)}
+      placeholder={placeholder} rows={rows}
+      className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition resize-none"
+    />
+  );
+}
+
+function Select({ value, onChange, children }: {
+  value: string; onChange: (v: string) => void; children: React.ReactNode;
+}) {
+  return (
+    <select value={value} onChange={e => onChange(e.target.value)}
+      className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 transition bg-white"
+    >
+      {children}
+    </select>
+  );
+}
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type ContentItemType = "unit" | "final_exam" | "project" | "closing";
+
+interface LessonBlock { type: "title"|"description"|"theory"|"video"|"pdf"|"vocabulary"|"exercise"; [key: string]: any; }
+interface Leccion { id: string; blocks: LessonBlock[]; }
+interface ContentItem { id: string; type: ContentItemType; refId?: string; }
+interface Unidad { id: string; titulo: string; descripcion: string; introVideo?: string; urlImagen: string; ejercicios: Exercise[]; textoCierre: string; lecciones: Leccion[]; closing?: Record<string, any>; }
+interface ExamenFinal { introTexto: string; ejercicios: Exercise[]; }
+interface Capstone { videoUrl: string; instrucciones: string; checklist: string[]; }
+interface Curso { titulo: string; descripcion: string; nivel: string; idioma: string; publico: boolean; videoPresentacion: string; urlImagen: string; cursantes: string[]; textoFinalCurso: string; textoFinalCursoVideoUrl: string; unidades?: Unidad[]; examenFinal?: ExamenFinal; capstone?: Capstone; contentTimeline?: ContentItem[]; createdAt?: Timestamp | null; updatedAt?: Timestamp | null; }
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const makeId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const isValidUrl = (s: string) => { try { const u = new URL(s); return u.protocol === "http:" || u.protocol === "https:"; } catch { return false; } };
+const defaultBlock = (type: string): LessonBlock => {
+  if (type === "vocabulary") return { type: "vocabulary", entries: [] };
+  if (type === "exercise") return { type: "exercise", exercise: null };
+  if (type === "video" || type === "pdf") return { type, url: "" } as LessonBlock;
+  return { type, value: "" } as LessonBlock;
+};
+
+// ─── TimelineItemBadge — igual que CrearMaterial ──────────────────────────────
+
+function TimelineItemBadge({ item, isSelected, label, onSelect, onDelete }: {
+  item: ContentItem; isSelected: boolean; label: string; onSelect: () => void; onDelete: () => void;
+}) {
+  const colors: Record<ContentItemType, string> = {
+    unit: isSelected ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200",
+    final_exam: isSelected ? "bg-amber-600 text-white" : "bg-amber-50 text-amber-700 hover:bg-amber-100",
+    project: isSelected ? "bg-blue-600 text-white" : "bg-blue-50 text-blue-700 hover:bg-blue-100",
+    closing: isSelected ? "bg-emerald-600 text-white" : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
+  };
+  return (
+    <div className={`flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium transition-all cursor-pointer ${colors[item.type]}`}>
+      <span onClick={onSelect} className="flex-1">{label}</span>
+      <button type="button" onClick={e => { e.stopPropagation(); onDelete(); }} className="ml-1 opacity-50 hover:opacity-100 transition"><Icon.X /></button>
+    </div>
+  );
+}
+
+// ─── JsonSectionImport — mismo estilo que CrearMaterial ───────────────────────
+
+function JsonSectionImport({ hint, onLoad, validate }: {
+  hint: string; onLoad: (data: any) => void; validate?: (data: any) => boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+
+  const handleLoad = () => {
+    if (!text.trim()) { toast.error("El campo está vacío"); return; }
+    try {
+      const data = JSON.parse(text);
+      if (validate && !validate(data)) { toast.error("Estructura JSON inválida para esta sección."); return; }
+      onLoad(data); setText(""); setOpen(false);
+      toast.success("✅ Sección actualizada desde JSON");
+    } catch { toast.error("❌ JSON inválido. Revisá las comillas y llaves."); }
+  };
+
+  return (
+    <div className="border border-dashed border-slate-300 rounded-xl overflow-hidden">
+      <button type="button" onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-4 py-2.5 bg-slate-50 hover:bg-slate-100 transition text-xs font-medium text-slate-500"
+      >
+        <span className="flex items-center gap-2"><Icon.Upload /> Autocompletar desde JSON</span>
+        <span className={`transition-transform duration-200 ${open ? "rotate-180" : ""}`}><Icon.ChevronDown /></span>
+      </button>
+      {open && (
+        <div className="p-4 space-y-3 bg-white border-t border-slate-100">
+          <p className="text-xs text-slate-400">
+            Estructura esperada: <code className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-600 text-[10px]">{hint}</code>
+          </p>
+          <textarea value={text} onChange={e => setText(e.target.value)} rows={5} spellCheck={false}
+            className="w-full px-3 py-2 border border-slate-200 rounded-lg font-mono text-xs focus:outline-none focus:ring-2 focus:ring-slate-900 transition resize-none bg-slate-50"
+          />
+          <div className="flex gap-2">
+            <button type="button" onClick={handleLoad} className="px-4 py-1.5 bg-slate-900 text-white text-xs font-semibold rounded-lg hover:bg-slate-700 transition">Aplicar</button>
+            <button type="button" onClick={() => { setText(""); setOpen(false); }} className="px-4 py-1.5 border border-slate-200 text-slate-500 text-xs font-semibold rounded-lg hover:bg-slate-50 transition">Cancelar</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
+
+export default function EditCourseForm({
+  courseId, initialData, loading, onClose,
+}: { courseId: string; initialData?: any; loading?: boolean; onClose?: () => void; }) {
   const { firestore, alumnos, reloadData, alumnosRaw, userProfile } = useAuth();
 
-  // Estados principales
   const [curso, setCurso] = useState<Curso | null>(null);
   const [unidades, setUnidades] = useState<Unidad[]>([]);
-  const [examenFinal, setExamenFinal] = useState<ExamenFinal>({
-    introTexto: "",
-    ejercicios: [],
-  });
-  const [capstone, setCapstone] = useState<Capstone>({
-    videoUrl: "",
-    instrucciones: "",
-    checklist: [],
-  });
+  const [examenFinal, setExamenFinal] = useState<ExamenFinal>({ introTexto: "", ejercicios: [] });
+  const [capstone, setCapstone] = useState<Capstone>({ videoUrl: "", instrucciones: "", checklist: [] });
   const [uploading, setUploading] = useState(false);
 
-  // Estados de navegación UI
-  const [activeMainTab, setActiveMainTab] = useState<string>("general");
-  
-  // Timeline y Selección (Igual que CrearCurso)
+  const [tab, setTab] = useState<"general" | "content" | "students">("general");
   const [contentTimeline, setContentTimeline] = useState<ContentItem[]>([]);
-  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  // Filtros de alumnos
-  const [filterIdioma, setFilterIdioma] = useState("");
-  const [filterNivel, setFilterNivel] = useState("");
-  const [filterNombre, setFilterNombre] = useState("");
-  const [filterCursoId, setFilterCursoId] = useState("");
+const [filterIdioma, setFilterIdioma] = useState("");
+const [filterNivel, setFilterNivel] = useState("");
+const [filterNombre, setFilterNombre] = useState("");
+const [filterCursoId, setFilterCursoId] = useState("");
+const [emailInput, setEmailInput] = useState("");
+const [alumnosPage, setAlumnosPage] = useState(0);
+const PAGE_SIZE = 50;
+
   const [resumeItem, setResumeItem] = useState<{ id: string; name: string } | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-
-// ✅ NUEVO: Estado para confirmación de salida
   const [showExitModal, setShowExitModal] = useState(false);
 
-  // ✅ NUEVO: Lógica para intentar cerrar
-  const handleAttemptClose = () => {
-    // En modo edición, asumimos que siempre puede haber cambios pendientes.
-    // Preguntamos siempre para seguridad del usuario.
-    setShowExitModal(true);
-  };
-  /* =========================================================
-     PERSISTENCIA DE POSICIÓN (BASE DE DATOS)
-     ========================================================= */
-
-  // 1. GUARDAR: Cada vez que seleccionas un item, actualizamos Firestore
+  // ── Persistencia de posición ───────────────────────────────────────────────
   useEffect(() => {
-    // Si no hay item, perfil o firestore listo, no hacemos nada
-    if (!selectedItemId || !userProfile?.batchId || !userProfile?.userKey || !firestore) return;
+    if (!selectedId || !userProfile?.batchId || !userProfile?.userKey || !firestore) return;
+    const t = setTimeout(async () => {
+      try { await updateDoc(doc(firestore, "alumnos", userProfile.batchId), { [`${userProfile.userKey}.editingProgress.${courseId}`]: selectedId }); }
+      catch (e) { console.error(e); }
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [selectedId, userProfile, firestore, courseId]);
 
-    // Usamos un "debounce" de 1.5 segundos para no saturar la base de datos si das clicks rápidos
-    const timer = setTimeout(async () => {
+  useEffect(() => {
+    const check = async () => {
+      if (!userProfile?.batchId || !userProfile?.userKey || !firestore || !contentTimeline.length) return;
       try {
-        const { batchId, userKey } = userProfile;
-        const batchRef = doc(firestore, "alumnos", batchId);
-        
-        // Guardamos en: user_XYZ.editingProgress.ID_DEL_CURSO
-        // Usamos notación de punto para actualizar solo ese campo específico sin borrar lo demás
-        await updateDoc(batchRef, {
-          [`${userKey}.editingProgress.${courseId}`]: selectedItemId
-        });
-        
-        // Opcional: console.log("Posición guardada en DB");
-      } catch (error) {
-        console.error("Error guardando posición:", error);
-      }
-    }, 1500); 
-
-    return () => clearTimeout(timer);
-  }, [selectedItemId, userProfile, firestore, courseId]);
-
-
- // 2. LEER: Al abrir, consultamos DIRECTAMENTE a la base de datos
-  useEffect(() => {
-    const checkSavedPosition = async () => {
-        // Validamos que tengamos lo necesario
-        if (!userProfile?.batchId || !userProfile?.userKey || !firestore || contentTimeline.length === 0) return;
-
-        try {
-            // 🔥 CLAVE: Leemos el documento fresco, no usamos el userProfile del contexto que puede ser viejo
-            const batchRef = doc(firestore, "alumnos", userProfile.batchId);
-            const snap = await getDoc(batchRef);
-
-            if (snap.exists()) {
-                const batchData = snap.data();
-                // Accedemos a user_XXX -> editingProgress
-                const userData = batchData[userProfile.userKey] || {};
-                const savedProgress = userData.editingProgress || {};
-                const lastId = savedProgress[courseId];
-
-                console.log("🔍 Posición recuperada de DB:", lastId); // Para depurar
-
-                // Si existe un ID guardado y NO es el que ya está seleccionado por defecto (el primero)
-                if (lastId && lastId !== selectedItemId) {
-                    
-                    // Verificamos que esa unidad/sección siga existiendo en el timeline
-                    const itemExists = contentTimeline.find(i => i.id === lastId);
-
-                    if (itemExists) {
-                        let name = "Sección anterior";
-                        
-                        // Buscamos un nombre bonito
-                        if (itemExists.type === "unit") {
-                            const u = unidades.find(unit => unit.id === itemExists.refId);
-                            if (u) name = `Unidad: ${u.titulo || "Sin título"}`;
-                        } else if (itemExists.type === "final_exam") name = "Examen Final";
-                        else if (itemExists.type === "project") name = "Proyecto Final";
-                        else if (itemExists.type === "closing") name = "Cierre";
-
-                        setResumeItem({ id: lastId, name });
-                    }
-                }
-            }
-        } catch (error) {
-            console.error("❌ Error leyendo posición guardada:", error);
-        }
+        const snap = await getDoc(doc(firestore, "alumnos", userProfile.batchId));
+        if (!snap.exists()) return;
+        const lastId = (snap.data()[userProfile.userKey]?.editingProgress || {})[courseId];
+        if (!lastId || lastId === selectedId) return;
+        const found = contentTimeline.find(i => i.id === lastId);
+        if (!found) return;
+        let name = "Sección anterior";
+        if (found.type === "unit") { const u = unidades.find(u => u.id === found.refId); if (u) name = `Unidad: ${u.titulo || "Sin título"}`; }
+        else if (found.type === "final_exam") name = "Examen Final";
+        else if (found.type === "project") name = "Proyecto Final";
+        else if (found.type === "closing") name = "Cierre";
+        setResumeItem({ id: lastId, name });
+      } catch (e) { console.error(e); }
     };
-
-    // Ejecutamos la lectura solo cuando el timeline y el usuario estén listos
-    checkSavedPosition();
-    
+    check();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contentTimeline, userProfile?.batchId, courseId]);
- /* ==============================================================
-     1. Cargar datos e inicializar (CON NORMALIZACIÓN)
-     ============================================================== */
+
+  // ── Cargar datos ───────────────────────────────────────────────────────────
   useEffect(() => {
     if (!initialData) return;
-
-    // 1. Normalizar los datos (convierte formato viejo a nuevo si hace falta)
-    const safeData = normalizeCourseData(initialData);
-
-    // 2. Setear los estados con la data ya limpia
-    setCurso(safeData);
-    setUnidades(safeData.unidades || []);
-    setExamenFinal(safeData.examenFinal || { introTexto: "", ejercicios: [] });
-    setCapstone(safeData.capstone || { videoUrl: "", instrucciones: "", checklist: [] });
-    setContentTimeline(safeData.contentTimeline || []);
-
-    // 3. Seleccionar el primer item por defecto para editar
-    if (safeData.contentTimeline && safeData.contentTimeline.length > 0) {
-      setSelectedItemId(safeData.contentTimeline[0].id);
-    }
+    const safe = normalizeCourseData(initialData);
+    setCurso(safe); setUnidades(safe.unidades || []);
+    setExamenFinal(safe.examenFinal || { introTexto: "", ejercicios: [] });
+    setCapstone(safe.capstone || { videoUrl: "", instrucciones: "", checklist: [] });
+    setContentTimeline(safe.contentTimeline || []);
+    if (safe.contentTimeline?.length) setSelectedId(safe.contentTimeline[0].id);
   }, [initialData]);
 
-  // Agregar este useEffect después de los estados
-useEffect(() => {
-  // 👇 AGREGAR ESTA VALIDACIÓN
-  if (!curso) return;
-  
-  // Si el item seleccionado ya no existe en el timeline, resetear
-  if (selectedItemId && !curso.contentTimeline.some(i => i.id === selectedItemId)) {
-    const firstItem = curso.contentTimeline.length > 0 ? curso.contentTimeline[0].id : null;
-    setSelectedItemId(firstItem);
-  }
-}, [curso, selectedItemId]); // 👈 Cambiar dependencia a 'curso' completo
-  /* ==============================================================
-     2. Handlers de Contenido (Paridad con CrearCurso)
-     ============================================================== */
-  
-  // Agregar Elementos al Timeline
+  // ── Timeline ───────────────────────────────────────────────────────────────
   const agregarUnidad = () => {
-    const nueva: Unidad = {
-      id: makeId(),
-      titulo: "",
-      descripcion: "",
-      introVideo: "",
-      urlImagen: "",
-      ejercicios: [],
-      textoCierre: "",
-      lecciones: [],
-    };
-    setUnidades((prev) => [...prev, nueva]);
-
-    const timelineId = `unit-${nueva.id}`;
-    setContentTimeline((prev) => [
-      ...prev,
-      { id: timelineId, type: "unit", refId: nueva.id },
-    ]);
-    setTimeout(() => setSelectedItemId(timelineId), 50);
+    const nueva: Unidad = { id: makeId(), titulo: "", descripcion: "", introVideo: "", urlImagen: "", ejercicios: [], textoCierre: "", lecciones: [] };
+    setUnidades(p => [...p, nueva]);
+    const tId = `unit-${nueva.id}`;
+    setContentTimeline(p => [...p, { id: tId, type: "unit", refId: nueva.id }]);
+    setTimeout(() => setSelectedId(tId), 50);
   };
-  
-  
 
-  const addFinalExamBlock = () => {
+  const addSingleton = (type: ContentItemType) => {
+    if (contentTimeline.some(i => i.type === type)) { toast.error(`Ya existe un bloque "${type}"`); return; }
     const id = makeId();
-    setContentTimeline((prev) => {
-      if (prev.some((i) => i.type === "final_exam")) return prev;
-      return [...prev, { id, refId: id, type: "final_exam" }];
-    });
-    setSelectedItemId(id);
+    setContentTimeline(p => [...p, { id, refId: id, type }]);
+    setSelectedId(id);
   };
 
-  const addProjectBlock = () => {
-    const id = makeId();
-    setContentTimeline((prev) => {
-      if (prev.some((i) => i.type === "project")) return prev;
-      return [...prev, { id, refId: id, type: "project" }];
-    });
-    setSelectedItemId(id);
+  const deleteItem = (itemId: string) => {
+    const item = contentTimeline.find(i => i.id === itemId);
+    if (!item || !confirm(`Delete this ${item.type.replace("_", " ")}?`)) return;
+    setContentTimeline(p => p.filter(i => i.id !== itemId));
+    setCurso(p => p ? { ...p, contentTimeline: p.contentTimeline?.filter(i => i.id !== itemId) } : p);
+    if (item.type === "unit") setUnidades(p => p.filter(u => u.id !== item.refId));
+    if (selectedId === itemId) setSelectedId(null);
   };
 
-  const addClosingBlock = () => {
-    const id = makeId();
-    setContentTimeline((prev) => {
-      if (prev.some((i) => i.type === "closing")) return prev;
-      return [...prev, { id, refId: id, type: "closing" }];
+  // ── Unit mutations ─────────────────────────────────────────────────────────
+  const updateUnidad = useCallback((idx: number, patch: Partial<Unidad>) => {
+    setUnidades(p => { const c = [...p]; c[idx] = { ...c[idx], ...patch }; return c; });
+  }, []);
+
+  const agregarLeccion = (uIdx: number) => setUnidades(p => p.map((u, i) => i === uIdx ? { ...u, lecciones: [...u.lecciones, { id: makeId(), blocks: [] }] } : u));
+  const borrarLeccion = (uIdx: number, lIdx: number) => setUnidades(p => p.map((u, i) => i === uIdx ? { ...u, lecciones: u.lecciones.filter((_, j) => j !== lIdx) } : u));
+  const updateBlock = (uIdx: number, lIdx: number, bIdx: number, val: LessonBlock) => { setUnidades(p => { const c = structuredClone(p); c[uIdx].lecciones[lIdx].blocks[bIdx] = val; return c; }); };
+  const deleteBlock = (uIdx: number, lIdx: number, bIdx: number) => { setUnidades(p => { const c = structuredClone(p); c[uIdx].lecciones[lIdx].blocks.splice(bIdx, 1); return c; }); };
+  const addBlock = (uIdx: number, lIdx: number, type: LessonBlock["type"]) => { setUnidades(p => { const c = structuredClone(p); c[uIdx].lecciones[lIdx].blocks.push(defaultBlock(type)); return c; }); };
+
+  // ── JSON import handlers ───────────────────────────────────────────────────
+  const handleImportUnit = (idx: number) => (data: any) => {
+    const raw = data.unidad ?? data;
+    setUnidades(p => {
+      const c = structuredClone(p); const u = c[idx];
+      if (raw.titulo !== undefined) u.titulo = raw.titulo;
+      if (raw.descripcion !== undefined) u.descripcion = raw.descripcion;
+      if (raw.introVideo !== undefined) u.introVideo = raw.introVideo;
+      if (raw.textoCierre !== undefined) u.textoCierre = raw.textoCierre;
+      if (Array.isArray(raw.lecciones)) u.lecciones = raw.lecciones.map((l: any) => ({ id: l.id || makeId(), blocks: Array.isArray(l.blocks) ? l.blocks : [] }));
+      return c;
     });
-    setSelectedItemId(id);
+  };
+  const handleImportFinalExam = (data: any) => {
+    const raw = data.examenFinal ?? data;
+    setExamenFinal(p => ({ introTexto: raw.introTexto ?? p.introTexto, ejercicios: Array.isArray(raw.ejercicios) ? raw.ejercicios : p.ejercicios }));
+  };
+  const handleImportCapstone = (data: any) => {
+    const raw = data.capstone ?? data;
+    setCapstone(p => ({ videoUrl: raw.videoUrl ?? p.videoUrl, instrucciones: raw.instrucciones ?? p.instrucciones, checklist: Array.isArray(raw.checklist) ? raw.checklist : p.checklist }));
+  };
+  const handleImportClosing = (data: any) => {
+    const raw = data.closing ?? data;
+    setCurso(p => p ? { ...p, textoFinalCurso: raw.textoFinalCurso ?? p.textoFinalCurso, textoFinalCursoVideoUrl: raw.textoFinalCursoVideoUrl ?? p.textoFinalCursoVideoUrl } : p);
   };
 
-  // Updates
-  const updateUnidad = useCallback(
-    (idx: number, patch: Partial<Unidad> | ((prev: Unidad) => Unidad)) => {
-      setUnidades((prev) => {
-        const nuevas = structuredClone(prev);
-        const unidadPrev = nuevas[idx];
-        nuevas[idx] = typeof patch === "function" ? patch(unidadPrev) : { ...unidadPrev, ...patch };
-        return nuevas;
-      });
-    },
-    []
-  );
+  // ── Label helpers ──────────────────────────────────────────────────────────
+  const getLabel = (item: ContentItem, idx: number) => {
+    if (item.type === "unit") { const u = unidades.find(u => u.id === item.refId); return u?.titulo ? `Unidad: ${u.titulo}` : `Unidad ${idx + 1}`; }
+    if (item.type === "final_exam") return "Examen Final";
+    if (item.type === "project") return "Proyecto Final";
+    if (item.type === "closing") return "Cierre";
+    return item.type;
+  };
 
-  const agregarLeccion = (unidadIdx: number) => {
-    const nueva: Leccion = { id: makeId(), blocks: [] };
-    setUnidades((p) =>
-      p.map((u, i) =>
-        i === unidadIdx ? { ...u, lecciones: [...u.lecciones, nueva] } : u
-      )
+  const unitCount = contentTimeline.filter(i => i.type === "unit").length;
+  const hasFinalExam = contentTimeline.some(i => i.type === "final_exam");
+  const hasProject = contentTimeline.some(i => i.type === "project");
+  const hasClosing = contentTimeline.some(i => i.type === "closing");
+
+  // ── Render content panels ──────────────────────────────────────────────────
+  const renderContent = () => {
+    if (!selectedId) return (
+      <div className="flex flex-col items-center justify-center py-20 text-slate-400 text-sm">
+        <Icon.Layers />
+        <p className="mt-3">Seleccioná un elemento del timeline para editar</p>
+      </div>
     );
-  };
-
-  const borrarLeccion = (unidadIdx: number, leccionIdx: number) => {
-    setUnidades((p) =>
-      p.map((u, i) =>
-        i === unidadIdx
-          ? { ...u, lecciones: u.lecciones.filter((_, j) => j !== leccionIdx) }
-          : u
-      )
-    );
-  };
-
-  const updateBlock = (uIdx: number, lIdx: number, bIdx: number, updated: LessonBlock) => {
-    setUnidades((prev) => {
-      const copy = structuredClone(prev);
-      copy[uIdx].lecciones[lIdx].blocks[bIdx] = updated;
-      return copy;
-    });
-  };
-
-  const deleteBlock = (uIdx: number, lIdx: number, bIdx: number) => {
-    setUnidades((prev) => {
-      const copy = structuredClone(prev);
-      copy[uIdx].lecciones[lIdx].blocks.splice(bIdx, 1);
-      return copy;
-    });
-  };
-
-  const addBlock = (uIdx: number, lIdx: number, type: LessonBlock["type"]) => {
-      setUnidades(prev => {
-        const copy = structuredClone(prev);
-        copy[uIdx].lecciones[lIdx].blocks.push(defaultBlock(type));
-        return copy;
-      });
-  }
-
-const deleteContentItem = (itemId: string) => {
-  // 1. Buscamos en el estado contentTimeline (que es tu fuente de verdad para el orden)
-  const item = contentTimeline.find((i) => i.id === itemId);
-  if (!item) return;
-
-  if (!confirm(`Delete this ${item.type.replace("_", " ")}?`)) return;
-
-  // 2. 🔥 CORRECCIÓN CRÍTICA: Actualizamos el estado contentTimeline
-  // Esto asegura que handleSubmit reciba la lista limpia
-  setContentTimeline((prev) => prev.filter((i) => i.id !== itemId));
-
-  // 3. Actualizamos el objeto curso (para mantener consistencia visual si algo más lo usa)
-  setCurso((prev) => {
-    if (!prev) return prev;
-    return {
-      ...prev,
-      contentTimeline: prev.contentTimeline.filter((i) => i.id !== itemId),
-    };
-  });
-
-  // 4. Si es una unidad, la borramos del array de unidades
-  if (item.type === "unit") {
-    setUnidades((prev) => prev.filter((u) => u.id !== item.refId));
-  }
-  
-  // 5. UX: Si borraste lo que tenías seleccionado, limpia la selección
-  if (selectedItemId === itemId) {
-      setSelectedItemId(null);
-  }
-};
-
-  /* ==============================================================
-     3. Renderizadores de Editores (Lado Derecho)
-     ============================================================== */
-  const renderSelectedContentItem = () => {
-    if (!selectedItemId) return <div className="text-center text-gray-400 py-8">Select an item to edit.</div>;
-    
-    const item = contentTimeline.find((i) => i.id === selectedItemId);
+    const item = contentTimeline.find(i => i.id === selectedId);
     if (!item) return null;
 
-    switch (item.type) {
-      case "unit": {
-        const idx = unidades.findIndex((u) => u.id === item.refId);
-        if (idx === -1) return <div className="text-red-400 p-4">Unit not found</div>;
-        return renderUnitEditor(idx);
-      }
-      case "final_exam":
-        return renderFinalExamEditor();
-      case "project":
-        return renderProjectEditor();
-      case "closing":
-        return renderClosingEditor();
-      default:
-        return null;
-    }
-  };
-
-  const renderUnitEditor = (idx: number) => {
-    const unidad = unidades[idx];
-    return (
-      <section className="rounded-2xl border border-[#112C3E]/20 bg-white p-6 space-y-8 animate-fadeIn">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br from-[#EE7203] to-[#FF3816] text-white">
-            <FiLayers className="w-5 h-5" />
-          </div>
-          <h3 className="text-xl font-black text-[#0C212D] tracking-tight">
-            Editing Unit: {unidad.titulo || "Untitled"}
-          </h3>
-        </div>
-
-        {/* Datos Básicos Unidad */}
+    if (item.type === "unit") {
+      const idx = unidades.findIndex(u => u.id === item.refId);
+      if (idx === -1) return <p className="text-sm text-red-400">Unidad no encontrada</p>;
+      const u = unidades[idx];
+      return (
         <div className="space-y-5">
+          <SectionCard className="space-y-4">
+            <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2"><Icon.Layers /> Información de la unidad</h3>
+            <JsonSectionImport
+              hint={`"titulo": "...", "descripcion": "...", "introVideo": "...", "lecciones": [...]`}
+              validate={d => typeof (d.unidad ?? d) === "object"}
+              onLoad={handleImportUnit(idx)}
+            />
+            <div><Label>Título</Label><Input value={u.titulo} onChange={v => updateUnidad(idx, { titulo: v })} placeholder="Título de la unidad" /></div>
+            <div><Label>Descripción</Label><Textarea value={u.descripcion} onChange={v => updateUnidad(idx, { descripcion: v })} placeholder="¿Qué aprenderá el alumno?" /></div>
             <div>
-                <label className="text-sm font-semibold text-[#0C212D]">Unit Title</label>
-                <input
-                    type="text"
-                    value={unidad.titulo}
-                    onChange={(e) => updateUnidad(idx, { titulo: e.target.value })}
-                    className="w-full p-3 border border-[#112C3E]/20 rounded-xl focus:ring-2 focus:ring-[#EE7203]"
-                />
+              <Label>Video intro (Vimeo, opcional)</Label>
+              <Input value={u.introVideo || ""} onChange={v => updateUnidad(idx, { introVideo: v })} placeholder="https://vimeo.com/..." type="url" />
+              {u.introVideo && isValidUrl(u.introVideo) && u.introVideo.includes("vimeo") && (
+                <div className="aspect-video rounded-xl overflow-hidden border bg-gray-100 mt-2">
+                  <iframe src={u.introVideo.replace("vimeo.com", "player.vimeo.com/video")} className="w-full h-full" allowFullScreen />
+                </div>
+              )}
             </div>
-             <div>
-                <label className="text-sm font-semibold text-[#0C212D]">Description</label>
-                <textarea
-                    value={unidad.descripcion}
-                    onChange={(e) => updateUnidad(idx, { descripcion: e.target.value })}
-                    rows={2}
-                    className="w-full p-3 border border-[#112C3E]/20 rounded-xl resize-none focus:ring-2 focus:ring-[#EE7203]"
-                />
+          </SectionCard>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-slate-900">Secciones</h3>
+              <button type="button" onClick={() => agregarLeccion(idx)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white text-xs font-medium rounded-lg hover:bg-slate-700 transition"
+              >
+                <Icon.Plus /> Agregar sección
+              </button>
             </div>
-             {/* THUMBNAIL */}
-            <div className="space-y-2">
-  <label className="text-sm font-semibold text-[#0C212D] flex items-center gap-2">
-    <FiVideo className="text-[#EE7203]"/> Unit Intro Video (Optional - Vimeo)
-  </label>
-  
-  <input 
-    type="url" 
-    className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-[#EE7203]" 
-    placeholder="https://vimeo.com/..." 
-    value={unidad.introVideo || ""} 
-    onChange={e => {
-        // Actualizamos directamente la propiedad introVideo de la unidad
-        updateUnidad(idx, { introVideo: e.target.value });
-    }} 
-  />
-
-  {/* Preview del video */}
-  {unidad.introVideo && isValidUrl(unidad.introVideo) && unidad.introVideo.includes("vimeo") && (
-      <div className="aspect-video rounded-xl overflow-hidden border bg-gray-100 mt-2">
-        <iframe 
-            src={unidad.introVideo.replace("vimeo.com", "player.vimeo.com/video")}
-            className="w-full h-full"
-            allowFullScreen
-        />
-      </div>
-  )}
-</div>
+            {u.lecciones.length === 0 && <p className="text-sm text-slate-400 text-center py-6 border-2 border-dashed border-slate-200 rounded-xl">Sin secciones. Agregá una para comenzar.</p>}
+            {u.lecciones.map((l, lIdx) => (
+              <LessonItem key={l.id} unidadIdx={idx} leccion={l} leccionIdx={lIdx}
+                updateBlock={updateBlock} deleteBlock={deleteBlock} addBlock={addBlock} borrarLeccion={borrarLeccion}
+              />
+            ))}
+          </div>
         </div>
-        
-        <hr className="border-gray-100" />
+      );
+    }
 
-        {/* Lecciones */}
-        <div>
-            <h4 className="text-lg font-bold text-[#0C212D] mb-4">Sections</h4>
-             <div className="space-y-4">
-  {unidad.lecciones.map((l, lIdx) => (
-    <LessonItem
-      key={l.id}
-      unidadIdx={idx}
-      leccion={l}
-      leccionIdx={lIdx}
-      updateBlock={updateBlock}
-      deleteBlock={deleteBlock}
-      addBlock={addBlock}
-      borrarLeccion={borrarLeccion}
-    />
-  ))}
-</div>
-
-            <button
-                type="button"
-                onClick={() => agregarLeccion(idx)}
-                className="w-full flex items-center justify-center gap-2 p-3 border border-dashed rounded-xl bg-[#F8FAFC] hover:bg-[#EEF1F5]"
-            >
-                <FiPlus /> Add New Section
-            </button>
-        </div>
-      </section>
+    if (item.type === "final_exam") return (
+      <SectionCard className="space-y-4">
+        <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2"><Icon.Clipboard /> Examen Final</h3>
+        <JsonSectionImport hint={`"introTexto": "...", "ejercicios": [...]`} validate={d => typeof (d.examenFinal ?? d) === "object"} onLoad={handleImportFinalExam} />
+        <div><Label>Instrucciones del examen</Label><Textarea value={examenFinal.introTexto} onChange={v => setExamenFinal(p => ({ ...p, introTexto: v }))} rows={3} /></div>
+        <Exercises initial={examenFinal.ejercicios} onChange={ex => setExamenFinal(p => ({ ...p, ejercicios: ex }))} />
+      </SectionCard>
     );
+
+    if (item.type === "project") return (
+      <SectionCard className="space-y-4">
+        <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2"><Icon.Layers /> Proyecto Final (Capstone)</h3>
+        <JsonSectionImport hint={`"videoUrl": "...", "instrucciones": "...", "checklist": ["item1"]`} validate={d => typeof (d.capstone ?? d) === "object"} onLoad={handleImportCapstone} />
+        <div>
+          <Label>Video URL</Label>
+          <Input value={capstone.videoUrl} onChange={v => setCapstone(p => ({ ...p, videoUrl: v }))} placeholder="https://vimeo.com/..." type="url" />
+          {capstone.videoUrl && isValidUrl(capstone.videoUrl) && <div className="aspect-video mt-2 rounded-xl border overflow-hidden"><iframe src={capstone.videoUrl} className="w-full h-full" allowFullScreen /></div>}
+        </div>
+        <div><Label>Instrucciones</Label><Textarea value={capstone.instrucciones} onChange={v => setCapstone(p => ({ ...p, instrucciones: v }))} rows={4} /></div>
+        <div>
+          <Label>Checklist de entrega</Label>
+          <div className="space-y-2">
+            {capstone.checklist.map((ci, i) => (
+              <div key={i} className="flex gap-2">
+                <Input value={ci} onChange={v => { const c = [...capstone.checklist]; c[i] = v; setCapstone(p => ({ ...p, checklist: c })); }} placeholder={`Ítem ${i + 1}`} />
+                <button type="button" onClick={() => setCapstone(p => ({ ...p, checklist: p.checklist.filter((_, idx) => idx !== i) }))} className="text-slate-400 hover:text-red-500 transition"><Icon.Trash /></button>
+              </div>
+            ))}
+            <button type="button" onClick={() => setCapstone(p => ({ ...p, checklist: [...p.checklist, ""] }))} className="text-sm text-slate-500 hover:text-slate-900 flex items-center gap-1 transition"><Icon.Plus /> Agregar ítem</button>
+          </div>
+        </div>
+      </SectionCard>
+    );
+
+    if (item.type === "closing") return (
+      <SectionCard className="space-y-4">
+        <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2"><Icon.Flag /> Cierre del material</h3>
+        <JsonSectionImport
+          hint={`"textoFinalCurso": "...", "textoFinalCursoVideoUrl": "https://vimeo.com/..."`}
+          validate={d => { const r = d.closing ?? d; return typeof r === "object" && (r.textoFinalCurso !== undefined || r.textoFinalCursoVideoUrl !== undefined); }}
+          onLoad={handleImportClosing}
+        />
+        <div><Label>Mensaje final</Label><Textarea value={curso?.textoFinalCurso || ""} onChange={v => setCurso(p => p ? { ...p, textoFinalCurso: v } : p)} rows={4} /></div>
+        <div><Label>Video de cierre (Vimeo, opcional)</Label><Input value={curso?.textoFinalCursoVideoUrl || ""} onChange={v => setCurso(p => p ? { ...p, textoFinalCursoVideoUrl: v } : p)} placeholder="https://vimeo.com/..." type="url" /></div>
+      </SectionCard>
+    );
+
+    return null;
   };
 
-  const renderFinalExamEditor = () => (
-    <section className="rounded-2xl bg-white border border-[#112C3E]/20 p-6 space-y-6">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br from-[#EE7203] to-[#FF3816] text-white">
-          <FiClipboard className="w-5 h-5" />
-        </div>
-        <h3 className="text-xl font-black text-[#0C212D] tracking-tight">Final Exam</h3>
-      </div>
-      <div className="space-y-2">
-        <label className="text-sm font-semibold text-[#0C212D]">Introductory text</label>
-        <textarea
-          value={examenFinal.introTexto}
-          onChange={(e) => setExamenFinal((prev) => ({ ...prev, introTexto: e.target.value }))}
-          rows={4}
-          className="w-full rounded-xl p-3 border border-[#112C3E]/20"
-        />
-      </div>
-      <div className="space-y-2">
-        <label className="text-sm font-semibold text-[#0C212D]">Exam exercises</label>
-        <Exercises
-          initial={examenFinal.ejercicios}
-          onChange={(newExercises) => setExamenFinal((prev) => ({ ...prev, ejercicios: newExercises }))}
-        />
-      </div>
-    </section>
-  );
-
-  const renderProjectEditor = () => (
-    <section className="rounded-2xl bg-white border border-[#112C3E]/20 p-6 space-y-6">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br from-[#FF3816] to-[#EE7203] text-white">
-            <FiLayers className="w-5 h-5" />
-        </div>
-        <h3 className="text-xl font-black text-[#0C212D] tracking-tight">Capstone Project</h3>
-      </div>
-      <div>
-        <label className="text-sm font-semibold">Project video URL</label>
-        <input
-            type="url"
-            value={capstone.videoUrl}
-            onChange={(e) => setCapstone((p) => ({ ...p, videoUrl: e.target.value }))}
-            className="w-full rounded-xl border p-3"
-        />
-         {capstone.videoUrl && isValidUrl(capstone.videoUrl) && (
-            <div className="aspect-video mt-2 rounded-xl border overflow-hidden">
-                <iframe src={capstone.videoUrl} className="w-full h-full" allowFullScreen />
-            </div>
-        )}
-      </div>
-      <div>
-         <label className="text-sm font-semibold">Instructions</label>
-         <textarea
-            value={capstone.instrucciones}
-            onChange={(e) => setCapstone((p) => ({ ...p, instrucciones: e.target.value }))}
-            rows={5}
-            className="w-full rounded-xl border p-3 resize-none"
-         />
-      </div>
-       {/* Checklist simple map */}
-       <div className="space-y-2">
-            <label className="text-sm font-semibold">Checklist</label>
-            {capstone.checklist.map((item, idx) => (
-                <div key={idx} className="flex gap-2">
-                    <input 
-                        value={item} 
-                        onChange={(e) => {
-                            const newL = [...capstone.checklist];
-                            newL[idx] = e.target.value;
-                            setCapstone(p => ({...p, checklist: newL}));
-                        }}
-                        className="flex-1 border p-2 rounded-lg"
-                    />
-                    <button onClick={() => setCapstone(p => ({...p, checklist: p.checklist.filter((_, i) => i !== idx)}))} className="text-red-500"><FiTrash2/></button>
-                </div>
-            ))}
-            <button onClick={() => setCapstone(p => ({...p, checklist: [...p.checklist, ""]}))} className="text-sm text-[#EE7203]">+ Add Item</button>
-       </div>
-    </section>
-  );
-
-  const renderClosingEditor = () => (
-    <section className="rounded-2xl bg-white border border-[#112C3E]/20 p-6 space-y-6">
-        <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br from-[#0C212D] to-[#112C3E] text-white">
-                <FiFlag className="w-5 h-5" />
-            </div>
-            <h3 className="text-xl font-black text-[#0C212D] tracking-tight">Closing of the Material</h3>
-        </div>
-        <div>
-            <label className="text-sm font-semibold">Final message</label>
-            <textarea
-                value={curso?.textoFinalCurso || ""}
-                onChange={handleChange}
-                name="textoFinalCurso"
-                rows={5}
-                className="w-full rounded-xl border p-3 resize-none"
-            />
-        </div>
-        <div>
-             <label className="text-sm font-semibold">Final Video URL</label>
-             <input
-                type="url"
-                name="textoFinalCursoVideoUrl"
-                value={curso?.textoFinalCursoVideoUrl || ""}
-                onChange={handleChange}
-                className="w-full p-3 border rounded-xl"
-             />
-        </div>
-    </section>
-  );
-
-  /* ==============================================================
-     4. Handlers de Guardado
-     ============================================================== */
+  // ── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!firestore || !curso) return toast.error("Error: System not ready");
+    if (!firestore || !curso) return toast.error("Sistema no listo");
     setUploading(true);
-
-    const refCurso = doc(firestore, "cursos", courseId);
-
-    // Normalizar unidades
-    const unidadesToSave = unidades.map((u) => ({
-      id: u.id,
-      titulo: u.titulo || "",
-      descripcion: u.descripcion || "",
-      introVideo: u.introVideo || "",
-      urlImagen: u.urlImagen || "",
-      textoCierre: u.textoCierre || "",
-      lecciones: u.lecciones.map((l) => ({
-        id: l.id,
-        blocks: l.blocks || [],
-      })),
-      closing: u.closing || {},
-    }));
-
-    const nuevosCursantes = curso.cursantes?.map((e) => e.toLowerCase().trim()).filter(Boolean) || [];
-
     try {
-      const payload: any = {
-        ...curso,
-        unidades: unidadesToSave,
-        examenFinal,
-        capstone,
-        contentTimeline, // ✅ GUARDAMOS EL TIMELINE
-        cursantes: nuevosCursantes,
-        updatedAt: serverTimestamp(),
-      };
-
-      await updateDoc(refCurso, payload);
-
-      // Enrolamiento (Misma lógica que antes)
-      if (nuevosCursantes.length > 0) {
-        // ... (Tu lógica existente de enrolamiento en batch) ...
-         for (const email of nuevosCursantes) {
-            let userFound = false;
-            for (let i = 1; i <= 10 && !userFound; i++) {
-                const batchRef = doc(firestore, "alumnos", `batch_${i}`);
-                const snap = await getDoc(batchRef);
-                if (!snap.exists()) continue;
-                const data = snap.data();
-                const userKey = Object.keys(data).find(
-                    (key) => key.startsWith("user_") && data[key]?.email === email
-                );
-                if (userKey) {
-                    const path = `${userKey}.cursosAdquiridos`;
-                    await updateDoc(batchRef, { [path]: arrayUnion(courseId) });
-                    userFound = true;
-                }
-            }
+      const unidadesToSave = unidades.map(u => ({ id: u.id, titulo: u.titulo || "", descripcion: u.descripcion || "", introVideo: u.introVideo || "", urlImagen: u.urlImagen || "", textoCierre: u.textoCierre || "", lecciones: u.lecciones.map(l => ({ id: l.id, blocks: l.blocks || [] })), closing: u.closing || {} }));
+      const cursantes = curso.cursantes?.map(e => e.toLowerCase().trim()).filter(Boolean) || [];
+      await updateDoc(doc(firestore, "cursos", courseId), { ...curso, unidades: unidadesToSave, examenFinal, capstone, contentTimeline, cursantes, updatedAt: serverTimestamp() });
+      for (const email of cursantes) {
+        let found = false;
+        for (let i = 1; i <= 10 && !found; i++) {
+          const bRef = doc(firestore, "alumnos", `batch_${i}`);
+          const snap = await getDoc(bRef);
+          if (!snap.exists()) continue;
+          const d = snap.data();
+          const key = Object.keys(d).find(k => k.startsWith("user_") && d[k]?.email === email);
+          if (key) { await updateDoc(bRef, { [`${key}.cursosAdquiridos`]: arrayUnion(courseId) }); found = true; }
         }
       }
-
-     // --- CAMBIOS AQUÍ ---
-        // 1. Refrescamos la data de fondo
-        await reloadData?.();
-        
-        // 2. Quitamos el loading
-        setUploading(false);
-
-        // 3. NO cerramos el formulario todavía (quitamos onClose?.())
-        // 4. Mostramos el Modal de Éxito
-        setShowSuccessModal(true);
-        
-        // Opcional: Mantener el toast si quieres doble feedback, o quitarlo.
-        // toast.success(`✅ Saved successfully`); 
-
-    } catch (err) {
-        console.error(err);
-        setUploading(false);
-        toast.error("Error saving course");
-    }
+      await reloadData?.();
+      setUploading(false);
+      setShowSuccessModal(true);
+    } catch (err) { console.error(err); setUploading(false); toast.error("Error al guardar"); }
   };
 
-  /* ==============================================================
-     5. Handlers UX / Filtros
-     ============================================================== */
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
-    const checked = (e.target as HTMLInputElement).checked;
-    setCurso((prev) => (prev ? { ...prev, [name]: type === "checkbox" ? checked : value } : prev));
-  };
-
+  // ── Students ───────────────────────────────────────────────────────────────
   const filteredAlumnos = useMemo(() => {
-  const list = Array.isArray(alumnos) ? alumnos : [];
-
-  // 1. Primero filtramos según los criterios
-  const matches = list.filter((a) => {
-    const lang = a.learningLanguage || a.idioma || "";
-    const lvl = a.learningLevel || a.nivel || "";
-    const nombre = (a.displayName || a.nombre || "").toLowerCase();
-    
-    // Lógica de ID de curso
-    let tieneCurso = true;
-    if (filterCursoId) {
-      const alumnoRaw = alumnosRaw?.find((raw: any) => raw.email?.toLowerCase() === a.email?.toLowerCase());
-      tieneCurso = alumnoRaw && Array.isArray(alumnoRaw.cursosAsignados) 
-          ? alumnoRaw.cursosAsignados.some((c: any) => (c.curso || "").toLowerCase().includes(filterCursoId.toLowerCase()))
-          : false;
-    }
-
-    return (filterIdioma ? lang.toLowerCase() === filterIdioma.toLowerCase() : true) &&
-           (filterNivel ? lvl.toLowerCase() === filterNivel.toLowerCase() : true) &&
-           (filterNombre ? nombre.includes(filterNombre.toLowerCase()) : true) &&
-           tieneCurso;
-  });
-
-  // 2. 🔥 AQUI ESTA LA MAGIA: Desduplicar por email
-  const uniqueMatches: any[] = [];
-  const seenEmails = new Set();
-
-  matches.forEach((alumno) => {
-    const emailNormalizado = alumno.email?.toLowerCase().trim();
-    if (emailNormalizado && !seenEmails.has(emailNormalizado)) {
-      seenEmails.add(emailNormalizado);
-      uniqueMatches.push(alumno);
-    }
-  });
-
-  return uniqueMatches;
-
-}, [alumnos, alumnosRaw, filterIdioma, filterNivel, filterNombre, filterCursoId]);
-
-  const toggleCursante = (email: string) => {
-    setCurso((p) => {
-      if (!p) return p;
-      const set = new Set(p.cursantes || []);
-      if (set.has(email)) set.delete(email); else set.add(email);
-      return { ...p, cursantes: Array.from(set) };
+    const list = Array.isArray(alumnos) ? alumnos : [];
+    const matches = list.filter(a => {
+      const lang = a.learningLanguage || a.idioma || ""; const lvl = a.learningLevel || a.nivel || "";
+      const nombre = (a.displayName || a.nombre || "").toLowerCase();
+      let tieneCurso = true;
+      if (filterCursoId) { const raw = alumnosRaw?.find((r: any) => r.email?.toLowerCase() === a.email?.toLowerCase()); tieneCurso = raw && Array.isArray(raw.cursosAsignados) ? raw.cursosAsignados.some((c: any) => (c.curso || "").toLowerCase().includes(filterCursoId.toLowerCase())) : false; }
+      return (!filterIdioma || lang.toLowerCase() === filterIdioma.toLowerCase()) && (!filterNivel || lvl.toLowerCase() === filterNivel.toLowerCase()) && (!filterNombre || nombre.includes(filterNombre.toLowerCase())) && tieneCurso;
     });
-  };
+    const seen = new Set<string>(); const out: any[] = [];
+    matches.forEach(a => { const e = a.email?.toLowerCase().trim(); if (e && !seen.has(e)) { seen.add(e); out.push(a); } });
+    return out;
+  }, [alumnos, alumnosRaw, filterIdioma, filterNivel, filterNombre, filterCursoId]);
 
-  const addAllFiltered = (emails: string[]) => {
-    setCurso((p) => {
-      if (!p) return p;
-      const set = new Set(p.cursantes || []);
-      emails.forEach((e) => set.add(e));
-      return { ...p, cursantes: Array.from(set) };
-    });
-  };
+  const toggleCursante = (email: string) => setCurso(p => { if (!p) return p; const s = new Set(p.cursantes || []); s.has(email) ? s.delete(email) : s.add(email); return { ...p, cursantes: Array.from(s) }; });
+  const addEmailManual = () => { const email = emailInput.trim().toLowerCase(); if (!email) return; if (curso?.cursantes.includes(email)) { toast.error("Ya está en la lista"); return; } setCurso(p => p ? { ...p, cursantes: [...(p.cursantes || []), email] } : p); setEmailInput(""); };
 
-  const removeAllSelected = () => setCurso((p) => (p ? { ...p, cursantes: [] } : p));
-
-  // UX: Close on ESC (Actualizado)
+  // ── ESC ────────────────────────────────────────────────────────────────────
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        // Si el modal de éxito está abierto, cerrar todo
-        if (showSuccessModal) {
-            onClose?.();
-            return;
-        }
-        // Si el modal de confirmación está abierto, cerrarlo (volver al form)
-        if (showExitModal) {
-            setShowExitModal(false);
-            return;
-        }
-        // Si no hay modales, intentar cerrar (mostrar confirmación)
-        handleAttemptClose();
-      }
+      if (e.key !== "Escape") return;
+      if (showSuccessModal) { onClose?.(); return; }
+      if (showExitModal) { setShowExitModal(false); return; }
+      setShowExitModal(true);
     };
     document.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "auto";
-    };
+    return () => { document.removeEventListener("keydown", onKey); document.body.style.overflow = "auto"; };
   }, [onClose, showSuccessModal, showExitModal]);
 
-
-  // Constantes visuales
-  const MAIN_TABS = [
-    { id: "general", label: "General", icon: <FiBookOpen /> },
-    { id: "content", label: "Content", icon: <FiLayers /> }, // Unificado
-    { id: "cursantes", label: "Students", icon: <FiUsers /> },
-  ];
-  const niveles = [{ value: "A1", label: "A1 - Beginner" }, { value: "A2", label: "A2 - Elementary" }, { value: "B1", label: "B1 - Intermediate" }, { value: "B2", label: "B2 - Upper Intermediate" }, { value: "B2.5", label: "B2.5 - High Intermediate" }, { value: "C1", label: "C1 - Advanced" }, { value: "C2", label: "C2 - Mastery" }];
-  const idiomasCurso = [{ value: "es", label: "Spanish" }, { value: "en", label: "English" }, { value: "pt", label: "Portuguese" }, { value: "fr", label: "French" }, { value: "it", label: "Italian" }];
-
-  if (loading || !curso) {
-    return (
-      <div className="flex items-center justify-center h-[90vh] bg-white rounded-2xl shadow-xl">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-[#EE7203] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 font-medium">Loading Material data...</p>
-        </div>
+  if (loading || !curso) return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-3xl p-10 text-center shadow-2xl">
+        <div className="w-14 h-14 border-4 border-slate-200 border-t-slate-900 rounded-full animate-spin mx-auto mb-4" />
+        <p className="text-sm text-slate-500 font-medium">Cargando material...</p>
       </div>
-    );
-  }
+    </div>
+  );
 
-  /* =========================
-     RENDER FINAL
-     ========================= */
+  const niveles = ["A1","A2","B1","B2","B2.5","C1","C2"];
+  const idiomas = [{ v: "es", l: "Español" }, { v: "en", l: "Inglés" }, { v: "pt", l: "Portugués" }, { v: "fr", l: "Francés" }, { v: "it", l: "Italiano" }];
+
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="flex items-center justify-center">
-      <div className="relative flex w-full max-w-6xl max-h-[95vh] flex-col overflow-hidden rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.25)] border border-[#112C3E]/30 bg-gradient-to-br from-white to-[#F9FAFB]">
-        
-        {/* HEADER */}
-        <header className="relative px-8 py-6 border-b bg-gradient-to-r from-[#0C212D] via-[#112C3E] to-[#0C212D] text-white shadow-xl">
-          <button type="button" onClick={handleAttemptClose} className="absolute right-6 top-6 flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white hover:bg-white/20 transition-all backdrop-blur-md shadow-lg">
-            <FiX size={20} />
-          </button>
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <div className="w-11 h-11 flex items-center justify-center rounded-xl bg-gradient-to-br from-[#EE7203] to-[#FF3816] text-white shadow-lg">
-                <FiBookOpen size={22} />
-              </div>
-              <h2 className="text-2xl font-black tracking-tight text-white">Edit Material Academy</h2>
-            </div>
-            <p className="text-sm text-gray-300 font-medium">Update the structure and content of your material.</p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40  p-4">
+      <div className="relative w-full max-w-5xl max-h-[94vh] flex flex-col bg-slate-50 rounded-3xl shadow-2xl overflow-hidden border border-slate-200">
+
+        {/* Header — igual a CrearMaterial */}
+        <div className="flex items-center justify-between px-7 py-5 bg-white border-b border-slate-100 shrink-0">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 tracking-tight">Editar Material Académico</h2>
+            <p className="text-xs text-slate-400 mt-0.5">{curso.titulo || "Sin título"} · {curso.nivel} · {curso.idioma?.toUpperCase()}</p>
           </div>
+          <div className="flex items-center bg-slate-100 rounded-xl p-1 gap-0.5">
+            <TabButton active={tab === "general"} onClick={() => setTab("general")}>General</TabButton>
+            <TabButton active={tab === "content"} onClick={() => setTab("content")}>Contenido</TabButton>
+            <TabButton active={tab === "students"} onClick={() => setTab("students")}>Alumnos</TabButton>
+          </div>
+          <button type="button" onClick={() => setShowExitModal(true)} className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition"><Icon.X /></button>
+        </div>
 
-          <nav className="mt-6 flex flex-wrap gap-2">
-            {MAIN_TABS.map((t) => {
-              const active = activeMainTab === t.id;
-              return (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => setActiveMainTab(t.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 shadow-sm border backdrop-blur-md ${
-                    active ? "bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white border-transparent shadow-lg scale-[1.03]" : "bg-white/10 text-white/80 border-white/20 hover:bg-white/20 hover:text-white"
-                  }`}
-                >
-                  {t.icon} {t.label}
-                </button>
-              );
-            })}
-          </nav>
-        </header>
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto">
+          <form id="edit-form" onSubmit={handleSubmit}>
 
-        {/* BODY */}
-        <div className="flex-1 overflow-y-auto bg-gray-50 p-6">
-            <form onSubmit={handleSubmit} className="space-y-10">
-                
-                {/* === TAB GENERAL === */}
-                {activeMainTab === "general" && (
-                     <section className="rounded-2xl border border-[#112C3E]/20 shadow-lg p-7 bg-white relative overflow-hidden">
-                        <div className="absolute -top-20 -right-16 w-44 h-44 bg-[#EE7203] opacity-[0.08] blur-2xl rounded-full" />
-                        
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 relative z-10">
-                            <div className="lg:col-span-2 space-y-6">
-                                <div>
-                                    <label className="text-sm font-semibold text-[#0C212D]">Material Title</label>
-                                    <input type="text" name="titulo" value={curso.titulo} onChange={handleChange} required className="w-full rounded-xl border border-[#112C3E]/20 bg-white p-3.5 text-[#0C212D] focus:ring-2 focus:ring-[#EE7203]" />
-                                </div>
-                                <div>
-                                    <label className="text-sm font-semibold text-[#0C212D]">Description</label>
-                                    <textarea name="descripcion" value={curso.descripcion} onChange={handleChange} rows={4} className="w-full rounded-xl border border-[#112C3E]/20 bg-white p-3.5 focus:ring-2 focus:ring-[#EE7203] resize-none" />
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                                    <div>
-                                        <label className="text-sm font-semibold text-[#0C212D]">Level</label>
-                                        <div className="relative">
-                                            <select name="nivel" value={curso.nivel} onChange={handleChange} className="w-full p-3.5 rounded-xl border border-[#112C3E]/20 bg-white appearance-none focus:ring-2 focus:ring-[#EE7203]">
-                                                {niveles.map((n) => <option key={n.value} value={n.value}>{n.label}</option>)}
-                                            </select>
-                                            <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="text-sm font-semibold text-[#0C212D]">Language</label>
-                                        <div className="relative">
-                                            <FiGlobe className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                            <select name="idioma" value={curso.idioma} onChange={handleChange} className="w-full p-3.5 pl-10 rounded-xl border border-[#112C3E]/20 bg-white appearance-none focus:ring-2 focus:ring-[#EE7203]">
-                                                {idiomasCurso.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-3 rounded-xl border border-[#112C3E]/20 bg-[#F8FAFB] p-4">
-                                    <input type="checkbox" name="publico" checked={!!curso.publico} onChange={handleChange} className="h-5 w-5 accent-[#EE7203]" />
-                                    <span className="text-sm font-semibold text-[#0C212D]">Public Material</span>
-                                </div>
-                                
-                            </div>
+            {/* ─ GENERAL ─ */}
+            {tab === "general" && (
+              <div className="p-7 space-y-5 max-w-2xl">
+                <SectionCard className="space-y-5">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="col-span-2"><Label>Título del material *</Label><Input value={curso.titulo} onChange={v => setCurso(p => p ? { ...p, titulo: v } : p)} placeholder="Ej: Inglés para Negocios B2" required /></div>
+                    <div className="col-span-2"><Label>Descripción</Label><Textarea value={curso.descripcion} onChange={v => setCurso(p => p ? { ...p, descripcion: v } : p)} rows={3} placeholder="¿Qué aprenderá el alumno?" /></div>
+                    <div><Label>Idioma</Label><Select value={curso.idioma} onChange={v => setCurso(p => p ? { ...p, idioma: v } : p)}>{idiomas.map(i => <option key={i.v} value={i.v}>{i.l}</option>)}</Select></div>
+                    <div><Label>Nivel</Label><Select value={curso.nivel} onChange={v => setCurso(p => p ? { ...p, nivel: v } : p)}>{niveles.map(n => <option key={n} value={n}>{n}</option>)}</Select></div>
+                    <div><Label>Video de presentación (Vimeo)</Label><Input value={curso.videoPresentacion} onChange={v => setCurso(p => p ? { ...p, videoPresentacion: v } : p)} placeholder="https://vimeo.com/..." type="url" /></div>
+                    <div><Label>Imagen de portada (URL)</Label><Input value={curso.urlImagen} onChange={v => setCurso(p => p ? { ...p, urlImagen: v } : p)} placeholder="https://..." type="url" /></div>
+                    <div className="col-span-2">
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <div onClick={() => setCurso(p => p ? { ...p, publico: !p.publico } : p)} className={`relative w-10 h-5 rounded-full transition-colors ${curso.publico ? "bg-slate-900" : "bg-slate-300"}`}>
+                          <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${curso.publico ? "translate-x-5" : ""}`} />
                         </div>
-                     </section>
+                        <span className="text-sm text-slate-700 font-medium">Material público</span>
+                      </label>
+                    </div>
+                  </div>
+                </SectionCard>
+              </div>
+            )}
+
+            {/* ─ CONTENT ─ */}
+            {tab === "content" && (
+              <div className="p-7 space-y-5">
+                {/* Banner retomar */}
+                {resumeItem && resumeItem.id !== selectedId && (
+                  <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-100 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-white text-blue-600 rounded-lg border border-blue-100"><Icon.Clock /></div>
+                      <div>
+                        <p className="text-sm text-blue-900 font-bold">¿Continuar donde lo dejaste?</p>
+                        <p className="text-xs text-blue-700">Edición reciente en: <span className="font-semibold underline">{resumeItem.name}</span></p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => setResumeItem(null)} className="px-3 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-100 rounded-lg transition">Descartar</button>
+                      <button type="button" onClick={() => { setSelectedId(resumeItem.id); setResumeItem(null); }} className="flex items-center gap-1 px-4 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition">Ir allí <Icon.ArrowRight /></button>
+                    </div>
+                  </div>
                 )}
 
-                {/* === TAB CONTENT (Unificado) === */}
-                {activeMainTab === "content" && (
-                    <div className="space-y-8">
-{/* === BANNER: RETOMAR TRABAJO (DB) === */}
-        {resumeItem && resumeItem.id !== selectedItemId && (
-            <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-100 rounded-xl animate-fadeIn shadow-sm">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white text-blue-600 rounded-lg border border-blue-100">
-                        <FiClock size={20} />
-                    </div>
-                    <div>
-                        <p className="text-sm text-blue-900 font-bold">
-                            ¿Continuar donde lo dejaste?
-                        </p>
-                        <p className="text-xs text-blue-700">
-                            Detectamos edición reciente en: <span className="font-semibold underline">{resumeItem.name}</span>
-                        </p>
-                    </div>
+                {/* Timeline + editor */}
+                <div className="grid grid-cols-3 gap-5 min-h-[400px]">
+                  <div className="col-span-1">
+                    <SectionCard className="space-y-3">
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Timeline</p>
+                      <div className="flex flex-col gap-1.5">
+                        <button type="button" onClick={agregarUnidad} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-600 border border-dashed border-slate-300 rounded-lg hover:border-slate-500 hover:text-slate-900 transition"><Icon.Plus /> Agregar unidad</button>
+                        <button type="button" onClick={() => addSingleton("final_exam")} disabled={hasFinalExam} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-amber-600 border border-dashed border-amber-200 rounded-lg hover:border-amber-400 transition disabled:opacity-40 disabled:cursor-not-allowed"><Icon.Plus /> Examen Final {hasFinalExam && "✓"}</button>
+                        <button type="button" onClick={() => addSingleton("project")} disabled={hasProject} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-blue-600 border border-dashed border-blue-200 rounded-lg hover:border-blue-400 transition disabled:opacity-40 disabled:cursor-not-allowed"><Icon.Plus /> Proyecto Final {hasProject && "✓"}</button>
+                        <button type="button" onClick={() => addSingleton("closing")} disabled={hasClosing} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-emerald-600 border border-dashed border-emerald-200 rounded-lg hover:border-emerald-400 transition disabled:opacity-40 disabled:cursor-not-allowed"><Icon.Plus /> Cierre {hasClosing && "✓"}</button>
+                      </div>
+                      {contentTimeline.length === 0 && <p className="text-xs text-slate-400 text-center py-4">Sin elementos</p>}
+                      <div className="space-y-1.5">
+                        {contentTimeline.map((item, idx) => (
+                          <TimelineItemBadge key={item.id} item={item} isSelected={selectedId === item.id} label={getLabel(item, idx)} onSelect={() => setSelectedId(item.id)} onDelete={() => deleteItem(item.id)} />
+                        ))}
+                      </div>
+                      {contentTimeline.length > 0 && <p className="text-xs text-slate-400 pt-1 border-t border-slate-100">{unitCount} unidad{unitCount !== 1 ? "es" : ""} · {contentTimeline.length} elemento{contentTimeline.length !== 1 ? "s" : ""}</p>}
+                    </SectionCard>
+                  </div>
+                  <div className="col-span-2 overflow-y-auto">{renderContent()}</div>
                 </div>
-                <div className="flex gap-2">
-                     <button
-                        type="button"
-                        onClick={() => setResumeItem(null)}
-                        className="px-3 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
-                    >
-                        Descartar
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => {
-                            setSelectedItemId(resumeItem.id);
-                            setResumeItem(null);
-                        }}
-                        className="flex items-center gap-1 px-4 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm shadow-blue-200 transition-all"
-                    >
-                        Ir allí <FiArrowRight />
-                    </button>
-                </div>
-            </div>
-        )}
+              </div>
+            )}
 
-
-                        {/* Timeline Editor */}
-                        <ContentTimelineEditor
-                            items={contentTimeline}
-                            onChange={setContentTimeline}
-                            selectedItemId={selectedItemId}
-                            onSelect={setSelectedItemId}
-                            onDelete={deleteContentItem}
-                            onAddUnit={agregarUnidad}
-                            onAddFinalExam={addFinalExamBlock}
-                            onAddProject={addProjectBlock}
-                            onAddClosing={addClosingBlock}
-                        />
-                        {/* Editor del Item Seleccionado */}
-                        {renderSelectedContentItem()}
+            {/* ─ STUDENTS ─ */}
+            {tab === "students" && (
+              <div className="p-7 space-y-5">
+                <div className="grid grid-cols-2 gap-5">
+                  <SectionCard className="space-y-4">
+                    <h3 className="text-sm font-semibold text-slate-900">Buscar y agregar alumnos</h3>
+                    <div className="flex gap-2">
+                      <input type="email" value={emailInput} onChange={e => setEmailInput(e.target.value)} onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addEmailManual())} placeholder="alumno@email.com"
+                        className="flex-1 px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 transition"
+                      />
+                      <button type="button" onClick={addEmailManual} className="px-4 py-2.5 bg-slate-900 text-white text-sm font-medium rounded-xl hover:bg-slate-700 transition flex items-center gap-1.5"><Icon.Plus /> Agregar</button>
                     </div>
-                )}
+                    <div className="space-y-2">
+                      <div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><Icon.Search /></span><input type="text" value={filterNombre} onChange={e => { setFilterNombre(e.target.value); setAlumnosPage(0); }} placeholder="Buscar por nombre..." className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 transition" /></div>
+                      <div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><Icon.Tag /></span><input type="text" value={filterCursoId} onChange={e => { setFilterCursoId(e.target.value); setAlumnosPage(0); }} placeholder="Filtrar por ID de curso..." className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-slate-900 transition" /></div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Select value={filterIdioma} onChange={v => { setFilterIdioma(v); setAlumnosPage(0); }}><option value="">Todos los idiomas</option>{idiomas.map(i => <option key={i.v} value={i.v}>{i.l}</option>)}</Select>
+                        <Select value={filterNivel} onChange={v => { setFilterNivel(v); setAlumnosPage(0); }}><option value="">Todos los niveles</option>{niveles.map(n => <option key={n} value={n}>{n}</option>)}</Select>
+                      </div>
+                      {(filterNombre || filterCursoId || filterIdioma || filterNivel) && (
+                        <button type="button" onClick={() => { setFilterNombre(""); setFilterCursoId(""); setFilterIdioma(""); setFilterNivel("");setAlumnosPage(0); }} className="w-full flex items-center justify-center gap-2 py-2 text-xs text-slate-500 border border-slate-200 rounded-xl hover:bg-slate-50 transition"><Icon.X /> Limpiar filtros</button>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+  <div className="flex items-center justify-between pb-1">
+    <p className="text-xs text-slate-400">
+      {filteredAlumnos.length} alumno{filteredAlumnos.length !== 1 ? "s" : ""}
+      {filteredAlumnos.length > PAGE_SIZE && (
+        <span className="ml-1 text-slate-300">
+          · mostrando {alumnosPage * PAGE_SIZE + 1}–{Math.min((alumnosPage + 1) * PAGE_SIZE, filteredAlumnos.length)}
+        </span>
+      )}
+    </p>
+  </div>
 
-                {/* === TAB CURSANTES (RESTAURADA COMPLETA) === */}
-                {activeMainTab === "cursantes" && (
-                    <section className="rounded-2xl bg-white border border-[#112C3E]/20 p-6 space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            
-                            {/* COLUMNA IZQ: FILTROS */}
-                            <div className="space-y-6">
-                                {/* Search Name */}
-                                <div className="space-y-1">
-                                    <label className="text-sm font-semibold text-[#0C212D] flex items-center gap-2"><FiSearch className="w-4 h-4"/> Search by Name</label>
-                                    <input type="text" placeholder="Type student name..." value={filterNombre} onChange={(e) => setFilterNombre(e.target.value)} className="w-full rounded-xl border p-3 outline-none focus:ring-2 focus:ring-[#EE7203]"/>
-                                </div>
-                                {/* Filter Course ID */}
-                                <div className="space-y-1">
-                                    <label className="text-sm font-semibold text-[#0C212D] flex items-center gap-2"><FiTag className="w-4 h-4"/> Filter by Course ID</label>
-                                    <input type="text" placeholder="Ex: ADM006" value={filterCursoId} onChange={(e) => setFilterCursoId(e.target.value)} className="w-full rounded-xl border p-3 font-mono outline-none focus:ring-2 focus:ring-[#EE7203]"/>
-                                </div>
-                                {/* Filters Lang & Level */}
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1">
-                                        <label className="text-sm font-semibold text-[#0C212D]">Language</label>
-                                        <select value={filterIdioma} onChange={(e) => setFilterIdioma(e.target.value)} className="w-full rounded-xl border p-3">
-                                            <option value="">All</option><option value="es">Spanish</option><option value="en">English</option><option value="pt">Portuguese</option><option value="fr">French</option><option value="it">Italian</option>
-                                        </select>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-sm font-semibold text-[#0C212D]">Level</label>
-                                        <select value={filterNivel} onChange={(e) => setFilterNivel(e.target.value)} className="w-full rounded-xl border p-3">
-                                            <option value="">All</option>{niveles.map(l=><option key={l.value} value={l.value}>{l.label}</option>)}
-                                        </select>
-                                    </div>
-                                </div>
-                                {/* Clear Filters */}
-                                {(filterNombre || filterCursoId || filterIdioma || filterNivel) && (
-                                    <button type="button" onClick={() => {setFilterNombre(""); setFilterCursoId(""); setFilterIdioma(""); setFilterNivel("")}} className="w-full p-2 rounded-lg border bg-gray-50 text-sm hover:bg-gray-100 flex justify-center items-center gap-2"><FiX/> Clear Filters</button>
-                                )}
-                                {/* List */}
-                                <div className="max-h-80 overflow-y-auto border rounded-xl p-3 bg-[#FAFAFA]">
-                                    <div className="mb-2 px-1 text-xs text-gray-500">Showing {filteredAlumnos.length} student{filteredAlumnos.length!==1?'s':''}</div>
-                                    {filteredAlumnos.map(a => (
-                                        <div key={a.email} onClick={() => toggleCursante(a.email)} className="flex justify-between p-2 hover:bg-orange-50 cursor-pointer rounded-lg border-b border-gray-100 last:border-0">
-                                            <div className="flex flex-col">
-                                                <span className="text-sm font-medium">{a.displayName || a.email}</span>
-                                                {filterCursoId && a.cursosAsignados && <span className="text-xs text-gray-400 font-mono">{a.cursosAsignados.filter((c:any)=>c.curso).map((c:any)=>c.curso).join(", ")}</span>}
-                                            </div>
-                                            <input type="checkbox" checked={curso.cursantes.includes(a.email)} readOnly className="accent-[#EE7203]"/>
-                                        </div>
-                                    ))}
-                                </div>
-                                <button type="button" onClick={() => addAllFiltered(filteredAlumnos.map(a => a.email))} className="w-full p-3 rounded-xl border border-dashed border-[#EE7203] text-[#EE7203] bg-[#FFF8F0] hover:bg-[#FFF0E0] font-semibold"><FiPlus className="inline mr-2"/> Add all filtered</button>
-                            </div>
+  <div className="max-h-52 overflow-y-auto space-y-1">
+    {filteredAlumnos
+      .slice(alumnosPage * PAGE_SIZE, (alumnosPage + 1) * PAGE_SIZE)
+      .map(a => (
+        <div key={a.email} onClick={() => toggleCursante(a.email)} className="flex items-center justify-between px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg cursor-pointer transition">
+          <span className="text-sm text-slate-700">{a.displayName || a.nombre || a.email}</span>
+          <input type="checkbox" readOnly checked={curso.cursantes?.includes(a.email) || false} className="accent-slate-900" />
+        </div>
+      ))
+    }
+  </div>
 
-                            {/* COLUMNA DER: SELECCIONADOS */}
-                            <div className="space-y-6">
-                                <h4 className="flex items-center gap-2 text-lg font-bold text-[#0C212D]"><FiCheck className="text-[#EE7203]"/> Selected ({curso.cursantes.length})</h4>
-                                <div className="max-h-80 overflow-y-auto border rounded-xl p-3 bg-[#FAFAFA]">
-                                    {curso.cursantes.length === 0 ? <p className="text-center text-gray-400 py-4 text-sm">No selected students.</p> : 
-                                        curso.cursantes.map(email => (
-                                            <div key={email} onClick={() => toggleCursante(email)} className="flex justify-between p-2 hover:bg-red-50 cursor-pointer rounded-lg border-b border-gray-100 last:border-0">
-                                                <span className="text-sm">{email}</span>
-                                                <FiTrash2 className="text-red-400"/>
-                                            </div>
-                                        ))
-                                    }
-                                </div>
-                                <button type="button" onClick={removeAllSelected} className="w-full p-3 rounded-xl border border-dashed border-red-300 text-red-500 bg-red-50 hover:bg-red-100 font-semibold"><FiTrash2 className="inline mr-2"/> Remove all selected</button>
-                            </div>
-                        </div>
-                    </section>
-                )}
+  {filteredAlumnos.length > PAGE_SIZE && (
+    <div className="flex items-center justify-between pt-2 border-t border-slate-200">
+      <button
+        type="button"
+        onClick={() => setAlumnosPage(p => Math.max(0, p - 1))}
+        disabled={alumnosPage === 0}
+        className="px-3 py-1 text-xs rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+      >
+        ← Anterior
+      </button>
+      <span className="text-xs text-slate-400">
+        Página {alumnosPage + 1} de {Math.ceil(filteredAlumnos.length / PAGE_SIZE)}
+      </span>
+      <button
+        type="button"
+        onClick={() => setAlumnosPage(p => Math.min(Math.ceil(filteredAlumnos.length / PAGE_SIZE) - 1, p + 1))}
+        disabled={alumnosPage >= Math.ceil(filteredAlumnos.length / PAGE_SIZE) - 1}
+        className="px-3 py-1 text-xs rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+      >
+        Siguiente →
+      </button>
+    </div>
+  )}
+</div>
+                    <button type="button" onClick={() => { const emails = filteredAlumnos.map(a => a.email); setCurso(p => { if (!p) return p; const s = new Set([...(p.cursantes || []), ...emails]); return { ...p, cursantes: Array.from(s) }; }); }} className="w-full flex items-center justify-center gap-2 py-2.5 border border-dashed border-slate-300 text-slate-600 text-sm rounded-xl hover:bg-slate-50 transition"><Icon.Plus /> Agregar todos los filtrados</button>
+                  </SectionCard>
 
-                {/* FOOTER SAVE */}
-                <div className="sticky bottom-0 z-20 flex justify-end bg-white/90 backdrop-blur-md border-t border-[#112C3E]/20 p-4 rounded-xl">
-                    <button type="submit" disabled={uploading} className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold tracking-wide transition-all duration-300 shadow-md ${uploading ? "bg-gray-300 cursor-not-allowed" : "bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white hover:scale-[1.02]"}`}>
-                        <FiSave size={18} /> {uploading ? "Saving..." : "Save Changes"}
-                    </button>
+                  <SectionCard className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2"><Icon.Check /> Alumnos asignados ({curso.cursantes?.length || 0})</h3>
+                    </div>
+                    {!curso.cursantes?.length
+                      ? <p className="text-sm text-slate-400 text-center py-8 border-2 border-dashed border-slate-200 rounded-xl">Sin alumnos asignados</p>
+                      : <div className="max-h-64 overflow-y-auto space-y-1.5">{curso.cursantes.map(email => (
+                          <div key={email} className="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-lg text-sm text-slate-700">
+                            <span>{email}</span>
+                            <button type="button" onClick={() => toggleCursante(email)} className="text-slate-400 hover:text-red-500 transition"><Icon.Trash /></button>
+                          </div>
+                        ))}</div>
+                    }
+                    {!!curso.cursantes?.length && (
+                      <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                        <span className="text-xs text-slate-400">{curso.cursantes.length} alumno{curso.cursantes.length !== 1 ? "s" : ""}</span>
+                        <button type="button" onClick={() => setCurso(p => p ? { ...p, cursantes: [] } : p)} className="text-xs text-red-500 hover:text-red-700 transition">Eliminar todos</button>
+                      </div>
+                    )}
+                  </SectionCard>
                 </div>
+              </div>
+            )}
+          </form>
+        </div>
 
-            </form>
+        {/* Footer */}
+        <div className="shrink-0 px-7 py-4 bg-white border-t border-slate-100 flex items-center justify-between">
+          <span className="text-xs text-slate-400">{unitCount} unidad{unitCount !== 1 ? "es" : ""} · {curso.cursantes?.length || 0} alumno{curso.cursantes?.length !== 1 ? "s" : ""}</span>
+          <button type="submit" form="edit-form" disabled={uploading} className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white text-sm font-semibold rounded-xl hover:bg-slate-700 disabled:opacity-50 transition shadow-sm">
+            <Icon.Save /> {uploading ? "Guardando..." : "Guardar cambios"}
+          </button>
         </div>
       </div>
+
+      {/* Modal éxito */}
       {showSuccessModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/10 animate-fadeIn">
-            <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full text-center border border-white/20 transform transition-all scale-100 relative overflow-hidden">
-                
-                {/* Decoración de fondo */}
-                <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#EE7203] to-[#FF3816]" />
-                <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#EE7203]/10 rounded-full blur-2xl" />
-
-                {/* Icono Animado */}
-                <div className="mx-auto w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-6 shadow-inner">
-                    <FiCheckCircle className="w-10 h-10 text-green-500 stroke-[2]" />
-                </div>
-
-                {/* Texto */}
-                <h3 className="text-2xl font-black text-[#0C212D] mb-2">
-                    ¡Cambios Guardados!
-                </h3>
-                <p className="text-gray-500 mb-8 leading-relaxed text-sm">
-                    El material académico ha sido actualizado y sincronizado correctamente.
-                </p>
-
-                {/* Botón de Acción */}
-                <button
-                    type="button" // Importante poner type="button" para que no intente enviar form
-                    onClick={() => {
-                        setShowSuccessModal(false);
-                        onClose?.(); 
-                    }}
-                    className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-[#EE7203] to-[#FF3816] text-white font-bold text-lg shadow-lg hover:shadow-orange-500/30 hover:scale-[1.02] transition-all active:scale-95"
-                >
-                    Entendido, cerrar
-                </button>
-            </div>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full text-center">
+            <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-5 text-emerald-500"><Icon.CheckCircle /></div>
+            <h3 className="text-xl font-bold text-slate-900 mb-2">¡Cambios guardados!</h3>
+            <p className="text-sm text-slate-500 mb-6">El material ha sido actualizado correctamente.</p>
+            <button type="button" onClick={() => { setShowSuccessModal(false); onClose?.(); }} className="w-full py-3 bg-slate-900 text-white font-semibold rounded-xl hover:bg-slate-700 transition">Cerrar</button>
+          </div>
         </div>
       )}
-      {/* === MODAL DE CONFIRMACIÓN DE SALIDA (SIN GUARDAR) === */}
-      {showExitModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center  p-4 animate-fadeIn">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-100 transform transition-all scale-100">
-            
-            {/* Header del Modal */}
-            <div className="bg-orange-50 p-6 border-b border-orange-100 flex items-center gap-4">
-              <div className="bg-orange-100 p-3 rounded-full text-[#EE7203]">
-                <FiFlag size={24} />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-[#0C212D]">¿Salir sin guardar?</h3>
-                <p className="text-sm text-gray-500">Se perderán los cambios no guardados en esta sesión.</p>
-              </div>
-            </div>
 
-            {/* Acciones */}
-            <div className="p-6 flex gap-3 justify-end bg-white">
-              <button
-                type="button"
-                onClick={() => setShowExitModal(false)}
-                className="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowExitModal(false);
-                  onClose?.(); // 👈 Cierra el formulario descartando cambios
-                }}
-                className="px-4 py-2 text-sm font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg shadow-md transition-all transform active:scale-95"
-              >
-                Sí, salir y descartar
-              </button>
+      {/* Modal salida */}
+      {showExitModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/30 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 space-y-4">
+            <h3 className="text-base font-bold text-slate-900">¿Salir sin guardar?</h3>
+            <p className="text-sm text-slate-500">Se perderán los cambios no guardados.</p>
+            <div className="flex gap-3 justify-end">
+              <button type="button" onClick={() => setShowExitModal(false)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition">Cancelar</button>
+              <button type="button" onClick={() => { setShowExitModal(false); onClose?.(); }} className="px-4 py-2 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 rounded-lg transition">Salir y descartar</button>
             </div>
           </div>
         </div>
@@ -1200,104 +724,39 @@ const deleteContentItem = (itemId: string) => {
   );
 }
 
-
-/* ----------------- MIGRATION / NORMALIZATION UTILS ----------------- */
+// ─── Normalización ────────────────────────────────────────────────────────────
 const normalizeCourseData = (legacyData: any): Curso => {
-  // 1. Normalizar Unidades y Lecciones (Convertir a Bloques)
   const normalizedUnits: Unidad[] = (legacyData.unidades || []).map((u: any) => {
     const unitId = u.id || makeId();
-
-    const normalizedLessons: Leccion[] = (u.lecciones || []).map((l: any) => {
-      // Si la lección YA tiene blocks, la dejamos tal cual
-      if (l.blocks && l.blocks.length > 0) return l;
-
-      // Si NO tiene blocks (es legacy), los creamos
+    const lessons: Leccion[] = (u.lecciones || []).map((l: any) => {
+      if (l.blocks?.length) return l;
       const blocks: LessonBlock[] = [];
-
       if (l.titulo) blocks.push({ type: "title", value: l.titulo });
       if (l.descripcion) blocks.push({ type: "description", value: l.descripcion });
-      
-      if (l.urlVideo && l.urlVideo.trim() !== "") {
-        blocks.push({ type: "video", url: l.urlVideo });
-      }
-      
+      if (l.urlVideo?.trim()) blocks.push({ type: "video", url: l.urlVideo });
       if (l.teoria) blocks.push({ type: "theory", value: l.teoria });
-      
-      if (l.pdfUrl && l.pdfUrl.trim() !== "") {
-        blocks.push({ type: "pdf", url: l.pdfUrl });
-      }
-
-      if (l.vocabulary && Array.isArray(l.vocabulary.entries)) {
-        blocks.push({ type: "vocabulary", entries: l.vocabulary.entries });
-      }
-
-      if (Array.isArray(l.ejercicios)) {
-        l.ejercicios.forEach((ex: any) => {
-          blocks.push({ type: "exercise", exercise: ex });
-        });
-      }
-
-      return {
-        id: l.id || makeId(),
-        blocks: blocks,
-      };
+      if (l.pdfUrl?.trim()) blocks.push({ type: "pdf", url: l.pdfUrl });
+      if (l.vocabulary?.entries) blocks.push({ type: "vocabulary", entries: l.vocabulary.entries });
+      if (Array.isArray(l.ejercicios)) l.ejercicios.forEach((ex: any) => blocks.push({ type: "exercise", exercise: ex }));
+      return { id: l.id || makeId(), blocks };
     });
-
-    return {
-      id: unitId,
-      titulo: u.titulo || "",
-      descripcion: u.descripcion || "",
-      introVideo: u.introVideo || "",
-      urlImagen: u.urlImagen || "",
-      ejercicios: [], 
-      textoCierre: u.textoCierre || "",
-      lecciones: normalizedLessons,
-      closing: u.closing || {}, 
-    };
+    return { id: unitId, titulo: u.titulo || "", descripcion: u.descripcion || "", introVideo: u.introVideo || "", urlImagen: u.urlImagen || "", ejercicios: [], textoCierre: u.textoCierre || "", lecciones: lessons, closing: u.closing || {} };
   });
 
-  // 2. Construir Timeline si no existe
-  const finalTimeline: ContentItem[] = legacyData.contentTimeline || [];
-
-  if (finalTimeline.length === 0) {
-    // Generar timeline basado en la existencia de datos
-    normalizedUnits.forEach((u) => {
-      finalTimeline.push({ id: `unit-${u.id}`, type: "unit", refId: u.id });
-    });
-
-    if (legacyData.examenFinal && (legacyData.examenFinal.introTexto || (legacyData.examenFinal.ejercicios && legacyData.examenFinal.ejercicios.length > 0))) {
-      const exId = makeId();
-      finalTimeline.push({ id: exId, type: "final_exam", refId: exId });
-    }
-
-    if (legacyData.capstone && (legacyData.capstone.videoUrl || legacyData.capstone.instrucciones)) {
-      const capId = makeId();
-      finalTimeline.push({ id: capId, type: "project", refId: capId });
-    }
-
-    if (legacyData.textoFinalCurso || legacyData.textoFinalCursoVideoUrl) {
-      const closeId = makeId();
-      finalTimeline.push({ id: closeId, type: "closing", refId: closeId });
-    }
+  const tl: ContentItem[] = legacyData.contentTimeline || [];
+  if (!tl.length) {
+    normalizedUnits.forEach(u => tl.push({ id: `unit-${u.id}`, type: "unit", refId: u.id }));
+    if (legacyData.examenFinal?.introTexto || legacyData.examenFinal?.ejercicios?.length) { const id = makeId(); tl.push({ id, type: "final_exam", refId: id }); }
+    if (legacyData.capstone?.videoUrl || legacyData.capstone?.instrucciones) { const id = makeId(); tl.push({ id, type: "project", refId: id }); }
+    if (legacyData.textoFinalCurso || legacyData.textoFinalCursoVideoUrl) { const id = makeId(); tl.push({ id, type: "closing", refId: id }); }
   }
 
-  // 3. Retornar objeto limpio y tipado
   return {
-    titulo: legacyData.titulo || "",
-    descripcion: legacyData.descripcion || "",
-    nivel: legacyData.nivel || "",
-    idioma: legacyData.idioma || "",
-    publico: legacyData.publico || false,
-    videoPresentacion: legacyData.videoPresentacion || "",
-    urlImagen: legacyData.urlImagen || "",
-    cursantes: legacyData.cursantes || [],
-    textoFinalCurso: legacyData.textoFinalCurso || "",
-    textoFinalCursoVideoUrl: legacyData.textoFinalCursoVideoUrl || "",
-    unidades: normalizedUnits,
-    examenFinal: legacyData.examenFinal || { introTexto: "", ejercicios: [] },
+    titulo: legacyData.titulo || "", descripcion: legacyData.descripcion || "", nivel: legacyData.nivel || "", idioma: legacyData.idioma || "",
+    publico: legacyData.publico || false, videoPresentacion: legacyData.videoPresentacion || "", urlImagen: legacyData.urlImagen || "",
+    cursantes: legacyData.cursantes || [], textoFinalCurso: legacyData.textoFinalCurso || "", textoFinalCursoVideoUrl: legacyData.textoFinalCursoVideoUrl || "",
+    unidades: normalizedUnits, examenFinal: legacyData.examenFinal || { introTexto: "", ejercicios: [] },
     capstone: legacyData.capstone || { videoUrl: "", instrucciones: "", checklist: [] },
-    contentTimeline: finalTimeline,
-    createdAt: legacyData.createdAt || null,
-    updatedAt: legacyData.updatedAt || null,
+    contentTimeline: tl, createdAt: legacyData.createdAt || null, updatedAt: legacyData.updatedAt || null,
   };
 };

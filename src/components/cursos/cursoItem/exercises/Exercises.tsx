@@ -149,6 +149,14 @@ export interface VerbTableExercise extends ExerciseBase {
   };
 }
 
+
+
+export interface OpenQuestionExercise extends ExerciseBase {
+  type: "open_question";
+  prompt: string;
+  maxLength: number;
+}
+
 /* =========================================
    Unión principal de ejercicios
 ============================================*/
@@ -165,7 +173,8 @@ export type Exercise =
   | SpeakingExercise
   | ReflectionExercise
   | SentenceCorrectionExercise
-  | VerbTableExercise;
+  | VerbTableExercise
+  | OpenQuestionExercise;
 
 
 // ===== Props del componente =====
@@ -300,6 +309,9 @@ export default function Exercises({ initial = [], onChange }: ExercisesProps) {
       return rows.some(r => r.subject.trim() !== "");
     }
 
+    case "open_question":
+  return ex.prompt?.trim() !== "";
+
     default:
       return false;
   }
@@ -333,22 +345,41 @@ const updateSnapshot = useCallback((changedId?: string) => {
   }, []);
 
   // ===== Montaje inicial =====
-  useEffect(() => {
-    if (!mountedRef.current) {
-      exercisesRef.current = initial ? structuredClone(initial) : [];
-      exercisesRef.current.forEach((e) => {
-        validationsRef.current[e.id] = validateExercise(e);
-      });
-      setActiveIdx((idx) =>
-        exercisesRef.current.length === 0
-          ? 0
-          : Math.min(idx, exercisesRef.current.length - 1)
-      );
-   
-       setSnapshot([...exercisesRef.current]);
-      mountedRef.current = true;
-    }
-  }, [initial]);
+ useEffect(() => {
+  if (!mountedRef.current) {
+    exercisesRef.current = initial ? structuredClone(initial) : [];
+
+    // Sincronizar answers de fill_blank con los *** de la sentence
+    exercisesRef.current = exercisesRef.current.map(ex => {
+  // Normalizar campos base para evitar undefined en inputs controlados
+  const normalized = {
+    ...ex,
+    title: ex.title ?? "",
+    instructions: ex.instructions ?? "",
+  };
+
+  // Sincronizar answers de fill_blank
+  if (normalized.type === "fill_blank") {
+    const blanks = (normalized.sentence?.match(/\*\*\*/g) || []).length;
+    const answers = Array.from({ length: blanks }, (_, i) => normalized.answers?.[i] || "");
+    return { ...normalized, answers };
+  }
+
+  return normalized;
+});
+
+    exercisesRef.current.forEach((e) => {
+      validationsRef.current[e.id] = validateExercise(e);
+    });
+    setActiveIdx((idx) =>
+      exercisesRef.current.length === 0
+        ? 0
+        : Math.min(idx, exercisesRef.current.length - 1)
+    );
+    setSnapshot([...exercisesRef.current]);
+    mountedRef.current = true;
+  }
+}, [initial]);
 
   // ===== Mutadores de colección =====
   const addExercise = (type: Exercise['type']) => {
@@ -523,7 +554,16 @@ const updateSnapshot = useCallback((changedId?: string) => {
   };
   break;
 
-
+case "open_question":
+  base = {
+    id,
+    type: "open_question",
+    title: "",
+    instructions: "",
+    prompt: "",
+    maxLength: 500,
+  };
+  break;
       }
 
 
@@ -755,6 +795,7 @@ const updateSnapshot = useCallback((changedId?: string) => {
     reflection: "Reflexión",
     sentence_correction: "Corrección",
     verb_table: "Verb Table",
+    open_question: "Pregunta Abierta",
   }[t] || t);
 
   const getTabTitle = (ex: Exercise, idx: number): string => {
@@ -1189,19 +1230,30 @@ const renderVerbTable = (ex: VerbTableExercise) => {
                   <button
                     type="button"
                     onClick={() => {
-                      const newRows = ex.rows.filter((_, i) => i !== idx);
-                      // Limpiar blanks y correct de esta fila
-                      const newBlanks = (ex.blanks || []).filter(b => b.rowIndex !== idx);
-                      const newCorrect = { ...(ex.correct || {}) };
-                      delete newCorrect[`${idx}-positive`];
-                      delete newCorrect[`${idx}-negative`];
-                      
-                      updateFieldImmediate(ex.id, { 
-                        rows: newRows,
-                        blanks: newBlanks,
-                        correct: newCorrect
-                      });
-                    }}
+  const newRows = ex.rows.filter((_, i) => i !== idx);
+
+  // Reindexar blanks: eliminar los de esta fila y decrementar los posteriores
+  const newBlanks = (ex.blanks || [])
+    .filter(b => b.rowIndex !== idx)
+    .map(b => b.rowIndex > idx ? { ...b, rowIndex: b.rowIndex - 1 } : b);
+
+  // Reindexar correct con la misma lógica
+  const newCorrect: Record<string, string> = {};
+  Object.entries(ex.correct || {}).forEach(([key, val]) => {
+    const dashIdx = key.lastIndexOf("-");
+    const rowIdx = parseInt(key.slice(0, dashIdx));
+    const col = key.slice(dashIdx + 1);
+    if (rowIdx === idx) return; // esta fila se elimina
+    const newRow = rowIdx > idx ? rowIdx - 1 : rowIdx;
+    newCorrect[`${newRow}-${col}`] = val as string;
+  });
+
+  updateFieldImmediate(ex.id, { 
+    rows: newRows,
+    blanks: newBlanks,
+    correct: newCorrect
+  });
+}}
                     className="text-red-500 hover:text-red-700"
                   >
                     ✖
@@ -1695,6 +1747,9 @@ const renderVerbTable = (ex: VerbTableExercise) => {
     case "verb_table":
   return renderVerbTable(ex);
 
+  case "open_question":
+  return renderOpenQuestion(ex as OpenQuestionExercise);
+
       default:
         return null;
     }
@@ -1736,28 +1791,20 @@ const renderVerbTable = (ex: VerbTableExercise) => {
   if (newKind === "open") {
     updateQuestion(qid, {
       kind: "open",
-      placeholder: "",
-      maxLength: 500,
       options: null,
       correctIndex: null,
       answer: null,
+      placeholder: "",
+      maxLength: 500,
     });
-    return;
-  }
-
-  if (newKind === "tf") {
+  } else if (newKind === "tf") {
     updateQuestion(qid, {
       kind: "tf",
-      answer: true,
       options: null,
       correctIndex: null,
-      placeholder: null,
-      maxLength: null,
+      answer: true,
     });
-    return;
-  }
-
-  if (newKind === "mc") {
+  } else {
     updateQuestion(qid, {
       kind: "mc",
       options: ["", ""],
@@ -2550,7 +2597,52 @@ const renderSentenceCorrection = (ex: SentenceCorrectionExercise) => {
     </div>
   );
 };
+const renderOpenQuestion = (ex: OpenQuestionExercise) => {
+  const update = (patch: Partial<OpenQuestionExercise>) =>
+    updateFieldImmediate(ex.id, patch);
 
+  return (
+    <div className="space-y-4">
+      <input
+        className="w-full border rounded px-3 py-2"
+        placeholder="Título del ejercicio"
+        value={ex.title}
+        onChange={(e) => update({ title: e.target.value })}
+      />
+      <textarea
+        rows={2}
+        className="w-full border rounded px-3 py-2"
+        placeholder="Instrucciones del ejercicio"
+        value={ex.instructions}
+        onChange={(e) => update({ instructions: e.target.value })}
+      />
+      <textarea
+        rows={3}
+        className="w-full border rounded px-3 py-2"
+        placeholder="Pregunta abierta (ej: Describe your ideal workplace...)"
+        value={ex.prompt}
+        onChange={(e) => update({ prompt: e.target.value })}
+        style={{ whiteSpace: "pre-wrap" }}
+      />
+      <div className="flex items-center gap-3">
+        <label className="text-sm text-slate-600">Máx. caracteres</label>
+        <input
+          type="number"
+          min={50}
+          max={2000}
+          className="w-24 border rounded px-2 py-1"
+          value={ex.maxLength}
+          onChange={(e) =>
+            update({ maxLength: parseInt(e.target.value || "500") })
+          }
+        />
+      </div>
+      <p className="text-xs text-slate-500">
+        ✅ Esta pregunta siempre se considera correcta al enviar — el alumno solo necesita escribir algo.
+      </p>
+    </div>
+  );
+};
 
   // Limpieza de debounce al desmontar
   useEffect(() => {
@@ -2609,6 +2701,14 @@ const renderSentenceCorrection = (ex: SentenceCorrectionExercise) => {
   className="px-3 py-1.5 rounded bg-indigo-600 text-white"
 >
   + Verb Table
+</button>
+
+<button
+  type="button"
+  onClick={() => addExercise("open_question")}
+  className="px-3 py-1.5 rounded bg-teal-600 text-white text-sm"
+>
+  + Pregunta Abierta
 </button>
 
 </div>

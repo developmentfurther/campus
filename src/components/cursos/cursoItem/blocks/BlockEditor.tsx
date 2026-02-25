@@ -58,6 +58,14 @@ function defaultExerciseForType(type: string) {
         correct: {},
       };
 
+      case "open_question":
+  return {
+    title: "",
+    instructions: "",
+    prompt: "",
+    maxLength: 500,
+  };
+
     default:
       return {};
   }
@@ -320,6 +328,7 @@ export default function BlockEditor({ block, onChange, onDelete }) {
                 "reflection",
                 "sentence_correction",
                 "verb_table",
+                "open_question",
               ].map((type) => (
                 <button
                   key={type}
