@@ -281,29 +281,87 @@ const PAGE_SIZE = 50;
 
   // ── JSON import handlers ───────────────────────────────────────────────────
   const handleImportUnit = (idx: number) => (data: any) => {
-    const raw = data.unidad ?? data;
-    setUnidades(p => {
-      const c = structuredClone(p); const u = c[idx];
-      if (raw.titulo !== undefined) u.titulo = raw.titulo;
-      if (raw.descripcion !== undefined) u.descripcion = raw.descripcion;
-      if (raw.introVideo !== undefined) u.introVideo = raw.introVideo;
-      if (raw.textoCierre !== undefined) u.textoCierre = raw.textoCierre;
-      if (Array.isArray(raw.lecciones)) u.lecciones = raw.lecciones.map((l: any) => ({ id: l.id || makeId(), blocks: Array.isArray(l.blocks) ? l.blocks : [] }));
-      return c;
-    });
-  };
+  const raw = data.unidad ?? data;
+
+  setUnidades(prev => {
+    const copy = structuredClone(prev);
+    const u = copy[idx];
+
+    // Campos de texto: solo aplica si viene un valor no vacío (no pisa con "")
+    if (raw.titulo && typeof raw.titulo === "string") u.titulo = raw.titulo;
+    if (raw.descripcion && typeof raw.descripcion === "string") u.descripcion = raw.descripcion;
+    if (raw.introVideo && typeof raw.introVideo === "string") u.introVideo = raw.introVideo;
+    if (raw.textoCierre && typeof raw.textoCierre === "string") u.textoCierre = raw.textoCierre;
+
+    // Lecciones: APPEND, no reemplazo
+    // Las lecciones existentes se conservan; las nuevas se agregan al final
+    if (Array.isArray(raw.lecciones) && raw.lecciones.length > 0) {
+      const newLessons = raw.lecciones.map((l: any) => ({
+        id: makeId(), // ID nuevo siempre para evitar colisiones
+        blocks: Array.isArray(l.blocks) ? l.blocks : [],
+      }));
+      u.lecciones = [...u.lecciones, ...newLessons];
+    }
+
+    return copy;
+  });
+};
   const handleImportFinalExam = (data: any) => {
-    const raw = data.examenFinal ?? data;
-    setExamenFinal(p => ({ introTexto: raw.introTexto ?? p.introTexto, ejercicios: Array.isArray(raw.ejercicios) ? raw.ejercicios : p.ejercicios }));
-  };
+  const raw = data.examenFinal ?? data;
+
+  setExamenFinal(prev => ({
+    // introTexto: solo pisa si viene string no vacío
+    introTexto: raw.introTexto && typeof raw.introTexto === "string"
+      ? raw.introTexto
+      : prev.introTexto,
+
+    // ejercicios: APPEND al array existente
+    ejercicios: Array.isArray(raw.ejercicios) && raw.ejercicios.length > 0
+      ? [...prev.ejercicios, ...raw.ejercicios]
+      : prev.ejercicios,
+  }));
+};
   const handleImportCapstone = (data: any) => {
-    const raw = data.capstone ?? data;
-    setCapstone(p => ({ videoUrl: raw.videoUrl ?? p.videoUrl, instrucciones: raw.instrucciones ?? p.instrucciones, checklist: Array.isArray(raw.checklist) ? raw.checklist : p.checklist }));
-  };
+  const raw = data.capstone ?? data;
+
+  setCapstone(prev => ({
+    // videoUrl: solo pisa si viene string no vacío
+    videoUrl: raw.videoUrl && typeof raw.videoUrl === "string"
+      ? raw.videoUrl
+      : prev.videoUrl,
+
+    // instrucciones: solo pisa si viene string no vacío
+    instrucciones: raw.instrucciones && typeof raw.instrucciones === "string"
+      ? raw.instrucciones
+      : prev.instrucciones,
+
+    // checklist: APPEND al existente
+    checklist: Array.isArray(raw.checklist) && raw.checklist.length > 0
+      ? [...prev.checklist, ...raw.checklist]
+      : prev.checklist,
+  }));
+};
   const handleImportClosing = (data: any) => {
-    const raw = data.closing ?? data;
-    setCurso(p => p ? { ...p, textoFinalCurso: raw.textoFinalCurso ?? p.textoFinalCurso, textoFinalCursoVideoUrl: raw.textoFinalCursoVideoUrl ?? p.textoFinalCursoVideoUrl } : p);
-  };
+  const raw = data.closing ?? data;
+
+  // Solo toca textoFinalCurso y textoFinalCursoVideoUrl del estado `curso`
+  // Nunca toca titulo, descripcion, nivel, idioma, cursantes, etc.
+  setCurso(prev => {
+    if (!prev) return prev;
+    return {
+      ...prev,
+      textoFinalCurso:
+        raw.textoFinalCurso && typeof raw.textoFinalCurso === "string"
+          ? raw.textoFinalCurso
+          : prev.textoFinalCurso,
+      textoFinalCursoVideoUrl:
+        raw.textoFinalCursoVideoUrl && typeof raw.textoFinalCursoVideoUrl === "string"
+          ? raw.textoFinalCursoVideoUrl
+          : prev.textoFinalCursoVideoUrl,
+      // Todo lo demás del objeto `curso` se preserva intacto con ...prev
+    };
+  });
+};
 
   // ── Label helpers ──────────────────────────────────────────────────────────
   const getLabel = (item: ContentItem, idx: number) => {

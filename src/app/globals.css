@@ -127,6 +127,27 @@ body {
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+aside::-webkit-scrollbar,
+main::-webkit-scrollbar {
+  width: 4px;
+}
+
+aside::-webkit-scrollbar-track,
+main::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+aside::-webkit-scrollbar-thumb,
+main::-webkit-scrollbar-thumb {
+  background: rgba(238, 114, 3, 0.2);
+  border-radius: 0;
+}
+
+aside::-webkit-scrollbar-thumb:hover,
+main::-webkit-scrollbar-thumb:hover {
+  background: rgba(238, 114, 3, 0.4);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -139,3 +160,4 @@ body {
 .prose {
   font-family: Poppins, Helvetica, sans-serif;
 }
+

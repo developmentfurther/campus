@@ -674,36 +674,82 @@ const PAGE_SIZE = 50;
   // ── JSON import / export ──────────────────────────────────────────────────────
 
   const handleLoadJson = (text: string) => {
-    if (!text.trim()) { toast.error("El campo está vacío"); return; }
-    try {
-      const data = JSON.parse(text);
-      if (!data.material || !Array.isArray(data.unidades)) {
-        throw new Error("Estructura inválida");
-      }
-      setMaterial({
-        titulo: data.material.titulo || "",
-        descripcion: data.material.descripcion || "",
-        nivel: data.material.nivel || "",
-        idioma: data.material.idioma || "",
-        publico: data.material.publico ?? true,
-        videoPresentacion: data.material.videoPresentacion || "",
-        urlImagen: data.material.urlImagen || "",
-        cursantes: Array.isArray(data.material.cursantes) ? data.material.cursantes : [],
-        textoFinalCurso: data.material.textoFinalCurso || "",
-        textoFinalCursoVideoUrl: data.material.textoFinalCursoVideoUrl || "",
-        contentTimeline: Array.isArray(data.material.contentTimeline) ? data.material.contentTimeline : [],
-      });
-      setUnits(data.unidades);
-      if (data.examenFinal) setFinalExam(data.examenFinal);
-      if (data.capstone) setCapstone(data.capstone);
-      toast.success("✅ Datos cargados correctamente");
-      if (data.material.contentTimeline?.length > 0) {
-        setSelectedId(data.material.contentTimeline[0].id);
-      }
-    } catch {
-      toast.error("❌ JSON inválido. Revisa la estructura.");
+  if (!text.trim()) { toast.error("El campo está vacío"); return; }
+  
+  let data: any;
+  
+  // Paso 1: ¿parsea bien?
+  try {
+    data = JSON.parse(text);
+    console.log("✅ JSON parseado:", data);
+  } catch (e) {
+    console.error("❌ Error de parseo:", e);
+    toast.error("JSON inválido - error de sintaxis");
+    return;
+  }
+
+  // Paso 2: ¿tiene la estructura mínima?
+  console.log("🔍 data.material:", data.material);
+  console.log("🔍 data.unidades:", data.unidades);
+  console.log("🔍 data.examenFinal:", data.examenFinal);
+  console.log("🔍 data.capstone:", data.capstone);
+
+  if (!data.material) {
+    toast.error("Falta el campo 'material'");
+    return;
+  }
+  if (!Array.isArray(data.unidades)) {
+    toast.error("'unidades' debe ser un array");
+    return;
+  }
+
+  // Paso 3: setters uno por uno
+  try {
+    console.log("⏳ Seteando material...");
+    setMaterial({
+      titulo: data.material.titulo || "",
+      descripcion: data.material.descripcion || "",
+      nivel: data.material.nivel || "",
+      idioma: data.material.idioma || "",
+      publico: data.material.publico ?? true,
+      videoPresentacion: data.material.videoPresentacion || "",
+      urlImagen: data.material.urlImagen || "",
+      cursantes: Array.isArray(data.material.cursantes) ? data.material.cursantes : [],
+      textoFinalCurso: data.material.textoFinalCurso || "",
+      textoFinalCursoVideoUrl: data.material.textoFinalCursoVideoUrl || "",
+      contentTimeline: Array.isArray(data.material.contentTimeline) ? data.material.contentTimeline : [],
+    });
+    console.log("✅ material seteado");
+
+    console.log("⏳ Seteando units...");
+    setUnits(data.unidades);
+    console.log("✅ units seteadas:", data.unidades.length);
+
+    if (data.examenFinal) {
+      console.log("⏳ Seteando examenFinal...");
+      setFinalExam(data.examenFinal);
+      console.log("✅ examenFinal seteado");
     }
-  };
+
+    if (data.capstone) {
+      console.log("⏳ Seteando capstone...");
+      setCapstone(data.capstone);
+      console.log("✅ capstone seteado");
+    }
+
+    toast.success("✅ Datos cargados correctamente");
+
+    if (data.material.contentTimeline?.length > 0) {
+      const firstId = data.material.contentTimeline[0].id;
+      console.log("🎯 Seteando selectedId:", firstId);
+      setSelectedId(firstId);
+    }
+
+  } catch (e) {
+    console.error("❌ Error durante los setters:", e);
+    toast.error(`Error interno: ${(e as Error).message}`);
+  }
+};
 
   const handleExportJson = () => {
     const data = { material, unidades: units, examenFinal: finalExam, capstone };
