@@ -17,8 +17,7 @@ import {
 } from "react-icons/fi";
 import { useI18n } from "@/contexts/I18nContext";
 import InfoTutorial from "@/components/tutoriales/InfoTutorial";
-import { useAuth } from "@/contexts/AuthContext";
-
+import { useAlumno } from "@/contexts/AlumnoContext";
 
 interface AlumnoInfoProps {
   userEmail?: string;
@@ -27,7 +26,7 @@ interface AlumnoInfoProps {
 export default function AlumnoInfo({ userEmail = "test@gmail.com" }: AlumnoInfoProps) {
   const { t } = useI18n();
 
-  const { tutorialsSeen, markTutorialAsSeen } = useAuth();
+  const { tutorialsSeen, markTutorialAsSeen } = useAlumno();
 
 const TUTORIAL_ID = "info";
 const shouldShowTutorial = !tutorialsSeen?.[TUTORIAL_ID];

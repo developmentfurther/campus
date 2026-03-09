@@ -20,24 +20,36 @@ import {
   FiClock,
 } from "react-icons/fi";
 
+import { useRouter } from "next/navigation";
+import { useAlumno } from "@/contexts/AlumnoContext";
+
 export default function AlumnoHome() {
+  const { user, userProfile } = useAuth(); 
   const {
-    user,
     misCursos,
     loadingCursos,
     recentActivity,
     loadingActivity,
-    userProfile,
     anuncios,
     loadingAnuncios,
-    tutorialsSeen, markTutorialAsSeen
-  } = useAuth();
+    tutorialsSeen,
+    markTutorialAsSeen,
+    allDataLoaded
+  } = useAlumno();
 
   const { t, lang } = useI18n();
-  const { setSection } = useDashboardUI();
+const router = useRouter();
   const TUTORIAL_ID = "home";
 const shouldShowTutorial = !tutorialsSeen?.[TUTORIAL_ID];
 
+const ROUTES: Record<string, string> = {
+  miscursos:      "/dashboard/cursos",
+  certificados:   "/dashboard/certificados",
+  gaming:         "/dashboard/gaming",
+  chatbot:        "/dashboard/chat",
+  "chat-history": "/dashboard/chat/historial",
+  perfil:         "/dashboard/perfil",
+};
   const localeMap: Record<string, string> = {
     es: "es-ES",
     en: "en-US",
@@ -75,16 +87,17 @@ const shouldShowTutorial = !tutorialsSeen?.[TUTORIAL_ID];
     return t("dashboard.time.justNow");
   }
 
-  if (loadingCursos || loadingActivity || loadingAnuncios) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-[#EE7203] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-[#0C212D] font-semibold">{t("dashboard.loading")}</p>
-        </div>
+  // ✅ UN SOLO GUARD AL PRINCIPIO — eliminar el de abajo:
+if (!userProfile || !allDataLoaded || loadingCursos || loadingActivity || loadingAnuncios) {
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="text-center">
+        <div className="w-16 h-16 border-4 border-[#EE7203] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <p className="text-[#0C212D] font-semibold">{t("dashboard.loading")}</p>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   const firstName = user?.email?.split("@")[0] ?? "Alumno";
 
@@ -132,6 +145,7 @@ const shouldShowTutorial = !tutorialsSeen?.[TUTORIAL_ID];
       gradient: "from-[#0C212D] to-[#112C3E]",
     },
   ];
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -239,7 +253,7 @@ const shouldShowTutorial = !tutorialsSeen?.[TUTORIAL_ID];
     <QuickAccessCard 
       key={link.id} 
       link={link} 
-      onClick={() => setSection(link.id)}
+      onClick={() => router.push(ROUTES[link.id])}onClick={() => setSection(link.id)}
       data-tutorial={index === 0 ? "quick-access-card" : undefined}
     />
   ))}

@@ -5,28 +5,26 @@ import { useEffect } from "react";
 import LoaderUi from "@/components/ui/LoaderUi";
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, authReady, loading } = useAuth();
+  const { user, authReady } = useAuth(); // ← ya no usamos `loading`
   const router = useRouter();
 
   useEffect(() => {
-    // Solo redirigir si ya terminamos de cargar todo (authReady) y no hay usuario
-    if (authReady && !loading && !user) {
+    if (authReady && !user) {
       router.replace("/");
     }
-  }, [user, authReady, loading, router]);
+  }, [user, authReady, router]);
 
-  // CASO 1: Aún cargando el estado inicial de Auth
-  if (!authReady || loading) {
+  // CASO 1: Firebase Auth todavía no respondió (< 200ms normalmente)
+  if (!authReady) {
     return <LoaderUi />;
   }
 
-  // CASO 2: Ya cargó, pero no hay usuario (estamos redirigiendo en el useEffect)
-  // 🔥 IMPORTANTE: No mostrar Loader aquí si ya sabemos que no hay user.
-  // Devolver null evita el parpadeo o el loader infinito visual mientras redirige.
+  // CASO 2: Ya cargó pero no hay usuario → redirigiendo
   if (!user) {
-    return null; 
+    return null;
   }
 
-  // CASO 3: Todo ok
+  // CASO 3: Todo ok → renderizar layout completo
+  // El role y userProfile llegan después en background, sin bloquear
   return <>{children}</>;
 }

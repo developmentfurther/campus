@@ -28,7 +28,7 @@ import {
 } from "react-icons/fi";
 import { useAuth } from "@/contexts/AuthContext";
 import { db as firestore, storage } from "@/lib/firebase";
-import { getCourseProgressStats } from "@/contexts/AuthContext";
+import { getCourseProgressStats } from "@/lib/courseUtils";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import Player from "@vimeo/player";
@@ -40,11 +40,11 @@ import { useI18n } from "@/contexts/I18nContext";
 import MobileMenu from "@/components/ui/MobileMenu";
 import LoaderUi from "@/components/ui/LoaderUi";
 import MarkdownWYSIWYG from "@/components/cursos/cursoItem/blocks/MarkdownWYSIWYG";
-import CoursePlayerVideoModal from "@/components/ui/CoursePlayerVideoModal"; 
-import CoursePlayerTutorial from "@/components/material-academico/CoursePlayerTutorial";
+import CoursePlayerVideoModal from "@/components/ui/CoursePlayerVideoModal";
 import DownloadBibliographyButton from "@/hooks/DownloadBibliographyButton";
 import React from "react";
 import { EnhancedCourseIntro } from "@/components/cursos/EnhancedCourseIntro";
+import { useAlumno } from "@/contexts/AlumnoContext";
 
 
 
@@ -134,8 +134,14 @@ export default function CoursePlayerPage() {
   const router = useRouter();
   const params = useParams();
   const courseId = params?.id?.toString?.() || "";
-  const { user, role, authReady, loading: authLoading, userProfile, saveCourseProgress, getCourseProgress, hasSeenCoursePlayerTutorial, markCoursePlayerTutorialAsSeen, loadingCoursePlayerTutorialStatus,allDataLoaded  } = useAuth();
+  const { user, role, authReady, loading: authLoading, userProfile } = useAuth();
+const { saveCourseProgress, getCourseProgress, hasSeenCoursePlayerTutorial, markCoursePlayerTutorialAsSeen, allDataLoaded } = useAlumno();
   const { t } = useI18n();
+  const dashboardRoute = role === "admin" 
+  ? "/admin" 
+  : role === "profesor" 
+  ? "/profesor" 
+  : "/dashboard";
 
 
   // 🔸 Estados principales
@@ -711,7 +717,7 @@ const goNextLesson = useCallback(async () => {
     toast.success("➡️ Avanzaste a la siguiente lección");
   } else {
     toast.success("🎉 ¡Curso completado!");
-    router.push("/dashboard");
+    router.push(dashboardRoute);
   }
 
   // 2️⃣ GUARDADO EN FIREBASE
@@ -881,7 +887,8 @@ function ExerciseRunner({
     total?: number;
   } | null>(null);
 
-  const { user, saveCourseProgress } = useAuth();
+  const { user } = useAuth();
+const { saveCourseProgress } = useAlumno();
 
   // 🔥 KEY GLOBAL ÚNICA
   const currentExerciseKey = useMemo(
@@ -1866,10 +1873,12 @@ const prevExercise = () => {
   if (currentExercise > 0) setCurrentExercise((prev) => prev - 1);
 };
 
+
+const dataReady = role === "alumno" ? allDataLoaded : true;
   /* =========================================================
      🔹 Guards de acceso
      ========================================================= */
-if (!authReady || authLoading || loading || !allDataLoaded) {
+if (!authReady || authLoading || loading || !dataReady) {
   return <LoaderUi />
 }
 
@@ -1939,7 +1948,7 @@ if (!authReady || authLoading || loading || !allDataLoaded) {
             transition={{ delay: 0.5 }}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => router.push("/dashboard")}
+            onClick={() => router.push(dashboardRoute)}
             className="w-full bg-gradient-to-r from-[#EE7203] via-[#FF3816] to-[#EE7203] bg-size-200 bg-pos-0 hover:bg-pos-100 text-white font-bold text-base py-4 rounded-xl shadow-lg shadow-[#EE7203]/30 transition-all duration-500 flex items-center justify-center gap-3 group"
             style={{ backgroundSize: '200% 100%' }}
           >
@@ -2075,7 +2084,7 @@ const StatCard = React.memo(({ icon: Icon, value, label, color }) => {
     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#EE7203] to-transparent"></div>
     <button
     data-tutorial="back-home"
-      onClick={() => router.push("/dashboard")}
+      onClick={() => router.push(dashboardRoute)}
       className="flex items-center gap-2 text-sm text-white/70 hover:text-white font-semibold transition-all group"
     >
       <div className="w-8 h-8 rounded-lg bg-[#EE7203]/20 flex items-center justify-center group-hover:bg-[#EE7203]/30 transition-colors">

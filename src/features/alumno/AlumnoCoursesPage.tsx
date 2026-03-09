@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@/contexts/AuthContext";
+import { useAlumno } from "@/contexts/AlumnoContext";
 import { FiBookOpen, FiAward, FiArrowRight, FiStar } from "react-icons/fi";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/contexts/I18nContext";
@@ -8,7 +8,7 @@ import MyMaterialTutorial from "@/components/tutoriales/MyMaterialTutorial"; // 
 
 
 export default function AlumnoCoursesPage() {
-  const { misCursos, loadingCursos, tutorialsSeen, markTutorialAsSeen  } = useAuth();
+  const { misCursos, loadingCursos, tutorialsSeen, markTutorialAsSeen } = useAlumno();
   const router = useRouter();
   const { t } = useI18n();
   const TUTORIAL_ID = "material";

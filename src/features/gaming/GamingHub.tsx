@@ -13,17 +13,16 @@ import {
   FiHelpCircle,
   FiCheck,
 } from "react-icons/fi";
-import { GAMES_MAP } from "@/app/gaming/games";
+import { GAMES_MAP } from "@/features/gaming/games";
 import { useI18n } from "@/contexts/I18nContext";
 import Image from "next/image";
 import GamingTutorial from "@/components/tutoriales/GamingTutorial";
-import { useAuth } from "@/contexts/AuthContext";
-
+import { useAlumno } from "@/contexts/AlumnoContext";
 
 export default function GamingHub() {
   const router = useRouter();
   const { t } = useI18n();
-  const { tutorialsSeen, markTutorialAsSeen } = useAuth();
+  const { tutorialsSeen, markTutorialAsSeen } = useAlumno();
   const TUTORIAL_ID = "gaming";
 
   const shouldShowTutorial = !tutorialsSeen?.[TUTORIAL_ID];

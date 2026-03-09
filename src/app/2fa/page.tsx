@@ -153,7 +153,7 @@ export default function TwoFactorPage() {
       if (cookieCheck === "true") {
         console.log("🚀 Cookie confirmada, redirigiendo...");
         // Usar replace para evitar historial
-        window.location.href = "/dashboard";
+        window.location.href = "/admin";
       } else {
         throw new Error("Cookie no se estableció correctamente");
       }

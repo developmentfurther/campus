@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAdmin } from "@/contexts/AdminContext";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { db } from "@/lib/firebase";
@@ -26,7 +26,7 @@ import {
 } from "react-icons/fi";
 
 export default function AdminAnunciosPage() {
-  const { anuncios, loadingAnuncios, loadAnuncios } = useAuth();
+  const { anuncios, loadingAnuncios, loadAnuncios } = useAdmin();
 
   const [modal, setModal] = useState<{
     mode: "create" | "edit";

@@ -5,10 +5,7 @@ import { retry } from "@/lib/retry";
 export const runtime = "nodejs";
 
 const apiKey = process.env.OPENAI_API_KEY;
-
-if (!apiKey) {
-  console.error("❌ Missing OPENAI_API_KEY in .env");
-}
+if (!apiKey) console.error("❌ Missing OPENAI_API_KEY in .env");
 
 const openai = new OpenAI({ apiKey });
 const MODEL_ID = "gpt-5-mini";
@@ -62,6 +59,10 @@ C1–C2:
 - Native-like interaction
 
 -----------------------------------------
+{{TOPIC_SECTION}}
+-----------------------------------------
+
+-----------------------------------------
 ABSOLUTE RULES
 -----------------------------------------
 1. ALWAYS speak in: {{LANGUAGE}}
@@ -76,6 +77,7 @@ ABSOLUTE RULES
 8. Share your own thoughts on the topic
 9. Make the student feel comfortable speaking
 10. Adapt your vocabulary and complexity to {{LEVEL}}
+{{TOPIC_CONSTRAINT}}
 
 -----------------------------------------
 EXAMPLE FLOW
@@ -102,11 +104,22 @@ function sanitize(text: string) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, level, language } = await req.json();
+    const { messages, level, language, topicPrompt } = await req.json();
+
+    // 🎯 Inyectar el topic en el system prompt si existe
+    const topicSection = topicPrompt
+      ? topicPrompt
+      : "TOPIC CONTEXT: No specific topic selected. Keep the conversation open and follow the student's lead.";
+
+    const topicConstraint = topicPrompt
+      ? "11. STAY ON TOPIC: Keep the conversation focused on the selected topic. You can explore subtopics, but always bring it back to the main theme."
+      : "";
 
     const systemPrompt = SYSTEM_PROMPT
       .replace(/{{LEVEL}}/g, level)
-      .replace(/{{LANGUAGE}}/g, language);
+      .replace(/{{LANGUAGE}}/g, language)
+      .replace(/{{TOPIC_SECTION}}/g, topicSection)
+      .replace(/{{TOPIC_CONSTRAINT}}/g, topicConstraint);
 
     const openaiMessages = [
       { role: "system" as const, content: systemPrompt },
@@ -116,7 +129,6 @@ export async function POST(req: NextRequest) {
       })),
     ];
 
-    // Streaming con OpenAI
     const stream = await retry(
       () =>
         openai.chat.completions.create({
@@ -138,9 +150,7 @@ export async function POST(req: NextRequest) {
             if (text) controller.enqueue(encoder.encode(text));
           }
         } catch (err) {
-          controller.enqueue(
-            encoder.encode("⚠️ Connection lost briefly but recovered.")
-          );
+          controller.enqueue(encoder.encode("⚠️ Connection lost briefly but recovered."));
         } finally {
           controller.close();
         }
@@ -155,8 +165,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error("🔥 FATAL STREAM ERROR:", err);
-    return new Response("The tutor is momentarily unavailable.", {
-      status: 200,
-    });
+    return new Response("The tutor is momentarily unavailable.", { status: 200 });
   }
 }

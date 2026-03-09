@@ -10,6 +10,8 @@ import { doc, getDoc } from 'firebase/firestore';
 import { FiMail, FiLock, FiArrowRight, FiZap, FiAlertCircle } from "react-icons/fi";
 import LoaderUi from '@/components/ui/LoaderUi';
 import FancyBackground from '@/components/ui/FancyBackground';
+import Cookies from 'js-cookie';
+import { fetchUserFromBatchesByUid } from '@/lib/userBatches';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -18,20 +20,30 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [showBajaModal, setShowBajaModal] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { user, authReady, loggingOut } = useAuth();
+  const { user, authReady, loggingOut, role } = useAuth();
   const router = useRouter();
+  
 
   // Redirección si ya está logueado
-  useEffect(() => {
-    if (authReady && user) {
-      router.replace('/dashboard');
-    }
-  }, [authReady, user, router]);
+
+useEffect(() => {
+  if (!authReady || !user || !role) return;
+
+  const ROLE_ROUTES = {
+    admin:    '/admin',
+    profesor: '/profesores',
+    alumno:   '/dashboard',
+  } as const;
+
+  router.replace(ROLE_ROUTES[role] ?? '/dashboard');
+}, [authReady, user, role, router]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
+     Cookies.remove("admin_2fa_valid");
+  Cookies.remove("user_role");
 
     try {
       // =====================================
@@ -69,20 +81,31 @@ export default function LoginPage() {
       // ✅ PASO 2: LOGIN EXITOSO
       // =====================================
       console.log("✅ Usuario válido, procediendo con login...");
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      
-      // 🔥 VERIFICAR SI ES ADMIN Y NECESITA 2FA
-      const userDoc = await getDoc(doc(db, 'usuarios', userCredential.user.uid));
-      const isAdmin = userDoc.exists() && userDoc.data()?.role === 'admin';
+      // ✅ PASO 2: LOGIN EXITOSO
+const userCredential = await signInWithEmailAndPassword(auth, email, password);
 
-      if (isAdmin) {
-        console.log("🔐 Usuario admin detectado, redirigiendo a 2FA...");
-        // El middleware interceptará y redirigirá a /2fa si no tiene cookie
-        router.push('/dashboard');
-      } else {
-        console.log("✅ Usuario regular, acceso directo al dashboard");
-        router.push('/dashboard');
-      }
+// 1. Obtener el rol desde batches (donde realmente viven los usuarios)
+const profile = await fetchUserFromBatchesByUid(userCredential.user.uid);
+const userRole = profile?.role ?? 'alumno';
+
+// 2. Setear cookie para el middleware
+Cookies.set('user_role', userRole, {
+  expires: 7,
+  path: '/',
+  sameSite: 'lax',
+  secure: process.env.NODE_ENV === 'production',
+});
+
+// 3. Redirigir según rol
+const ROLE_ROUTES = {
+  admin:    '/admin',
+  profesor: '/profesores',
+  alumno:   '/dashboard',
+};
+
+router.push(ROLE_ROUTES[userRole] ?? '/dashboard');
+
+;
 
     } catch (err: any) {
       console.error("❌ Error en autenticación:", err);

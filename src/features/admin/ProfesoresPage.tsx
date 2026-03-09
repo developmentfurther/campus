@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@/contexts/AuthContext";
+import { useAdmin } from "@/contexts/AdminContext";
 import { useState, useMemo, useEffect } from "react";
 import {
   FiSearch,
@@ -30,7 +30,7 @@ import { db } from "@/lib/firebase";
 import { doc, updateDoc } from "firebase/firestore";
 
 export default function ProfesoresPage() {
-  const { profesores, loadProfesores, loadingProfesores } = useAuth();
+  const { profesores, loadProfesores, loadingProfesores } = useAdmin();
 
   const [search, setSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);

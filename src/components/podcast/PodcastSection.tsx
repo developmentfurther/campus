@@ -5,6 +5,8 @@ import { useDashboardUI } from '@/stores/useDashboardUI';
 import { useAuth } from '@/contexts/AuthContext';
 import { Headphones, Mic2, PlayCircle, Calendar, Clock } from 'lucide-react';
 import PodcastsTutorial from '../tutoriales/PodcastsTutorial';
+import { useAlumno } from '@/contexts/AlumnoContext';
+
 // --- Helper para formatear tiempo ---
 const formatDuration = (ms: number): string => {
   const minutes = Math.floor(ms / 60000);
@@ -14,7 +16,7 @@ const formatDuration = (ms: number): string => {
 
 export default function PodcastsSection() {
   const { playPodcast } = useDashboardUI(); 
-  const { podcastEpisodes, loadingPodcast, tutorialsSeen, markTutorialAsSeen } = useAuth();
+  const { podcastEpisodes, loadingPodcast, tutorialsSeen, markTutorialAsSeen } = useAlumno();
 
   const TUTORIAL_ID = "podcast";
 const shouldShowTutorial = !tutorialsSeen?.[TUTORIAL_ID];

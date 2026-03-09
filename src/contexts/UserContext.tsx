@@ -18,7 +18,7 @@ interface UsersContextType {
 const UsersContext = createContext<UsersContextType | undefined>(undefined);
 
 export const UsersProvider = ({ children }: { children: ReactNode }) => {
-  const { user, authReady } = useAuth();
+  const { user, authReady, userProfile } = useAuth();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -49,14 +49,14 @@ export const UsersProvider = ({ children }: { children: ReactNode }) => {
 
 
   useEffect(() => {
-    if (authReady && user?.role === 'admin') {
+    if (authReady && userProfile?.role === 'admin') {
       fetchUsers();
     }
-  }, [authReady, user]);
+  }, [authReady, user, userProfile]);
 
   return (
     <UsersContext.Provider
-      value={{ users, loading, error, fetchUsers, handleUpdateRole }}
+      value={{ users, loading, error, fetchUsers, handleUpdateRole,  }}
     >
       {children}
     </UsersContext.Provider>

@@ -3,11 +3,16 @@
 import { useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { FiBookOpen, FiUser, FiArrowRight } from "react-icons/fi";
+import { useRouter } from "next/navigation";
+import { useProfesor } from "@/contexts/ProfesorContext";
 import { useDashboardUI } from "@/stores/useDashboardUI";
 
 export default function ProfesorHomePage() {
-  const { user, allCursos, userProfile } = useAuth();
+  const { user, userProfile } = useAuth();
+  const {allCursos} = useProfesor()
+  const router = useRouter();
   const { setSection } = useDashboardUI();
+
 
   // Mapeo de idiomas del profesor
   const idiomaDisplayMap: Record<string, string> = {
@@ -144,9 +149,9 @@ export default function ProfesorHomePage() {
           </div>
 
           <button
-            onClick={() => setSection("cursos")}
-            className="w-full py-3 px-4 bg-white text-[#112C3E] rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-gray-100 transition-colors"
-          >
+  onClick={() => setSection("cursos")}
+  className="w-full py-3 px-4 bg-white text-[#112C3E] rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-gray-100 transition-colors"
+>
             View All Courses
             <FiArrowRight size={18} />
           </button>
@@ -187,6 +192,7 @@ export default function ProfesorHomePage() {
               </p>
             </div>
           </div>
+
 
           <button
             onClick={() => setSection("perfil")}

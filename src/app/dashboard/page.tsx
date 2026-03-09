@@ -1,63 +1,32 @@
 "use client";
-
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useDashboardUI } from "@/stores/useDashboardUI";
 import { useAuth } from "@/contexts/AuthContext";
-import LoaderUi from "@/components/ui/LoaderUi";
-import WelcomeVideoModal from "@/components/ui/WelcomeVideoModal";
-
-import AdminDashboard from "@/components/dashboards/admin/AdminDashboard";
-import ProfesorDashboard from "@/components/dashboards/profesor/ProfesorDashboard";
-import AlumnoDashboard from "@/components/dashboards/alumno/AlumnoDashboard";
+import AlumnoHome from "@/features/alumno/AlumnoHome";
+import AlumnoCoursesPage from "@/features/alumno/AlumnoCoursesPage";
+import AlumnoCertificatesPage from "@/features/alumno/AlumnoCertificatePage";
+import AlumnoProfilePage from "@/features/alumno/AlumnoProfilePage";
+import GamingHub from "@/features/gaming/GamingHub";
+import ChatBox from "@/components/chat/ChatBox";
+import ChatHistoryList from "@/components/chat/history/ChatHistoryList";
+import ChatHistorySession from "@/components/chat/history/ChatHistorySession";
+import AlumnoInfo from "@/features/alumno/AlumnoInfo";
+import PodcastSection from "@/components/podcast/PodcastSection";
 
 export default function DashboardPage() {
-  const { user, role, authReady, loading, loggingOut } = useAuth();
-  const router = useRouter();
+  const { section } = useDashboardUI();
+  const { user } = useAuth();
 
-  // 🔒 Redirige al login si no hay sesión
-  useEffect(() => {
-    if (authReady && !user) router.replace("/login");
-  }, [authReady, user, router]);
-
-  if (loggingOut) {
-    return <LoaderUi />;
+  switch (section) {
+    case "home":          return <AlumnoHome />;
+    case "miscursos":     return <AlumnoCoursesPage />;
+    case "certificados":  return <AlumnoCertificatesPage />;
+    case "perfil":        return <AlumnoProfilePage />;
+    case "gaming":        return <GamingHub />;
+    case "chatbot":       return <ChatBox />;
+    case "chat-history":  return <ChatHistoryList />;
+    case "chat-session":  return <ChatHistorySession />;
+    case "infoimportante":return <AlumnoInfo userEmail={user?.email || ""} />;
+    case "podcast":       return <PodcastSection />;
+    default:              return <AlumnoHome />;
   }
-
-  if (!authReady || loading) {
-    return <LoaderUi />;
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-gray-500">
-        No hay usuario autenticado.
-      </div>
-    );
-  }
-
-  // 🎬 Función para renderizar el dashboard según el rol
-  const renderDashboard = () => {
-    if (role === "admin") return <AdminDashboard />;
-    if (role === "profesor") return <ProfesorDashboard />;
-    if (role === "alumno") return <AlumnoDashboard />;
-    
-    return (
-      <div className="min-h-screen flex items-center justify-center text-red-400">
-        Rol no reconocido.
-      </div>
-    );
-  };
-
-  return (
-    <>
-      {/* 🎥 Modal de video de bienvenida - SE MUESTRA PARA TODOS LOS ROLES */}
-      <WelcomeVideoModal 
-        videoUrl="https://player.vimeo.com/video/1146030268" // 👈 Reemplaza con tu video
-        autoShow={true} 
-      />
-      
-      {/* 📊 Dashboard específico según rol */}
-      {renderDashboard()}
-    </>
-  );
 }

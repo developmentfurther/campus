@@ -10,11 +10,12 @@ import {
   updateDoc,
   arrayUnion,
 } from "firebase/firestore";
-import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { db } from "@/lib/firebase";
 import Exercises, { Exercise } from "@/components/cursos/cursoItem/exercises/Exercises";
 import LessonItem from "@/components/cursos/cursoItem/LessonItem";
+import { useAdmin } from "@/contexts/AdminContext";
+
 
 // ─── Icons (inline SVG to avoid extra deps) ───────────────────────────────────
 const Icon = {
@@ -553,8 +554,8 @@ function ClosingEditor({
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function CrearMaterial({ onClose }: { onClose?: () => void }) {
-  const { firestore, reloadData, alumnos, alumnosRaw } = useAuth();
-  const dbToUse = firestore || db;
+  const { reloadData, alumnos, alumnosRaw } = useAdmin();
+
 
   // Core state
   const [material, setMaterial] = useState<MaterialState>(defaultMaterial());
@@ -766,7 +767,7 @@ const PAGE_SIZE = 50;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!dbToUse) return toast.error("DB no inicializada");
+    if (!db) return toast.error("DB no inicializada");
     if (!material.titulo.trim()) return toast.error("El título es obligatorio");
 
     try {
@@ -789,14 +790,14 @@ const PAGE_SIZE = 50;
         cursantes: material.cursantes.map((c) => c.toLowerCase().trim()),
       };
 
-      const docRef = await addDoc(collection(dbToUse, "cursos"), payload);
+      const docRef = await addDoc(collection(db, "cursos"), payload);
 
       // Assign to students
       if (payload.cursantes.length > 0) {
         for (const email of payload.cursantes) {
           let found = false;
           for (let i = 1; i <= 10 && !found; i++) {
-            const batchRef = doc(dbToUse, "alumnos", `batch_${i}`);
+            const batchRef = doc(db, "alumnos", `batch_${i}`);
             const snap = await getDoc(batchRef);
             if (!snap.exists()) continue;
             const data = snap.data();
@@ -809,7 +810,7 @@ const PAGE_SIZE = 50;
             }
           }
         }
-        await updateDoc(doc(dbToUse, "cursos", docRef.id), {
+        await updateDoc(doc(db, "cursos", docRef.id), {
           cursantes: arrayUnion(...payload.cursantes),
         });
       }
@@ -1005,7 +1006,7 @@ const selectSuggestion = (alumno: any) => {
   // ─────────────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40  p-4">
+    <div className="fixed inset-0 z-99999 flex items-center justify-center bg-black/40  p-4">
       <div className="relative w-full max-w-5xl max-h-[94vh] flex flex-col bg-slate-50 rounded-3xl shadow-2xl overflow-hidden border border-slate-200">
 
         {/* ── Header ── */}

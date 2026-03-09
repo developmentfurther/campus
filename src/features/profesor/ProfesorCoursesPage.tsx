@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useState, useMemo } from "react";
 import { FiBookOpen, FiClock, FiAward, FiArrowRight } from "react-icons/fi";
 import { useRouter } from "next/navigation";
+import { useProfesor } from "@/contexts/ProfesorContext";
 
 // MAPEO INVERSO: idiomaCurso (código corto) → idioma legible
 const idiomaDisplayMap: Record<string, string> = {
@@ -15,7 +16,8 @@ const idiomaDisplayMap: Record<string, string> = {
 };
 
 export default function ProfesorCoursesPage() {
-  const { allCursos, loadingAllCursos, userProfile } = useAuth();
+  const { allCursos, loadingAllCursos } = useProfesor();
+  const {userProfile} = useAuth();
   const router = useRouter();
 
   const [filterIdioma, setFilterIdioma] = useState("");

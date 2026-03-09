@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { X, PlayCircle, CheckCircle2, BookOpen } from "lucide-react";
-
+import { useAlumno } from "@/contexts/AlumnoContext";
 // 🎨 Paleta corporativa
 const COLORS = {
   darkBlue: "#0C212D",
@@ -25,12 +25,9 @@ export default function CoursePlayerVideoModal({
   autoShow = true,
   videoType = "youtube",
 }: CoursePlayerVideoModalProps) {
-  const {
-    hasSeenCoursePlayerVideo,
-    markCoursePlayerVideoAsSeen,
-    loadingCoursePlayerVideoStatus,
-    user,
-  } = useAuth();
+  const { user } = useAuth();
+const { hasSeenCoursePlayerVideo, markCoursePlayerVideoAsSeen } = useAlumno();
+const loadingCoursePlayerVideoStatus = false;
 
   const [isOpen, setIsOpen] = useState(false);
   const [videoEnded, setVideoEnded] = useState(false);

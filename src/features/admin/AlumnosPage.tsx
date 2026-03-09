@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@/contexts/AuthContext";
+import { useAdmin } from "@/contexts/AdminContext";
 import { useState, useMemo, useEffect } from "react";
 import {
   FiSearch,
@@ -19,7 +19,7 @@ import { db } from "@/lib/firebase";
 import { toast } from "sonner";
 
 export default function StudentsPage() {
-  const { alumnos, loading, reloadData } = useAuth();
+  const { alumnos, loadingAlumnos: loading, reloadData } = useAdmin();
 
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);

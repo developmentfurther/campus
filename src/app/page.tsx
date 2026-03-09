@@ -1,27 +1,31 @@
-'use client';
+"use client";
 
-//app/page.tsx
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+
+const ROLE_ROUTES = {
+  admin:    "/admin",
+  profesor: "/profesores",
+  alumno:   "/dashboard",
+} as const;
 
 export default function HomePage() {
-  const { user, authReady } = useAuth();
+  const { user, role, authReady } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!authReady) return;
 
     if (!user) {
-      // Usuario NO logueado → ir al login
-      router.replace('/login');
+      router.replace("/login");
       return;
     }
 
-    // Usuario logueado → ir al dashboard
-    router.replace('/dashboard');
-  }, [authReady, user, router]);
+    // Redirigir según rol. Fallback a /dashboard si el rol no está aún
+    const destination = role ? ROLE_ROUTES[role] : "/dashboard";
+    router.replace(destination);
+  }, [authReady, user, role, router]);
 
-  // No mostrar NADA en pantalla
   return null;
 }

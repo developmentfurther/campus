@@ -178,7 +178,17 @@ export default function MobileNavbarProfesor() {
 
 /* ===== COMPS AUXILIARES ===== */
 
-function MobileNavButton({ icon, label, active, onClick }) {
+function MobileNavButton({ 
+  icon, 
+  label, 
+  active, 
+  onClick 
+}: { 
+  icon: React.ReactNode; 
+  label: string; 
+  active: boolean; 
+  onClick: () => void; 
+})  {
   return (
     <button
       onClick={onClick}

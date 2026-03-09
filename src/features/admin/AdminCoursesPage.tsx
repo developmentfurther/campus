@@ -9,9 +9,10 @@ import { db } from "@/lib/firebase";
 import { FiBookOpen, FiPlus, FiEye, FiEdit3, FiTrash2, FiUsers, FiLayers } from "react-icons/fi";
 import EditCourseForm from "@/components/cursos/edit/EditCourseForm";
 import CrearMaterial from "@/components/cursos/crear/CreateCourse";
+import { useAdmin } from "@/contexts/AdminContext";
 
 export default function MaterialAcademico() {
-  const { allCursos, loadingAllCursos, reloadData } = useAuth();
+  const { allCursos, loadingAllCursos, reloadData } = useAdmin();
 
   const [selectedCourse, setSelectedCourse] = useState<any | null>(null);
   const [fullCourseData, setFullCourseData] = useState<any | null>(null);

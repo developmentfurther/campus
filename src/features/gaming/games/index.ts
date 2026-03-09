@@ -1,6 +1,6 @@
 import Hangman from "./Hangman";
 import EmojiIdioms from "./EmojiIdioms";
-import WordScramble from "./WordScramble";
+import WordScramble from "../WordScramble";
 import Wordle from "./Wordle";
 import SentenceBuilder from "./SentenceBuilder";
 import ErrorFinder from "./ErrorFinder";

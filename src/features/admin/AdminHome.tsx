@@ -1,6 +1,6 @@
 "use client";
 
-import { useDashboardUI } from "@/stores/useDashboardUI";
+import { useRouter } from "next/navigation";
 import {
   FiUsers,
   FiBookOpen,
@@ -14,7 +14,15 @@ import {
 } from "react-icons/fi";
 
 export default function AdminHome() {
-  const { setSection } = useDashboardUI();
+  const router = useRouter();
+  const ROUTES: Record<string, string> = {
+  alumnos:   "/admin/alumnos",
+  material:  "/admin/cursos",
+  profesores:"/admin/profesores",
+  anuncios:  "/admin/anuncios",
+  chatbot:   "/admin/chat",
+  perfil:    "/admin/perfil",
+};
 
   const cards = [
     {
@@ -147,7 +155,7 @@ export default function AdminHome() {
         {/* DASHBOARD CARDS */}
         <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
           {cards.map((c, i) => (
-            <AdminCard key={i} card={c} onClick={() => setSection(c.id)} index={i} />
+            <AdminCard key={i} card={c} onClick={() => router.push(ROUTES[c.id])} index={i} />
           ))}
         </section>
 
@@ -224,17 +232,9 @@ function AdminCard({ card, onClick, index }) {
 }
 
 // Animation keyframes
-const style = document.createElement('style');
-style.textContent = `
+<style>{`
   @keyframes fadeInUp {
-    from {
-      opacity: 0;
-      transform: translateY(30px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
   }
-`;
-document.head.appendChild(style);
+`}</style>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { X, PlayCircle, CheckCircle2, Sparkles } from "lucide-react";
+import { useAlumno } from "@/contexts/AlumnoContext";
 
 // 🎨 Paleta corporativa
 const COLORS = {
@@ -23,7 +24,9 @@ export default function WelcomeVideoModal({
   autoShow = true,
   videoType = "youtube", // Por defecto YouTube
 }: WelcomeVideoModalProps) {
-  const { hasSeenWelcomeVideo, markWelcomeVideoAsSeen, loadingVideoStatus, user } = useAuth();
+  const { user } = useAuth();
+const { hasSeenWelcomeVideo, markWelcomeVideoAsSeen } = useAlumno();
+const loadingVideoStatus = false; // ya no existe como loader separado
   const [isOpen, setIsOpen] = useState(false);
   const [videoEnded, setVideoEnded] = useState(false);
   const [isClosing, setIsClosing] = useState(false);

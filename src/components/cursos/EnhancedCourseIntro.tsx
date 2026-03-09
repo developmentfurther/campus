@@ -57,6 +57,25 @@ export const EnhancedCourseIntro = memo(function EnhancedCourseIntro({
     // Ocupa todo el espacio disponible en el main
     <div className="w-full h-full flex overflow-hidden bg-[#0C212D]">
 
+<style>{`
+      .course-intro-left::-webkit-scrollbar,
+      .course-intro-right::-webkit-scrollbar {
+        width: 4px;
+      }
+      .course-intro-left::-webkit-scrollbar-track,
+      .course-intro-right::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .course-intro-left::-webkit-scrollbar-thumb,
+      .course-intro-right::-webkit-scrollbar-thumb {
+        background: rgba(238, 114, 3, 0.2);
+        border-radius: 2px;
+      }
+      .course-intro-left::-webkit-scrollbar-thumb:hover,
+      .course-intro-right::-webkit-scrollbar-thumb:hover {
+        background: rgba(238, 114, 3, 0.4);
+      }
+    `}</style>
       {/* ══════════════════════════════════════════
           COLUMNA IZQUIERDA — Hero visual
       ══════════════════════════════════════════ */}
@@ -100,7 +119,8 @@ export const EnhancedCourseIntro = memo(function EnhancedCourseIntro({
         />
 
         {/* Contenido principal */}
-        <div className="relative flex-1 flex flex-col justify-between p-8 md:p-12 xl:p-14 overflow-y-auto">
+        <div className="relative flex-1 flex flex-col justify-between p-8 md:p-12 xl:p-14 overflow-y-auto course-intro-left">
+
 
           {/* Badge superior */}
           <motion.div
@@ -317,8 +337,7 @@ export const EnhancedCourseIntro = memo(function EnhancedCourseIntro({
           variants={containerVariants}
           initial="hidden"
           animate="show"
-          className="relative flex-1 overflow-y-auto px-10 pb-10 space-y-1"
-        >
+          className="relative flex-1 overflow-y-auto px-10 pb-10 space-y-1 course-intro-right">
           {previewLessons.map((lesson, idx) => (
             <motion.div
               key={lesson.key}

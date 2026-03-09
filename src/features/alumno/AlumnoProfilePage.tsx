@@ -10,9 +10,12 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import SuccessModal from "@/components/ui/SuccessModal";
 import { useI18n } from "@/contexts/I18nContext";
+import { useAlumno } from "@/contexts/AlumnoContext";
+
 
 export default function AlumnoProfilePage() {
-  const { user, userProfile, authReady, setUserProfile, tutorialsSeen, markTutorialAsSeen } = useAuth();
+  const { user, userProfile, authReady, setUserProfile } = useAuth(); 
+const { tutorialsSeen, markTutorialAsSeen } = useAlumno();  
   const { t } = useI18n();
 
   const [loading, setLoading] = useState(true);

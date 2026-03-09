@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { X, PlayCircle, CheckCircle2, MessageSquare } from "lucide-react";
 import { useI18n } from "@/contexts/I18nContext";
-
+import { useAlumno } from "@/contexts/AlumnoContext";
 // 🎨 Paleta corporativa
 const COLORS = {
   darkBlue: "#0C212D",
@@ -27,7 +27,10 @@ export default function ChatbotVideoModal({
   onClose, 
 }: ChatbotVideoModalProps) {
   const { t } = useI18n();
-  const { hasSeenChatbotVideo, markChatbotVideoAsSeen, loadingChatbotVideoStatus, user } = useAuth();
+ const { user } = useAuth();
+const { hasSeenChatbotVideo, markChatbotVideoAsSeen } = useAlumno();
+const loadingChatbotVideoStatus = false;
+
   const [isOpen, setIsOpen] = useState(false);
   const [videoEnded, setVideoEnded] = useState(false);
   const [isClosing, setIsClosing] = useState(false);

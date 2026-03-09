@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import Exercises, { Exercise } from "../cursoItem/exercises/Exercises";
 import LessonItem from "../cursoItem/LessonItem";
 import ContentTimelineEditor from "../cursoItem/Content/ContentTimeLineEditor";
+import { useAdmin } from "@/contexts/AdminContext";
+import { db } from "@/lib/firebase";
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const Icon = {
@@ -176,7 +178,10 @@ function JsonSectionImport({ hint, onLoad, validate }: {
 export default function EditCourseForm({
   courseId, initialData, loading, onClose,
 }: { courseId: string; initialData?: any; loading?: boolean; onClose?: () => void; }) {
-  const { firestore, alumnos, reloadData, alumnosRaw, userProfile } = useAuth();
+  const { alumnos, reloadData, alumnosRaw } = useAdmin();
+const { userProfile } = useAuth();
+
+
 
   const [curso, setCurso] = useState<Curso | null>(null);
   const [unidades, setUnidades] = useState<Unidad[]>([]);
@@ -202,19 +207,19 @@ const PAGE_SIZE = 50;
 
   // ── Persistencia de posición ───────────────────────────────────────────────
   useEffect(() => {
-    if (!selectedId || !userProfile?.batchId || !userProfile?.userKey || !firestore) return;
+    if (!selectedId || !userProfile?.batchId || !userProfile?.userKey || !db) return;
     const t = setTimeout(async () => {
-      try { await updateDoc(doc(firestore, "alumnos", userProfile.batchId), { [`${userProfile.userKey}.editingProgress.${courseId}`]: selectedId }); }
+      try { await updateDoc(doc(db, "alumnos", userProfile.batchId), { [`${userProfile.userKey}.editingProgress.${courseId}`]: selectedId }); }
       catch (e) { console.error(e); }
     }, 1500);
     return () => clearTimeout(t);
-  }, [selectedId, userProfile, firestore, courseId]);
+  }, [selectedId, userProfile, courseId]);
 
   useEffect(() => {
     const check = async () => {
-      if (!userProfile?.batchId || !userProfile?.userKey || !firestore || !contentTimeline.length) return;
+      if (!userProfile?.batchId || !userProfile?.userKey || !db || !contentTimeline.length) return;
       try {
-        const snap = await getDoc(doc(firestore, "alumnos", userProfile.batchId));
+        const snap = await getDoc(doc(db, "alumnos", userProfile.batchId));
         if (!snap.exists()) return;
         const lastId = (snap.data()[userProfile.userKey]?.editingProgress || {})[courseId];
         if (!lastId || lastId === selectedId) return;
@@ -486,16 +491,16 @@ const PAGE_SIZE = 50;
   // ── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!firestore || !curso) return toast.error("Sistema no listo");
+    if (!db || !curso) return toast.error("Sistema no listo");
     setUploading(true);
     try {
       const unidadesToSave = unidades.map(u => ({ id: u.id, titulo: u.titulo || "", descripcion: u.descripcion || "", introVideo: u.introVideo || "", urlImagen: u.urlImagen || "", textoCierre: u.textoCierre || "", lecciones: u.lecciones.map(l => ({ id: l.id, blocks: l.blocks || [] })), closing: u.closing || {} }));
       const cursantes = curso.cursantes?.map(e => e.toLowerCase().trim()).filter(Boolean) || [];
-      await updateDoc(doc(firestore, "cursos", courseId), { ...curso, unidades: unidadesToSave, examenFinal, capstone, contentTimeline, cursantes, updatedAt: serverTimestamp() });
+      await updateDoc(doc(db, "cursos", courseId), { ...curso, unidades: unidadesToSave, examenFinal, capstone, contentTimeline, cursantes, updatedAt: serverTimestamp() });
       for (const email of cursantes) {
         let found = false;
         for (let i = 1; i <= 10 && !found; i++) {
-          const bRef = doc(firestore, "alumnos", `batch_${i}`);
+          const bRef = doc(db, "alumnos", `batch_${i}`);
           const snap = await getDoc(bRef);
           if (!snap.exists()) continue;
           const d = snap.data();
@@ -541,7 +546,7 @@ const PAGE_SIZE = 50;
   }, [onClose, showSuccessModal, showExitModal]);
 
   if (loading || !curso) return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-99999 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-3xl p-10 text-center shadow-2xl">
         <div className="w-14 h-14 border-4 border-slate-200 border-t-slate-900 rounded-full animate-spin mx-auto mb-4" />
         <p className="text-sm text-slate-500 font-medium">Cargando material...</p>

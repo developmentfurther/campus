@@ -1,40 +1,47 @@
-// middleware.ts (en la raíz del proyecto, al lado de app/)
+// middleware.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  
-  console.log("🔍 Middleware ejecutándose en:", pathname);
-  
-  // Rutas que requieren 2FA
-  const requiresAdmin = pathname.startsWith('/dashboard');
-  const is2FAPage = pathname === '/2fa';
-  
-  // Si no es ruta protegida o es la página de 2FA, permitir
-  if (!requiresAdmin || is2FAPage) {
+
+  const role = request.cookies.get('user_role')?.value;
+  const has2FA = request.cookies.get('admin_2fa_valid')?.value === 'true';
+
+  // ── /admin ──────────────────────────────────────────────
+  if (pathname.startsWith('/admin')) {
+  if (role !== 'admin') return NextResponse.redirect(new URL('/login', request.url));
+  if (!has2FA) return NextResponse.redirect(new URL('/2fa', request.url));
+  return NextResponse.next();
+}
+
+  // ── /profesores ─────────────────────────────────────────
+  if (pathname.startsWith('/profesores')) {
+    if (role !== 'profesor' && role !== 'admin') {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
     return NextResponse.next();
   }
 
-  // Verificar cookie de 2FA
-  const has2FA = request.cookies.get('admin_2fa_valid')?.value === 'true';
-  
-  console.log("🍪 Cookie 2FA:", has2FA ? "✅ Válida" : "❌ No encontrada");
-  
-  // Si no tiene 2FA válido, redirigir
-  if (!has2FA) {
-    console.log("🚫 Redirigiendo a /2fa");
-    const url = new URL('/2fa', request.url);
-    return NextResponse.redirect(url);
+  // ── /dashboard ──────────────────────────────────────────
+  if (pathname.startsWith('/dashboard')) {
+    if (!role) return NextResponse.redirect(new URL('/login', request.url));
+
+    // Admin y profesor no deberían estar en /dashboard
+    if (role === 'admin') return NextResponse.redirect(new URL('/admin', request.url));
+    if (role === 'profesor') return NextResponse.redirect(new URL('/profesores', request.url));
+
+    return NextResponse.next();
   }
 
-  console.log("✅ Acceso permitido a dashboard");
   return NextResponse.next();
 }
 
 export const config = {
   matcher: [
     '/dashboard/:path*',
-    '/2fa'
-  ]
+    '/admin/:path*',
+    '/profesores/:path*',
+  ],
 };
