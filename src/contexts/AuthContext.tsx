@@ -7,7 +7,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { useI18n } from "@/contexts/I18nContext";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
-import { fetchUserFromBatchesByUid, addUserToBatch } from "@/lib/userBatches";
+import { fetchUserFromBatchesByUid } from "@/lib/userBatches";
 import { toast } from "sonner";
 
 interface AuthContextType {
@@ -67,10 +67,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           try {
             let p = await fetchUserFromBatchesByUid(firebaseUser.uid);
 
-            if (!p) {
-              await addUserToBatch(firebaseUser, "alumno");
-              p = await fetchUserFromBatchesByUid(firebaseUser.uid);
-            }
+            // if (!p) {
+            //   await addUserToBatch(firebaseUser, "alumno");
+            //   p = await fetchUserFromBatchesByUid(firebaseUser.uid);
+            // }
 
             if (p?.batchId) {
               const snap = await getDoc(doc(db, "alumnos", p.batchId));

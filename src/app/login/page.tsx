@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { signInWithEmailAndPassword /*, createUserWithEmailAndPassword*/ } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,12 +11,12 @@ import { FiMail, FiLock, FiArrowRight, FiZap, FiAlertCircle, FiCheckCircle } fro
 import LoaderUi from '@/components/ui/LoaderUi';
 import FancyBackground from '@/components/ui/FancyBackground';
 import Cookies from 'js-cookie';
-import { fetchUserFromBatchesByUid, addUserToBatch } from '@/lib/userBatches';
+import { fetchUserFromBatchesByUid /*, addUserToBatch*/ } from '@/lib/userBatches';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isRegister, setIsRegister] = useState(false);
+  // const [isRegister, setIsRegister] = useState(false); // 🔒 Registro deshabilitado — cuentas se crean desde n8n + API sync
   const [error, setError] = useState('');
   const [showBajaModal, setShowBajaModal] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -49,17 +49,18 @@ export default function LoginPage() {
     Cookies.remove("user_role");
 
     try {
-      if (isRegister) {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const newUser = userCredential.user;
-        await addUserToBatch(newUser, "alumno");
-        alert("Cuenta creada exitosamente. Ahora podés iniciar sesión.");
-        setIsRegister(false);
-        setEmail('');
-        setPassword('');
-        setLoading(false);
-        return;
-      }
+      // 🔒 REGISTRO DESHABILITADO — las cuentas se crean desde n8n + API sync
+      // if (isRegister) {
+      //   const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      //   const newUser = userCredential.user;
+      //   await addUserToBatch(newUser, "alumno");
+      //   alert("Cuenta creada exitosamente. Ahora podés iniciar sesión.");
+      //   setIsRegister(false);
+      //   setEmail('');
+      //   setPassword('');
+      //   setLoading(false);
+      //   return;
+      // }
 
       const validation = await validateUserStatus(email);
 
@@ -109,35 +110,35 @@ export default function LoginPage() {
     }
   };
 
- const handleReset = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setResetError('');
-  setResetLoading(true);
-  try {
-    const res = await fetch('/api/reset-password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: resetEmail }),
-    });
+  const handleReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetError('');
+    setResetLoading(true);
+    try {
+      const res = await fetch('/api/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: resetEmail }),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (!res.ok) {
-      if (data.error === "auth/user-not-found") {
-        setResetError("No existe una cuenta con ese correo.");
-      } else {
-        setResetError("Error al enviar el email. Intentá nuevamente.");
+      if (!res.ok) {
+        if (data.error === "auth/user-not-found") {
+          setResetError("No existe una cuenta con ese correo.");
+        } else {
+          setResetError("Error al enviar el email. Intentá nuevamente.");
+        }
+        return;
       }
-      return;
-    }
 
-    setResetSent(true);
-  } catch (err) {
-    setResetError("Error al enviar el email. Intentá nuevamente.");
-  } finally {
-    setResetLoading(false);
-  }
-};
+      setResetSent(true);
+    } catch (err) {
+      setResetError("Error al enviar el email. Intentá nuevamente.");
+    } finally {
+      setResetLoading(false);
+    }
+  };
 
   if (!authReady) {
     return (
@@ -158,7 +159,7 @@ export default function LoginPage() {
 
       {/* MODAL USUARIO DADO DE BAJA */}
       {showBajaModal && (
-        <div className="fixed inset-0 bg-black/60  flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl transform animate-scale-in">
             <div className="flex justify-center mb-4">
               <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
@@ -191,9 +192,8 @@ export default function LoginPage() {
 
       {/* MODAL RESET PASSWORD */}
       {showReset && (
-  <div className="fixed inset-0 bg-black/60  flex items-center justify-center z-50 p-4 animate-fade-in">
-    <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl animate-scale-in">
-
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl animate-scale-in">
             {resetSent ? (
               <div className="text-center">
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -286,7 +286,7 @@ export default function LoginPage() {
                 <div className="h-px w-12 bg-gradient-to-r from-transparent via-[#FF3816] to-transparent"></div>
               </div>
               <p className="text-gray-300 text-sm text-center font-medium">
-                {isRegister ? "Crea tu cuenta" : "Inicia sesión para continuar"}
+                Inicia sesión para continuar
               </p>
             </div>
           </div>
@@ -332,18 +332,7 @@ export default function LoginPage() {
                   />
                 </div>
 
-                {/* ¿Olvidaste tu contraseña? */}
-                {!isRegister && (
-                  <div className="text-right mt-2">
-                    <button
-                      type="button"
-                      onClick={() => { setShowReset(true); setResetEmail(email); setError(''); }}
-                      className="text-sm text-[#EE7203] hover:text-[#FF3816] font-semibold transition-colors"
-                    >
-                      ¿Olvidaste tu contraseña?
-                    </button>
-                  </div>
-                )}
+                
               </div>
 
               {/* Error */}
@@ -365,19 +354,34 @@ export default function LoginPage() {
                 {loading ? (
                   <div className="flex items-center gap-3 justify-center">
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    {isRegister ? "Creando cuenta..." : "Validando..."}
+                    Validando...
                   </div>
                 ) : (
                   <span className="flex items-center justify-center gap-2">
-                    {isRegister ? "Crear cuenta" : "Iniciar sesión"}
+                    Iniciar sesión
                     <FiArrowRight className="group-hover:translate-x-1 transition-transform" />
                   </span>
                 )}
               </button>
             </form>
 
-            {/* Toggle Login/Register */}
-            <div className="mt-6 text-center">
+            {/* ¿Olvidaste tu contraseña? — siempre visible */}
+                <div className="mt-6 text-center">
+  <button
+    type="button"
+    onClick={() => { setShowReset(true); setResetEmail(email); setError(''); }}
+    className="group inline-flex items-center gap-2 text-sm font-semibold text-[#EE7203] transition-all duration-300 hover:text-[#FF3816] hover:-translate-y-0.5"
+  >
+    <span className="relative">
+      ¿Olvidaste tu contraseña?
+      <span className="absolute left-0 -bottom-1 h-0.5 w-0 bg-gradient-to-r from-[#EE7203] to-[#FF3816] transition-all duration-300 group-hover:w-full"></span>
+    </span>
+    
+  </button>
+</div>
+
+            {/* 🔒 REGISTRO DESHABILITADO — las cuentas se crean desde n8n + API sync */}
+            {/* <div className="mt-6 text-center">
               <button
                 type="button"
                 onClick={() => { setIsRegister(!isRegister); setError(''); }}
@@ -390,7 +394,7 @@ export default function LoginPage() {
                 </span>
                 <FiArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
               </button>
-            </div>
+            </div> */}
 
             {/* Footer */}
             <div className="mt-8 text-center">
