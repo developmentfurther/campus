@@ -11,7 +11,7 @@ import { FiMail, FiLock, FiArrowRight, FiZap, FiAlertCircle, FiCheckCircle } fro
 import LoaderUi from '@/components/ui/LoaderUi';
 import FancyBackground from '@/components/ui/FancyBackground';
 import Cookies from 'js-cookie';
-import { fetchUserFromBatchesByUid /*, addUserToBatch*/ } from '@/lib/userBatches';
+// import { fetchUserFromBatchesByUid } from '@/lib/userBatches'; // 🔒 ya no se usa en login — AuthContext maneja el perfil
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -38,6 +38,13 @@ export default function LoginPage() {
       profesor: '/profesores',
       alumno:   '/dashboard',
     } as const;
+    // Setear cookie aquí, cuando role ya está confirmado por AuthContext
+    Cookies.set('user_role', role, {
+      expires: 7,
+      path: '/',
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+    });
     router.replace(ROLE_ROUTES[role] ?? '/dashboard');
   }, [authReady, user, role, router]);
 
@@ -76,19 +83,10 @@ export default function LoginPage() {
         return;
       }
 
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const profile = await fetchUserFromBatchesByUid(userCredential.user.uid);
-      const userRole = profile?.role ?? 'alumno';
-
-      Cookies.set('user_role', userRole, {
-        expires: 7,
-        path: '/',
-        sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production',
-      });
-
-      const ROLE_ROUTES = { admin: '/admin', profesor: '/profesores', alumno: '/dashboard' };
-      router.push(ROLE_ROUTES[userRole] ?? '/dashboard');
+      // signInWithEmailAndPassword dispara onAuthStateChanged en AuthContext,
+      // que carga el perfil, setea role y authReady=true.
+      // El useEffect de abajo escucha esos cambios y hace la redirección.
+      await signInWithEmailAndPassword(auth, email, password);
 
     } catch (err: any) {
       console.error("❌ Error en autenticación:", err);
@@ -331,8 +329,6 @@ export default function LoginPage() {
                     className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 rounded-xl text-sm font-medium focus:border-[#EE7203] focus:ring-4 focus:ring-[#EE7203]/10 outline-none transition-all hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
-
-                
               </div>
 
               {/* Error */}
@@ -365,21 +361,6 @@ export default function LoginPage() {
               </button>
             </form>
 
-            {/* ¿Olvidaste tu contraseña? — siempre visible */}
-                <div className="mt-6 text-center">
-  <button
-    type="button"
-    onClick={() => { setShowReset(true); setResetEmail(email); setError(''); }}
-    className="group inline-flex items-center gap-2 text-sm font-semibold text-[#EE7203] transition-all duration-300 hover:text-[#FF3816] hover:-translate-y-0.5"
-  >
-    <span className="relative">
-      ¿Olvidaste tu contraseña?
-      <span className="absolute left-0 -bottom-1 h-0.5 w-0 bg-gradient-to-r from-[#EE7203] to-[#FF3816] transition-all duration-300 group-hover:w-full"></span>
-    </span>
-    
-  </button>
-</div>
-
             {/* 🔒 REGISTRO DESHABILITADO — las cuentas se crean desde n8n + API sync */}
             {/* <div className="mt-6 text-center">
               <button
@@ -395,6 +376,22 @@ export default function LoginPage() {
                 <FiArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
               </button>
             </div> */}
+
+            {/* ¿Olvidaste tu contraseña? */}
+            <div className="mt-6 text-center">
+              <button
+                type="button"
+                onClick={() => { setShowReset(true); setResetEmail(email); setError(''); }}
+                disabled={loading}
+                className="group inline-flex items-center gap-2 text-[#0C212D] hover:text-[#EE7203] text-sm font-bold transition-colors disabled:opacity-50"
+              >
+                <span className="relative">
+                  ¿Olvidaste tu contraseña?
+                  <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-[#EE7203] to-[#FF3816] group-hover:w-full transition-all duration-300"></span>
+                </span>
+                <FiArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+              </button>
+            </div>
 
             {/* Footer */}
             <div className="mt-8 text-center">

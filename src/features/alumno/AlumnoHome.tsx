@@ -20,7 +20,7 @@ import {
   FiClock,
 } from "react-icons/fi";
 
-import { useRouter } from "next/navigation";
+
 import { useAlumno } from "@/contexts/AlumnoContext";
 
 export default function AlumnoHome() {
@@ -38,18 +38,12 @@ export default function AlumnoHome() {
   } = useAlumno();
 
   const { t, lang } = useI18n();
-const router = useRouter();
+
   const TUTORIAL_ID = "home";
 const shouldShowTutorial = !tutorialsSeen?.[TUTORIAL_ID];
+const { setSection } = useDashboardUI();
 
-const ROUTES: Record<string, string> = {
-  miscursos:      "/dashboard/cursos",
-  certificados:   "/dashboard/certificados",
-  gaming:         "/dashboard/gaming",
-  chatbot:        "/dashboard/chat",
-  "chat-history": "/dashboard/chat/historial",
-  perfil:         "/dashboard/perfil",
-};
+
   const localeMap: Record<string, string> = {
     es: "es-ES",
     en: "en-US",
@@ -256,7 +250,7 @@ if (!userProfile || !allDataLoaded || loadingCursos || loadingActivity || loadin
     <QuickAccessCard 
       key={link.id} 
       link={link} 
-      onClick={() => router.push(ROUTES[link.id])}onClick={() => setSection(link.id)}
+      onClick={() => setSection(link.id)}
       data-tutorial={index === 0 ? "quick-access-card" : undefined}
     />
   ))}
