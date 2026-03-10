@@ -2,8 +2,15 @@
 
 import { useDashboardUI } from "@/stores/useDashboardUI";
 import {
-  FiUsers, FiBookOpen, FiBell, FiActivity,
-  FiCalendar, FiMessageCircle, FiUser, FiArrowRight, FiShield,
+  FiUsers,
+  FiBookOpen,
+  FiBell,
+  FiActivity,
+  FiCalendar,
+  FiMessageCircle,
+  FiUser,
+  FiArrowRight,
+  FiShield,
 } from "react-icons/fi";
 
 export default function AdminHome() {
@@ -69,8 +76,8 @@ export default function AdminHome() {
           <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-[#EE7203] to-[#FF3816] opacity-10 rounded-full blur-3xl -mr-48 -mt-48"></div>
           <div className="absolute bottom-0 left-0 w-72 h-72 bg-[#FF3816] opacity-10 rounded-full blur-3xl -ml-36 -mb-36"></div>
           <div className="absolute inset-0 opacity-5" style={{
-            backgroundImage: "radial-gradient(circle, #EE7203 1px, transparent 1px)",
-            backgroundSize: "24px 24px",
+            backgroundImage: 'radial-gradient(circle, #EE7203 1px, transparent 1px)',
+            backgroundSize: '24px 24px'
           }}></div>
 
           <div className="relative z-10 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8">
@@ -79,14 +86,16 @@ export default function AdminHome() {
                 <FiShield size={16} className="text-white" />
                 <span className="text-xs font-black uppercase tracking-wider text-white">Admin Panel</span>
               </div>
+
               <div className="flex items-center gap-3 mb-6">
                 <div className="flex gap-1.5">
                   <div className="w-2 h-2 bg-[#EE7203] rounded-full animate-pulse"></div>
-                  <div className="w-2 h-2 bg-[#FF3816] rounded-full animate-pulse" style={{ animationDelay: "0.2s" }}></div>
-                  <div className="w-2 h-2 bg-[#EE7203] rounded-full animate-pulse" style={{ animationDelay: "0.4s" }}></div>
+                  <div className="w-2 h-2 bg-[#FF3816] rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
+                  <div className="w-2 h-2 bg-[#EE7203] rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></div>
                 </div>
                 <div className="h-px flex-1 bg-gradient-to-r from-[#EE7203] via-[#FF3816] to-transparent max-w-md"></div>
               </div>
+
               <h1 className="text-4xl md:text-6xl font-black mb-4 bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent leading-tight">
                 Admin Dashboard
               </h1>
@@ -107,7 +116,9 @@ export default function AdminHome() {
                   </div>
                   <p className="text-xl font-black text-white">
                     {new Date().toLocaleDateString("en-US", {
-                      weekday: "long", month: "short", day: "numeric",
+                      weekday: "long",
+                      month: "short",
+                      day: "numeric",
                     })}
                   </p>
                 </div>
@@ -123,7 +134,7 @@ export default function AdminHome() {
           <div className="flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent"></div>
         </div>
 
-        {/* CARDS */}
+        {/* DASHBOARD CARDS */}
         <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
           {cards.map((c, i) => (
             <AdminCard key={c.id} card={c} onClick={() => setSection(c.id)} index={i} />
@@ -157,17 +168,27 @@ function AdminCard({
     <button
       onClick={onClick}
       className="group relative bg-white rounded-2xl p-7 shadow-sm hover:shadow-2xl transition-all duration-500 border-2 border-gray-100 hover:border-[#EE7203]/30 overflow-hidden text-left hover:-translate-y-2"
-      style={{ animation: "fadeInUp 0.5s ease-out forwards", animationDelay: `${index * 0.1}s`, opacity: 0 }}
+      style={{
+        animation: 'fadeInUp 0.5s ease-out forwards',
+        animationDelay: `${index * 0.1}s`,
+        opacity: 0
+      }}
     >
       <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`}></div>
+
       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
         <div className="absolute top-0 -left-full h-full w-1/2 bg-gradient-to-r from-transparent via-white to-transparent opacity-20 group-hover:left-full transition-all duration-1000"></div>
+      </div>
+
+      <div className="absolute top-0 right-0 w-32 h-32 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+        <div className="absolute inset-0 bg-gradient-to-bl from-white/10 to-transparent rounded-full transform translate-x-16 -translate-y-16"></div>
       </div>
 
       <div className="relative z-10">
         <div className={`bg-gradient-to-br ${card.gradient} w-16 h-16 rounded-2xl flex items-center justify-center text-white mb-6 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300 shadow-xl`}>
           {card.icon}
         </div>
+
         <div className="space-y-3 mb-6">
           <h3 className="font-black text-[#0C212D] text-2xl group-hover:text-white transition-colors duration-300">
             {card.label}
@@ -179,6 +200,7 @@ function AdminCard({
             {card.extra}
           </p>
         </div>
+
         <div className="flex items-center text-[#EE7203] text-sm font-bold group-hover:text-white transition-colors duration-300 pt-4 border-t-2 border-gray-100 group-hover:border-white/20">
           <span className="group-hover:mr-2 transition-all duration-300">Access Module</span>
           <FiArrowRight className="opacity-0 group-hover:opacity-100 transform group-hover:translate-x-1 transition-all duration-300" />
@@ -188,14 +210,16 @@ function AdminCard({
       <div className={`absolute bottom-0 left-0 right-0 h-1.5 bg-gradient-to-r ${card.gradient} transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left`}></div>
     </button>
   );
-  
 }
-// Animation keyframes
-const style = document.createElement("style");
-style.textContent = `
-  @keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(30px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-`;
-if (typeof document !== "undefined") document.head.appendChild(style);
+
+// Animation keyframes — solo se inyecta en el cliente, nunca en el servidor
+if (typeof document !== "undefined") {
+  const style = document.createElement("style");
+  style.textContent = `
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  `;
+  document.head.appendChild(style);
+}
