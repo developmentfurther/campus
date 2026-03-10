@@ -80,9 +80,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }
 
             const resolvedRole = p?.role || "alumno";
-            setRole(resolvedRole);
-            setUserProfile(p);
-            setLang(resolvedRole === "profesor" ? "en" : p?.learningLanguage || "en");
+            const normalizedProfile = {
+  ...p,
+  learningLanguages: p?.learningLanguages?.length
+    ? p.learningLanguages
+    : p?.learningLanguage
+      ? [p.learningLanguage]
+      : ["en"],
+  activeLanguage: p?.activeLanguage || p?.learningLanguage || "en",
+  learningLevel: p?.learningLevel || "A1",  // ✅ default
+  firstName: p?.firstName || "",
+  lastName: p?.lastName || "",
+};
+
+setRole(resolvedRole);
+setUserProfile(normalizedProfile);
+setLang(resolvedRole === "profesor" ? "en" : normalizedProfile.activeLanguage);
 
           } catch (err) {
             console.error("❌ Error cargando perfil:", err);

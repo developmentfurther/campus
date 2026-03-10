@@ -3,8 +3,7 @@ import { db } from "./firebase";
 import { BatchUser, Role, UserProfile } from "@/types/auth";
 import { User } from "firebase/auth";
 
-const MAX_USERS_PER_BATCH = 200;
-const MAX_BATCHES = 10;
+const MAX_USERS_PER_BATCH = 100;
 const USER_KEY_PREFIX = "user_";
 
 
@@ -25,15 +24,14 @@ export const addUserToBatch = async (firebaseUser: User, role: Role = "alumno") 
     const batchesSnapshot = await getDocs(alumnosRef);
 
     const batches: { id: string; data: Record<string, any> }[] = [];
-   batchesSnapshot.forEach((docSnap) => {
-  const id = docSnap.id;
-  // ✅ Solo considerar documentos que sigan el patrón "batch_X"
-  if (id.startsWith("batch_")) {
-    batches.push({ id, data: docSnap.data() });
-  } else {
-    console.warn(`⚠️ Documento ignorado: ${id} (no es un batch válido)`);
-  }
-});
+    batchesSnapshot.forEach((docSnap) => {
+      const id = docSnap.id;
+      if (id.startsWith("batch_")) {
+        batches.push({ id, data: docSnap.data() });
+      } else {
+        console.warn(`⚠️ Documento ignorado: ${id} (no es un batch válido)`);
+      }
+    });
 
     console.log(`📊 Cantidad de batches encontrados: ${batches.length}`);
 
@@ -48,8 +46,13 @@ export const addUserToBatch = async (firebaseUser: User, role: Role = "alumno") 
       }
     }
 
-    // 2️⃣ Buscar batch con espacio libre
-    batches.sort((a, b) => parseInt(a.id.replace("batch_", "")) - parseInt(b.id.replace("batch_", "")));
+    // 2️⃣ Buscar batch con espacio libre (ordenado por número)
+    batches.sort((a, b) => {
+      const numA = parseInt(a.id.replace("batch_", ""));
+      const numB = parseInt(b.id.replace("batch_", ""));
+      return numA - numB;
+    });
+
     let targetBatchId: string | null = null;
     let nextSlot = 0;
 
@@ -66,28 +69,33 @@ export const addUserToBatch = async (firebaseUser: User, role: Role = "alumno") 
 
     // 3️⃣ Crear nuevo batch si no hay espacio
     if (!targetBatchId) {
-      const newBatchIndex = batches.length + 1;
-      targetBatchId = `batch_${newBatchIndex}`;
+      const lastBatch = batches[batches.length - 1];
+      const lastNum = lastBatch ? parseInt(lastBatch.id.replace("batch_", "")) : 0;
+      const newNum = String(lastNum + 1).padStart(3, "0");
+      targetBatchId = `batch_${newNum}`;
       console.log(`🆕 Creando nuevo batch: ${targetBatchId}`);
       await setDoc(doc(db, "alumnos", targetBatchId), {});
     }
 
-    // 4️⃣ Crear usuario
-    const userKey = `${USER_KEY_PREFIX}${nextSlot}`;
+    // 4️⃣ Crear usuario con userKey con padding
+    const userKey = `${USER_KEY_PREFIX}${String(nextSlot).padStart(3, "0")}`;
     const newUser: BatchUser = {
-      uid: firebaseUser.uid,
-      email: firebaseUser.email,
-      role,
-      batchId: targetBatchId,
-      createdAt: new Date().toISOString(),
-      cursosAdquiridos: [],
-      progreso: {}, 
-      active: true,
-    };
+  uid: firebaseUser.uid,
+  email: firebaseUser.email,
+  role,
+  batchId: targetBatchId,
+  userKey: userKey,
+  createdAt: new Date().toISOString(),
+  cursosAdquiridos: [],
+  progreso: {},
+  active: true,
+  learningLanguages: ["en"],
+  activeLanguage: "en",
+  learningLevel: "A1",
+};
 
     console.log("🧩 Usuario a guardar:", newUser);
 
-    // 5️⃣ Guardar correctamente en Firestore (sin campo basura)
     const batchRef = doc(db, "alumnos", targetBatchId);
     await setDoc(batchRef, { [userKey]: newUser }, { merge: true });
 
@@ -99,29 +107,25 @@ export const addUserToBatch = async (firebaseUser: User, role: Role = "alumno") 
 
 
 /* =========================================================
-   🔹 fetchUserFromBatchesByUid — busca usuario por UID (login)
+   🔹 fetchUserFromBatchesByUid — busca usuario por UID
    ========================================================= */
-export const fetchUserFromBatchesByUid = async (
-  uid: string
-): Promise<UserProfile | null> => {
+export const fetchUserFromBatchesByUid = async (uid: string): Promise<UserProfile | null> => {
   console.log(`🔍 Buscando usuario con UID ${uid} en batches...`);
-  for (let i = 1; i <= MAX_BATCHES; i++) {
-    const ref = doc(db, "alumnos", `batch_${i}`);
-    const snap = await getDoc(ref);
-    if (!snap.exists()) continue;
+  const snap = await getDocs(collection(db, "alumnos"));
 
-    const data = snap.data();
+  for (const batchDoc of snap.docs) {
+    if (!batchDoc.id.startsWith("batch_")) continue;
+    const data = batchDoc.data();
     for (const key in data) {
-      const user = data[key];
-      if (key.startsWith(USER_KEY_PREFIX) && user?.uid === uid) {
-        console.log(`✅ Usuario encontrado en alumnos/batch_${i}/${key}`);
+      if (key.startsWith(USER_KEY_PREFIX) && data[key]?.uid === uid) {
+        console.log(`✅ Usuario encontrado en alumnos/${batchDoc.id}/${key}`);
         return {
-          uid: user.uid,
-          email: user.email,
-          role: user.role,
-          batchId: `batch_${i}`,
+          uid: data[key].uid,
+          email: data[key].email,
+          role: data[key].role,
+          batchId: batchDoc.id,
           userKey: key,
-          active: user.active ?? true,
+          active: data[key].active ?? true,
         };
       }
     }
@@ -132,32 +136,26 @@ export const fetchUserFromBatchesByUid = async (
 };
 
 
-
-
 /* =========================================================
-   🔹 fetchUserFromBatches — busca usuario por EMAIL (enrolamiento)
+   🔹 fetchUserFromBatches — busca usuario por EMAIL
    ========================================================= */
-export const fetchUserFromBatches = async (
-  email: string
-): Promise<UserProfile | null> => {
+export const fetchUserFromBatches = async (email: string): Promise<UserProfile | null> => {
   console.log(`🔍 Buscando usuario con EMAIL ${email} en batches...`);
-  for (let i = 1; i <= MAX_BATCHES; i++) {
-    const ref = doc(db, "alumnos", `batch_${i}`);
-    const snap = await getDoc(ref);
-    if (!snap.exists()) continue;
+  const snap = await getDocs(collection(db, "alumnos"));
 
-    const data = snap.data();
+  for (const batchDoc of snap.docs) {
+    if (!batchDoc.id.startsWith("batch_")) continue;
+    const data = batchDoc.data();
     for (const key in data) {
-      const user = data[key];
-      if (key.startsWith(USER_KEY_PREFIX) && user?.email === email) {
-        console.log(`✅ Usuario encontrado en alumnos/batch_${i}/${key}`);
+      if (key.startsWith(USER_KEY_PREFIX) && data[key]?.email === email) {
+        console.log(`✅ Usuario encontrado en alumnos/${batchDoc.id}/${key}`);
         return {
-          uid: user.uid,
-          email: user.email,
-          role: user.role,
-          batchId: `batch_${i}`,
-          userKey: key, 
-          active: user.active ?? true,
+          uid: data[key].uid,
+          email: data[key].email,
+          role: data[key].role,
+          batchId: batchDoc.id,
+          userKey: key,
+          active: data[key].active ?? true,
         };
       }
     }
@@ -173,11 +171,11 @@ export const fetchUserFromBatches = async (
    ========================================================= */
 export const fetchAllUsers = async (): Promise<UserProfile[]> => {
   console.log("📦 [fetchAllUsers] Cargando todos los usuarios desde batches...");
-  const alumnosRef = collection(db, "alumnos");
-  const snap = await getDocs(alumnosRef);
+  const snap = await getDocs(collection(db, "alumnos"));
 
   const allUsers: UserProfile[] = [];
   snap.forEach((batchDoc) => {
+    if (!batchDoc.id.startsWith("batch_")) return;
     const data = batchDoc.data();
     for (const key in data) {
       if (key.startsWith(USER_KEY_PREFIX)) {
@@ -197,21 +195,21 @@ export const fetchAllUsers = async (): Promise<UserProfile[]> => {
   return allUsers;
 };
 
+
 /* =========================================================
    🔹 updateUserRole — actualiza rol dentro de su batch
    ========================================================= */
 export const updateUserRole = async (uid: string, newRole: Role) => {
   console.log(`🎭 [updateUserRole] Buscando UID ${uid} para rol ${newRole}`);
-  const alumnosRef = collection(db, "alumnos");
-  const snap = await getDocs(alumnosRef);
+  const snap = await getDocs(collection(db, "alumnos"));
 
   for (const batchDoc of snap.docs) {
+    if (!batchDoc.id.startsWith("batch_")) continue;
     const data = batchDoc.data();
     for (const key in data) {
       if (key.startsWith(USER_KEY_PREFIX) && data[key].uid === uid) {
-        const userPath = `${key}.role`;
         await updateDoc(doc(db, "alumnos", batchDoc.id), {
-          [userPath]: newRole,
+          [`${key}.role`]: newRole,
         });
         console.log(`✅ [updateUserRole] Rol actualizado para ${uid}`);
         return;
@@ -222,10 +220,13 @@ export const updateUserRole = async (uid: string, newRole: Role) => {
   console.warn("⚠️ [updateUserRole] Usuario no encontrado en ningún batch.");
 };
 
+
+/* =========================================================
+   🔹 enrollUserInCourse — asigna curso a usuario por email
+   ========================================================= */
 export const enrollUserInCourse = async (email: string, courseId: string) => {
   console.log(`🎓 Enrolando usuario ${email} en curso ${courseId}`);
   try {
-    // Buscar al usuario por email
     const userProfile = await fetchUserFromBatches(email);
     if (!userProfile) {
       console.warn(`⚠️ No se encontró el usuario ${email} en ningún batch`);
@@ -240,7 +241,6 @@ export const enrollUserInCourse = async (email: string, courseId: string) => {
     }
 
     const data = snap.data();
-    // Encontrar la key (user_0, user_1, etc.) que corresponde a este email
     const userKey = Object.keys(data).find(
       (key) => key.startsWith("user_") && data[key]?.email === email
     );
@@ -250,10 +250,8 @@ export const enrollUserInCourse = async (email: string, courseId: string) => {
       return;
     }
 
-    // Agregar el curso al array cursosAdquiridos (lo crea si no existe)
-    const path = `${userKey}.cursosAdquiridos`;
     await updateDoc(batchRef, {
-      [path]: arrayUnion(courseId),
+      [`${userKey}.cursosAdquiridos`]: arrayUnion(courseId),
     });
 
     console.log(`✅ Curso ${courseId} asignado a ${email} (${userKey} en ${userProfile.batchId})`);
@@ -262,19 +260,21 @@ export const enrollUserInCourse = async (email: string, courseId: string) => {
   }
 };
 
-// Función para activar o desactivar alumnos desde admin
+
+/* =========================================================
+   🔹 updateUserActive — activa o desactiva usuario
+   ========================================================= */
 export const updateUserActive = async (uid: string, state: boolean) => {
   console.log(`🟢 [updateUserActive] Cambiando estado de ${uid} a ${state}`);
-  const alumnosRef = collection(db, "alumnos");
-  const snap = await getDocs(alumnosRef);
+  const snap = await getDocs(collection(db, "alumnos"));
 
   for (const batchDoc of snap.docs) {
+    if (!batchDoc.id.startsWith("batch_")) continue;
     const data = batchDoc.data();
     for (const key in data) {
       if (key.startsWith(USER_KEY_PREFIX) && data[key].uid === uid) {
-        const userPath = `${key}.active`;
         await updateDoc(doc(db, "alumnos", batchDoc.id), {
-          [userPath]: state,
+          [`${key}.active`]: state,
         });
         console.log(`✅ [updateUserActive] Estado actualizado para ${uid}`);
         return;

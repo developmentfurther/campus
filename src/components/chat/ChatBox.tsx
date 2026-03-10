@@ -13,7 +13,8 @@ import { useI18n } from "@/contexts/I18nContext";
 import ChatbotVideoModal from "@/components/ui/ChatbotVideoModal";
 import ChatboxTutorial from "./ChatboxTutorial";
 import { useChat } from "@/contexts/ChatContext";
-import TopicSelector, { TOPICS, Topic } from "./TopicSelector"; // 👈 NUEVO
+import TopicSelector, { TOPICS, Topic } from "./TopicSelector";
+import { useAlumno } from "@/contexts/AlumnoContext";
 
 const DAILY_MESSAGE_LIMIT = 6;
 
@@ -24,13 +25,10 @@ function formatMarkdown(text: string) {
     .replace(/\*(.*?)\*/g, "<em>$1</em>");
 }
 
-// ✅ El mensaje inicial ahora depende del topic seleccionado
 const getInitialMessage = (language: string, topic: Topic | null): string => {
-  if (!topic) return ""; // No hay mensaje hasta que se elija tema
-
+  if (!topic) return "";
   const isEs = ["es", "spanish"].includes(language?.toLowerCase());
   const topicName = isEs ? topic.labelEs : topic.label;
-
   const map: Record<string, Record<string, string>> = {
     english: {
       travel: "Hi! Let's talk about travel! Have you been anywhere exciting lately, or do you have a dream destination in mind? ✈️",
@@ -53,7 +51,6 @@ const getInitialMessage = (language: string, topic: Topic | null): string => {
       business: "¡Hola! Vamos a hablar de negocios. ¿Trabajás en una empresa o alguna vez pensaste en tener tu propio emprendimiento? 📈",
     },
   };
-
   const langKey = ["es", "spanish"].includes(language?.toLowerCase()) ? "spanish" : "english";
   return map[langKey]?.[topic.id] ?? `Hi! Let's talk about ${topicName}!`;
 };
@@ -75,32 +72,25 @@ interface Message {
 }
 
 export default function ChatBox() {
-  const { userProfile, user, hasSeenChatbotTutorial, loadingChatbotTutorialStatus } = useAuth();
-  const { t } = useI18n();
+  const { userProfile, user } = useAuth();
+  const { hasSeenChatbotTutorial, loadingChatbotTutorialStatus } = useAlumno();
+  const { t, lang } = useI18n();
   const { messages, setMessages } = useChat();
 
-  const rawLang = userProfile?.learningLanguage?.toLowerCase() || "en";
-  const language = languageKeyMap[rawLang] ?? "english";
-  const level = userProfile?.learningLevel;
-
-  // 🎯 NUEVO: estado del topic
+  // ✅ TODOS los hooks primero
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
   const [showTopicSelector, setShowTopicSelector] = useState(false);
-
-  if (!userProfile) {
-    return <div className="p-6 text-gray-500 text-center">{t("chat.loadingProfile")}</div>;
-  }
-  if (!language || !level) {
-    return <div className="p-6 text-gray-500 text-center">{t("chat.incompleteProfile")}</div>;
-  }
-
-  // Estado del chat
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [isProcessingAudio, setIsProcessingAudio] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [videoFinished, setVideoFinished] = useState(false);
+  const [messageCount, setMessageCount] = useState(0);
+  const [isLimitReached, setIsLimitReached] = useState(false);
+  const [limitReason, setLimitReason] = useState<"count" | "summary" | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -108,46 +98,13 @@ export default function ChatBox() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputContainerRef = useRef<HTMLDivElement>(null);
 
-  const [showTutorial, setShowTutorial] = useState(false);
-  const [videoFinished, setVideoFinished] = useState(false);
+  // ✅ Variables derivadas
+  const rawLang = lang || "en";
+  const language = languageKeyMap[rawLang] ?? "english";
+  const level = userProfile?.learningLevel || "A1";
+  const isEs = ["es", "spanish"].includes(rawLang);
 
-  const [messageCount, setMessageCount] = useState(0);
-  const [isLimitReached, setIsLimitReached] = useState(false);
-  const [limitReason, setLimitReason] = useState<"count" | "summary" | null>(null);
-
-  /* =============================================
-     🎯 SELECCIÓN DE TOPIC
-  ============================================= */
-  const handleTopicSelect = (topic: Topic) => {
-    setSelectedTopic(topic);
-    setShowTopicSelector(false);
-
-    // Si es un cambio de tema (ya había mensajes), agregar mensaje de transición
-    if (messages.length > 1) {
-      const isEs = ["es", "spanish"].includes(rawLang);
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: isEs
-            ? `¡Genial! Cambiamos de tema. Ahora vamos a hablar de <strong>${topic.labelEs}</strong> ${topic.emoji}`
-            : `Great! Let's switch topics. Now we'll talk about <strong>${topic.label}</strong> ${topic.emoji}`,
-        },
-      ]);
-    } else {
-      // Primera vez: setear mensaje inicial del topic
-      setMessages([
-        {
-          role: "assistant",
-          content: getInitialMessage(rawLang, topic),
-        },
-      ]);
-    }
-  };
-
-  /* =============================================
-     🔥 VERIFICAR USO AL CARGAR
-  ============================================= */
+  // ✅ TODOS los useEffect antes de cualquier return
   useEffect(() => {
     const checkDailyUsage = async () => {
       if (!user) return;
@@ -174,6 +131,46 @@ export default function ChatBox() {
     checkDailyUsage();
   }, [user]);
 
+  useEffect(() => {
+    if (videoFinished && !loadingChatbotTutorialStatus && userProfile && !hasSeenChatbotTutorial) {
+      setShowTutorial(true);
+    }
+  }, [videoFinished, userProfile, hasSeenChatbotTutorial, loadingChatbotTutorialStatus]);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isTyping]);
+
+  useEffect(() => {
+    return () => { if (recordingTimerRef.current) clearInterval(recordingTimerRef.current); };
+  }, []);
+
+  // ✅ Early returns DESPUÉS de todos los hooks
+  if (!userProfile) {
+    return <div className="p-6 text-gray-500 text-center">{t("chat.loadingProfile")}</div>;
+  }
+
+  /* =============================================
+     🎯 SELECCIÓN DE TOPIC
+  ============================================= */
+  const handleTopicSelect = (topic: Topic) => {
+    setSelectedTopic(topic);
+    setShowTopicSelector(false);
+    if (messages.length > 1) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: isEs
+            ? `¡Genial! Cambiamos de tema. Ahora vamos a hablar de <strong>${topic.labelEs}</strong> ${topic.emoji}`
+            : `Great! Let's switch topics. Now we'll talk about <strong>${topic.label}</strong> ${topic.emoji}`,
+        },
+      ]);
+    } else {
+      setMessages([{ role: "assistant", content: getInitialMessage(rawLang, topic) }]);
+    }
+  };
+
   const incrementUsage = (): boolean => {
     const newCount = messageCount + 1;
     setMessageCount(newCount);
@@ -194,44 +191,16 @@ export default function ChatBox() {
     await persistUsage(messageCount, true);
   };
 
-  useEffect(() => {
-    if (videoFinished && !loadingChatbotTutorialStatus && userProfile && !hasSeenChatbotTutorial) {
-      setShowTutorial(true);
-    }
-  }, [videoFinished, userProfile, hasSeenChatbotTutorial, loadingChatbotTutorialStatus]);
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isTyping]);
-
-  useEffect(() => {
-    return () => { if (recordingTimerRef.current) clearInterval(recordingTimerRef.current); };
-  }, []);
-
-  /* =============================================
-     💾 Guardar sesión
-  ============================================= */
   const saveConversationToFirestore = async (summary: any) => {
     if (!user) return;
     const sessionId = Date.now().toString();
     await setDoc(
       doc(db, "conversaciones", user.uid, "sessions", sessionId),
-      {
-        userId: user.uid,
-        language,
-        level,
-        topic: selectedTopic?.id ?? null,    // 👈 guardar el topic también
-        summary,
-        startedAt: serverTimestamp(),
-        endedAt: serverTimestamp(),
-      },
+      { userId: user.uid, language, level, topic: selectedTopic?.id ?? null, summary, startedAt: serverTimestamp(), endedAt: serverTimestamp() },
       { merge: true }
     );
   };
 
-  /* =============================================
-     🔍 Analizar errores
-  ============================================= */
   const analyzeMessage = async (messageText: string) => {
     try {
       const res = await fetch("/api/chat/analyze", {
@@ -244,23 +213,16 @@ export default function ChatBox() {
     } catch (err) { return []; }
   };
 
-  /* =============================================
-     🚀 ENVIAR MENSAJE — pasa el topic al API
-  ============================================= */
   const handleSend = async () => {
     if (!input.trim() || isLimitReached) return;
-
     const userMsg: Message = { role: "user", content: input, corrections: [] };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     const userMessageIndex = newMessages.length - 1;
-
     setInput("");
     setIsTyping(true);
     setIsAnalyzing(true);
-
     const shouldLock = incrementUsage();
-
     analyzeMessage(input).then((corrections) => {
       setMessages((prev) => {
         const updated = [...prev];
@@ -269,39 +231,22 @@ export default function ChatBox() {
       });
       setIsAnalyzing(false);
     });
-
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: newMessages,
-          level,
-          language,
-          topicPrompt: selectedTopic?.systemPrompt ?? null, // 👈 NUEVO: pasar topic al API
-        }),
+        body: JSON.stringify({ messages: newMessages, level, language, topicPrompt: selectedTopic?.systemPrompt ?? null }),
       });
-
       if (!res.body) throw new Error("No stream received");
-
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
-      let partial = "";
-      let assistantAdded = false;
-
+      let partial = ""; let assistantAdded = false;
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         partial += decoder.decode(value, { stream: true });
-        if (!assistantAdded) {
-          assistantAdded = true;
-          setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
-        }
-        setMessages((prev) => {
-          const updated = [...prev];
-          updated[updated.length - 1] = { role: "assistant", content: partial };
-          return updated;
-        });
+        if (!assistantAdded) { assistantAdded = true; setMessages((prev) => [...prev, { role: "assistant", content: "" }]); }
+        setMessages((prev) => { const updated = [...prev]; updated[updated.length - 1] = { role: "assistant", content: partial }; return updated; });
       }
     } catch (err) {
       console.error("🔥 Streaming error:", err);
@@ -309,10 +254,7 @@ export default function ChatBox() {
       setIsTyping(false);
       if (shouldLock) {
         setTimeout(() => {
-          setMessages((prev) => [...prev, {
-            role: "assistant",
-            content: "¡Has alcanzado tu límite diario! Has hecho un gran trabajo. Descansa y vuelve mañana. 👋",
-          }]);
+          setMessages((prev) => [...prev, { role: "assistant", content: "¡Has alcanzado tu límite diario! Has hecho un gran trabajo. Descansa y vuelve mañana. 👋" }]);
           setLimitReason("count");
           setIsLimitReached(true);
           persistUsage(messageCount + 1, false);
@@ -321,9 +263,6 @@ export default function ChatBox() {
     }
   };
 
-  /* =============================================
-     🎤 AUDIO
-  ============================================= */
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -361,13 +300,7 @@ export default function ChatBox() {
       const response = await fetch("/api/chat/voice", { method: "POST", body: formData });
       const data = await response.json();
       if (data.error) throw new Error(data.error);
-      const userMsg: Message = {
-        role: "user",
-        content: data.transcription || "[Audio message]",
-        corrections: data.corrections || [],
-        pronunciation: data.pronunciation || null,
-        isAudio: true,
-      };
+      const userMsg: Message = { role: "user", content: data.transcription || "[Audio message]", corrections: data.corrections || [], pronunciation: data.pronunciation || null, isAudio: true };
       const newMessages = [...messages, userMsg];
       setMessages(newMessages);
       setIsTyping(true);
@@ -400,9 +333,6 @@ export default function ChatBox() {
 
   const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 
-  /* =============================================
-     🧾 FINALIZAR CONVERSACIÓN
-  ============================================= */
   const finishConversation = async () => {
     setIsTyping(true);
     const studentMessages = messages.filter((m) => m.role === "user");
@@ -435,11 +365,6 @@ export default function ChatBox() {
     } finally { setIsTyping(false); }
   };
 
-  const isEs = ["es", "spanish"].includes(rawLang);
-
-  /* =============================================
-     UI
-  ============================================= */
   return (
     <>
       <ChatbotVideoModal
@@ -472,7 +397,6 @@ export default function ChatBox() {
                     <span className="px-1.5 py-0.5 bg-[#EE7203] text-white text-[10px] font-bold rounded uppercase">{language}</span>
                     <span className="text-white/50 text-xs hidden sm:inline">•</span>
                     <span className="text-white/70 text-[10px]">Level {level}</span>
-                    {/* 🎯 TOPIC BADGE */}
                     {selectedTopic && (
                       <>
                         <span className="text-white/50 text-xs hidden sm:inline">•</span>
@@ -486,7 +410,6 @@ export default function ChatBox() {
               </div>
 
               <div className="flex items-center gap-2">
-                {/* 🎯 BOTÓN CAMBIAR TEMA */}
                 <button
                   onClick={() => setShowTopicSelector(true)}
                   disabled={isLimitReached}
@@ -496,7 +419,6 @@ export default function ChatBox() {
                   <FiCompass size={14} />
                   <span className="hidden sm:inline">{selectedTopic ? (isEs ? "Cambiar tema" : "Change topic") : (isEs ? "Elegir tema" : "Choose topic")}</span>
                 </button>
-
                 <button
                   data-tutorial="end-button"
                   onClick={finishConversation}
@@ -539,28 +461,13 @@ export default function ChatBox() {
               <div ref={chatEndRef}></div>
             </div>
 
-            {/* 🎯 SELECTOR INICIAL (cuando no hay tema elegido aún) */}
             {!selectedTopic && !isLimitReached && (
-              <TopicSelector
-                language={rawLang}
-                onSelect={handleTopicSelect}
-                currentTopic={null}
-                mode="initial"
-              />
+              <TopicSelector language={rawLang} onSelect={handleTopicSelect} currentTopic={null} mode="initial" />
             )}
-
-            {/* 🎯 SELECTOR DE CAMBIO (modal overlay) */}
             {showTopicSelector && selectedTopic && (
-              <TopicSelector
-                language={rawLang}
-                onSelect={handleTopicSelect}
-                currentTopic={selectedTopic}
-                mode="change"
-                onClose={() => setShowTopicSelector(false)}
-              />
+              <TopicSelector language={rawLang} onSelect={handleTopicSelect} currentTopic={selectedTopic} mode="change" onClose={() => setShowTopicSelector(false)} />
             )}
 
-            {/* OVERLAY LÍMITE */}
             {isLimitReached && (
               <div className="absolute bottom-0 left-0 w-full bg-white/95 backdrop-blur-md border-t-2 border-[#EE7203] p-6 z-20 flex flex-col items-center text-center animate-in slide-in-from-bottom-10 fade-in duration-500">
                 <div className="w-24 h-24 relative mb-4">
@@ -571,9 +478,7 @@ export default function ChatBox() {
                   {limitReason === "count" ? "Daily limit reached!" : "Session completed!"}
                 </h3>
                 <p className="text-gray-600 max-w-sm text-sm mb-4 leading-relaxed">
-                  {limitReason === "count"
-                    ? "You've been practicing hard today! Come back tomorrow for more."
-                    : "You've finished your daily session. Review your feedback and come back tomorrow!"}
+                  {limitReason === "count" ? "You've been practicing hard today! Come back tomorrow for more." : "You've finished your daily session. Review your feedback and come back tomorrow!"}
                 </p>
                 <div className="w-full bg-gray-100 rounded-full h-2 mb-2 max-w-xs"><div className="bg-[#EE7203] h-full w-full rounded-full"></div></div>
                 <p className="text-xs text-gray-400 font-medium">Resets automatically tomorrow</p>
@@ -637,7 +542,6 @@ export default function ChatBox() {
               Chat session closed for today.
             </div>
           )}
-
         </div>
       </div>
 

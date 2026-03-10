@@ -10,6 +10,7 @@ import {
   FiInfo, FiHeadphones,
 } from "react-icons/fi";
 import { SidebarButton, SectionTitle, SidebarFooter } from "./SidebarShared";
+import LanguageSwitcher from "../LanguageSwitcher";
 
 type SectionKey =
   | "home" | "miscursos" | "certificados" | "infoimportante"
@@ -103,6 +104,7 @@ export default function SidebarAlumno() {
         </ul>
       </nav>
 
+        <LanguageSwitcher />  
       <SidebarFooter email={user?.email} role={t("sidebar.user")} initials={initials} onLogout={handleLogout} />
     </aside>
   );

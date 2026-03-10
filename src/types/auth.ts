@@ -10,26 +10,40 @@ export interface UserProfile {
   uid: string;
   email: string;
   role: Role;
+  batchId: string;
+  userKey: string;
+  firstName?: string;
+  lastName?: string;
+  learningLanguages?: string[];
+  activeLanguage?: string;
+  learningLevel?: string;
+  active?: boolean;
+  createdAt?: string;
+  cursosAdquiridos?: string[];
+  progreso?: Record<string, any>;
+  tutorialsSeen?: Record<string, boolean>;
+  hasSeenWelcomeVideo?: boolean;
+  hasSeenChatbotVideo?: boolean;
+  hasSeenCoursePlayerVideo?: boolean;
+  hasSeenChatbotTutorial?: boolean;
+  hasSeenCoursePlayerTutorial?: boolean;
 }
 
-// Nuevo: Para batches
 export interface BatchUser {
   uid: string;
   email: string;
   role: Role;
-  batchId: string; 
-}
-export interface UserBatch {
-  users: BatchUser[];
+  batchId: string;
+  userKey: string;
+  createdAt?: string;
+  cursosAdquiridos?: string[];
+  progreso?: Record<string, any>;
+  active?: boolean;
+  learningLanguages?: string[];
+  activeLanguage?: string;
+  learningLevel?: string;
 }
 
-export interface StudentData {
-    student: string;
-    email: string;
-    level: string;
-    language: string;
-    teacher: string;
-    format: string;
-    delivery: string;
-    schedule: string;
+export interface UserBatch {
+  users: BatchUser[];
 }

@@ -1,72 +1,72 @@
-'use client';
+// 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { fetchAllUsers, updateUserRole, updateUserActive } from '@/lib/userBatches';
-import { UserProfile, Role } from '@/types/auth';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from "sonner";
+// import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+// import { fetchAllUsers, updateUserRole, updateUserActive } from '@/lib/userBatches';
+// import { UserProfile, Role } from '@/types/auth';
+// import { useAuth } from '@/contexts/AuthContext';
+// import { toast } from "sonner";
 
-interface UsersContextType {
-  users: UserProfile[];
-  loading: boolean;
-  error: string;
-  fetchUsers: () => Promise<void>;
-  handleUpdateRole: (uid: string, newRole: Role) => Promise<void>;
-  toggleUserActive: (uid: string, state: boolean) => Promise<void>; // 👈 nuevo
-}
+// interface UsersContextType {
+//   users: UserProfile[];
+//   loading: boolean;
+//   error: string;
+//   fetchUsers: () => Promise<void>;
+//   handleUpdateRole: (uid: string, newRole: Role) => Promise<void>;
+//   toggleUserActive: (uid: string, state: boolean) => Promise<void>; // 👈 nuevo
+// }
 
-const UsersContext = createContext<UsersContextType | undefined>(undefined);
+// const UsersContext = createContext<UsersContextType | undefined>(undefined);
 
-export const UsersProvider = ({ children }: { children: ReactNode }) => {
-  const { user, authReady, userProfile } = useAuth();
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+// export const UsersProvider = ({ children }: { children: ReactNode }) => {
+//   const { user, authReady, userProfile } = useAuth();
+//   const [users, setUsers] = useState<UserProfile[]>([]);
+//   const [loading, setLoading] = useState(true);
+//   const [error, setError] = useState('');
 
-  const fetchUsers = async () => {
-    try {
-      setLoading(true);
-      const usersList = await fetchAllUsers();
-      setUsers(usersList);
-      setError('');
-    } catch (err: any) {
-      console.error(err);
-      setError('Error al cargar usuarios: ' + err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+//   const fetchUsers = async () => {
+//     try {
+//       setLoading(true);
+//       const usersList = await fetchAllUsers();
+//       setUsers(usersList);
+//       setError('');
+//     } catch (err: any) {
+//       console.error(err);
+//       setError('Error al cargar usuarios: ' + err.message);
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
 
-  const handleUpdateRole = async (uid: string, newRole: Role) => {
-  try {
-    await updateUserRole(uid, newRole);
-    await fetchUsers(); // refresca la lista después del cambio
+//   const handleUpdateRole = async (uid: string, newRole: Role) => {
+//   try {
+//     await updateUserRole(uid, newRole);
+//     await fetchUsers(); // refresca la lista después del cambio
     
-  } catch (err) {
-    alert('Error al actualizar rol: ' + (err as Error).message);
-  }
-};
+//   } catch (err) {
+//     alert('Error al actualizar rol: ' + (err as Error).message);
+//   }
+// };
 
 
-  useEffect(() => {
-    if (authReady && userProfile?.role === 'admin') {
-      fetchUsers();
-    }
-  }, [authReady, user, userProfile]);
+//   useEffect(() => {
+//     if (authReady && userProfile?.role === 'admin') {
+//       fetchUsers();
+//     }
+//   }, [authReady, user, userProfile]);
 
-  return (
-    <UsersContext.Provider
-      value={{ users, loading, error, fetchUsers, handleUpdateRole,  }}
-    >
-      {children}
-    </UsersContext.Provider>
-  );
-};
+//   return (
+//     <UsersContext.Provider
+//       value={{ users, loading, error, fetchUsers, handleUpdateRole,  }}
+//     >
+//       {children}
+//     </UsersContext.Provider>
+//   );
+// };
 
-export const useUsers = () => {
-  const context = useContext(UsersContext);
-  if (!context) {
-    throw new Error('useUsers debe usarse dentro de un <UsersProvider>');
-  }
-  return context;
-};
+// export const useUsers = () => {
+//   const context = useContext(UsersContext);
+//   if (!context) {
+//     throw new Error('useUsers debe usarse dentro de un <UsersProvider>');
+//   }
+//   return context;
+// };

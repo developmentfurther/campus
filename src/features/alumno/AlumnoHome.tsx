@@ -67,11 +67,10 @@ const ROUTES: Record<string, string> = {
     day: "numeric",
   });
 
-  const idiomaAlumno = userProfile?.learningLanguage || "es";
-
-  const anunciosFiltrados = anuncios.filter(
-    (a) => a.idioma === idiomaAlumno && a.visible !== false
-  );
+ const idiomasAlumno = userProfile?.learningLanguages || ["en"];
+const anunciosFiltrados = anuncios.filter(
+  (a) => idiomasAlumno.includes(a.idioma) && a.visible !== false
+);
 
   function timeAgo(date: Date) {
     const diffSeconds = Math.floor((Date.now() - date.getTime()) / 1000);
@@ -224,15 +223,19 @@ if (!userProfile || !allDataLoaded || loadingCursos || loadingActivity || loadin
             {/* Right – Idioma / Nivel */}
             <div className="flex flex-row lg:flex-col gap-4 w-full lg:w-auto lg:min-w-[240px]">
               <ProfileInfoCard
-                title={t("dashboard.language")}
-                value={renderLanguage(userProfile?.learningLanguage)}
-                icon={<FiZap size={18} />}
-              />
-              <ProfileInfoCard
-                title={t("dashboard.level")}
-                value={userProfile?.learningLevel || t("dashboard.unassigned")}
-                icon={<FiTrendingUp size={18} />}
-              />
+  title={t("dashboard.language")}
+  value={
+    (userProfile?.learningLanguages || ["en"])
+      .map((code: string) => renderLanguage(code))
+      .join(" ")
+  }
+  icon={<FiZap size={18} />}
+/>
+<ProfileInfoCard
+  title={t("dashboard.level")}
+  value={userProfile?.learningLevel || t("dashboard.unassigned")}
+  icon={<FiTrendingUp size={18} />}
+/>
             </div>
 
           </div>
@@ -334,14 +337,14 @@ function ProfileInfoCard({ title, value, icon }) {
 }
 
 function renderLanguage(code?: string) {
-  const languages = {
-    es: "🇪🇸 Español",
-    en: "🇬🇧 English",
-    pt: "🇧🇷 Portuguese",
-    it: "🇮🇹 Italian",
-    fr: "🇫🇷 French",
+  const flags: Record<string, string> = {
+    es: "🇪🇸",
+    en: "🇺🇸",
+    pt: "🇧🇷",
+    it: "🇮🇹",
+    fr: "🇫🇷",
   };
-  return languages[code ?? ""] || "🌍 N/A";
+  return flags[code ?? ""] || "🌍";
 }
 
 function QuickAccessCard({ link, onClick, ...props }) {
@@ -408,7 +411,7 @@ function AnnouncementsSection({ anunciosFiltrados, locale, t, ...props }) {
           <p className="text-gray-500 font-semibold text-sm md:text-base">{t("dashboard.noAnnouncements")}</p>
         </div>
       ) : (
-        <div className="space-y-4 max-h-80 md:max-h-96 overflow-y-auto pr-2">
+       <div className="space-y-4 max-h-80 md:max-h-96 overflow-y-auto pr-2 custom-scrollbar">
           {anunciosFiltrados.map((n) => (
             <div
               key={n.id}

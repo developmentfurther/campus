@@ -18,7 +18,7 @@ export default function SuccessModal({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.18, ease: "easeOut" }}
-          className="fixed inset-0 z-[999] bg-black/40 backdrop-blur-sm flex items-center justify-center px-6"
+          className="fixed inset-0 z-[99999] bg-black/40  flex items-center justify-center px-6"
         >
           <motion.div
             initial={{ y: 12, opacity: 0, scale: 0.97 }}

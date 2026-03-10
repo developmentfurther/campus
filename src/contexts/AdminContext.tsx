@@ -95,14 +95,18 @@ export const AdminProvider = ({ children }: { children: React.ReactNode }) => {
           const u = data[key];
           if (u.role === "profesor" || u.role === "admin") continue;
           alumnosCampus.push({
-            uid: u.uid, email: u.email, role: u.role,
-            batchId: batchDoc.id, userKey: key,
-            createdAt: u.createdAt ?? null,
-            learningLanguage: (u.learningLanguage || "").toLowerCase().trim(),
-            learningLevel: (u.learningLevel || "").toUpperCase().trim(),
-            estadoAlumno: "Active",
-            nombre: u.firstName && u.lastName ? `${u.firstName} ${u.lastName}` : u.email?.split("@")[0] || "Unknown",
-          });
+  uid: u.uid, email: u.email, role: u.role,
+  batchId: batchDoc.id, userKey: key,
+  createdAt: u.createdAt ?? null,
+  learningLanguages: u.learningLanguages || [],        // ✅ array nuevo
+  activeLanguage: u.activeLanguage || "en",            // ✅ idioma activo
+  learningLevel: (u.learningLevel || "").toUpperCase().trim(),
+  active: u.active ?? true,
+  firstName: u.firstName || "",
+  lastName: u.lastName || "",
+  estadoAlumno: u.active ? "Active" : "Inactive",
+  nombre: u.firstName && u.lastName ? `${u.firstName} ${u.lastName}` : u.email?.split("@")[0] || "Unknown",
+});
         }
       });
 

@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { I18nProvider } from "@/contexts/I18nContext";
-import { UsersProvider } from '@/contexts/UserContext';
+// import { UsersProvider } from '@/contexts/UserContext';
 
 // 👇 1. Importar el componente
 import {GlobalPodcast}  from '@/components/podcast/GlobalPodcast'; 
@@ -26,7 +26,7 @@ export default function RootLayout({
         <I18nProvider>
           <AuthProvider>
             <ChatProvider>
-            <UsersProvider>
+            
               
               <main className="min-h-screen bg-gray-50">
                 {children}
@@ -38,7 +38,7 @@ export default function RootLayout({
               */}
               <GlobalPodcast />
 
-            </UsersProvider>
+            
             </ChatProvider>
           </AuthProvider>
         </I18nProvider>
