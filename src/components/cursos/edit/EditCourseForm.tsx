@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
-  doc, getDoc, updateDoc, arrayUnion,
+  doc, getDoc, getDocs,collection , updateDoc, arrayUnion,
   Timestamp, serverTimestamp,
 } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
@@ -491,29 +491,57 @@ const PAGE_SIZE = 50;
 
   // ── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!db || !curso) return toast.error("Sistema no listo");
-    setUploading(true);
-    try {
-      const unidadesToSave = unidades.map(u => ({ id: u.id, titulo: u.titulo || "", descripcion: u.descripcion || "", introVideo: u.introVideo || "", urlImagen: u.urlImagen || "", textoCierre: u.textoCierre || "", lecciones: u.lecciones.map(l => ({ id: l.id, blocks: l.blocks || [] })), closing: u.closing || {} }));
-      const cursantes = curso.cursantes?.map(e => e.toLowerCase().trim()).filter(Boolean) || [];
-      await updateDoc(doc(db, "cursos", courseId), { ...curso, unidades: unidadesToSave, examenFinal, capstone, contentTimeline, cursantes, updatedAt: serverTimestamp() });
+  e.preventDefault();
+  if (!db || !curso) return toast.error("Sistema no listo");
+  setUploading(true);
+  try {
+    const unidadesToSave = unidades.map(u => ({
+      id: u.id, titulo: u.titulo || "", descripcion: u.descripcion || "",
+      introVideo: u.introVideo || "", urlImagen: u.urlImagen || "",
+      textoCierre: u.textoCierre || "",
+      lecciones: u.lecciones.map(l => ({ id: l.id, blocks: l.blocks || [] })),
+      closing: u.closing || {}
+    }));
+
+    const cursantes = curso.cursantes?.map(e => e.toLowerCase().trim()).filter(Boolean) || [];
+
+    await updateDoc(doc(db, "cursos", courseId), {
+      ...curso, unidades: unidadesToSave, examenFinal, capstone,
+      contentTimeline, cursantes, updatedAt: serverTimestamp()
+    });
+
+    // Enrollar alumnos dinámicamente
+    if (cursantes.length > 0) {
+      const batchSnaps = await getDocs(collection(db, "alumnos"));
+
       for (const email of cursantes) {
         let found = false;
-        for (let i = 1; i <= 10 && !found; i++) {
-          const bRef = doc(db, "alumnos", `batch_${i}`);
-          const snap = await getDoc(bRef);
-          if (!snap.exists()) continue;
-          const d = snap.data();
-          const key = Object.keys(d).find(k => k.startsWith("user_") && d[k]?.email === email);
-          if (key) { await updateDoc(bRef, { [`${key}.cursosAdquiridos`]: arrayUnion(courseId) }); found = true; }
+        for (const batchSnap of batchSnaps.docs) {
+          if (found) break;
+          const d = batchSnap.data();
+          const key = Object.keys(d).find(
+            (k) => k.startsWith("user_") && d[k]?.email === email
+          );
+          if (key) {
+            await updateDoc(batchSnap.ref, {
+              [`${key}.cursosAdquiridos`]: arrayUnion(courseId)
+            });
+            found = true;
+          }
         }
+        if (!found) console.warn(`⚠️ No se encontró alumno: ${email}`);
       }
-      await reloadData?.();
-      setUploading(false);
-      setShowSuccessModal(true);
-    } catch (err) { console.error(err); setUploading(false); toast.error("Error al guardar"); }
-  };
+    }
+
+    await reloadData?.();
+    setUploading(false);
+    setShowSuccessModal(true);
+  } catch (err) {
+    console.error(err);
+    setUploading(false);
+    toast.error("Error al guardar");
+  }
+};
 
   // ── Students ───────────────────────────────────────────────────────────────
   const filteredAlumnos = useMemo(() => {

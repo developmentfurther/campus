@@ -2,7 +2,7 @@ import { useState } from "react";
 import { FiDownload, FiLoader, FiChevronRight } from "react-icons/fi";
 import { toast } from "sonner";
 import { jsPDF } from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 
 /**
  * 🔧 SANITIZACIÓN ULTRA-ROBUSTA
@@ -11,7 +11,7 @@ const sanitizeForPDF = (text) => {
   if (!text) return "";
   
   // Convertir a string y normalizar
-  let cleaned = String(text)
+  const cleaned = String(text)
     // Caracteres acentuados
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '') // Remover diacríticos
@@ -104,6 +104,7 @@ export default function DownloadBibliographyButton({ unit, courseTitle }) {
   const [loading, setLoading] = useState(false);
 
   const generatePDF = async () => {
+    console.log("🔍 UNIT recibida:", JSON.stringify(unit, null, 2));
     if (!unit) {
       toast.error("No hay datos de la unidad disponibles");
       return;
@@ -111,6 +112,7 @@ export default function DownloadBibliographyButton({ unit, courseTitle }) {
 
     setLoading(true);
     const startTime = performance.now();
+    
     
     try {
       // ==========================================
@@ -204,52 +206,33 @@ export default function DownloadBibliographyButton({ unit, courseTitle }) {
           y += 4;
         });
       };
+// ==========================================
+// 📌 HEADER PRINCIPAL
+// ==========================================
 
-      // ==========================================
-      // 📌 HEADER PRINCIPAL
-      // ==========================================
-      
-      // Logo "Further"
-      doc.setFontSize(28);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...colors.primary);
-      doc.text("Further", margin, y);
-      y += 8;
+// Cargar logo
+const logoResponse = await fetch("/images/Logo-FurtherCorporate-transparent.png");
+const logoBuffer = await logoResponse.arrayBuffer();
+const logoBase64 = btoa(
+  new Uint8Array(logoBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
+);
 
-      // Línea decorativa gruesa
-      doc.setDrawColor(...colors.primary);
-      doc.setLineWidth(2);
-      doc.line(margin, y, pageWidth - margin, y);
-      y += 10;
+// Ratio exacto del logo (1440x810px = 0.5625)
+const logoTargetWidth = 40;
+const logoTargetHeight = logoTargetWidth * 0.5625; // 22.5mm
 
-      // Título del curso
-      doc.setFontSize(16);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...colors.secondary);
-      const titleLines = doc.splitTextToSize(
-        sanitizeForPDF(courseTitle || "Course Material"),
-        contentWidth
-      );
-      titleLines.forEach(line => {
-        doc.text(line, margin, y);
-        y += 7;
-      });
-      y += 3;
+// Fondo blanco detrás del logo (evita colores raros con PNG transparente)
+doc.setFillColor(255, 255, 255);
+doc.rect(margin, y, logoTargetWidth, logoTargetHeight, "F");
 
-      // Título de la unidad
-      doc.setFontSize(14);
-      doc.setTextColor(...colors.accent);
-      doc.setFont("helvetica", "bold");
-      const unitLines = doc.splitTextToSize(
-        `Unit: ${sanitizeForPDF(unit.title)}`,
-        contentWidth
-      );
-      unitLines.forEach(line => {
-        doc.text(line, margin, y);
-        y += 6;
-      });
-      y += 10;
+doc.addImage(logoBase64, "PNG", margin, y, logoTargetWidth, logoTargetHeight);
+y += logoTargetHeight + 5;
 
+// Línea decorativa gruesa
+doc.setDrawColor(...colors.primary);
+doc.setLineWidth(2);
+doc.line(margin, y, pageWidth - margin, y);
+y += 10;
       // ==========================================
       // 📚 CONTENIDO DE LECCIONES
       // ==========================================
@@ -336,64 +319,231 @@ export default function DownloadBibliographyButton({ unit, courseTitle }) {
             sanitizeForPDF(entry.translation || entry.meaning || "-")
           ]);
 
-          doc.autoTable({
-            startY: y,
-            head: [["Term", "Meaning"]],
-            body: tableData,
-            margin: { left: margin + 5, right: margin },
-            styles: {
-              fontSize: 8,
-              cellPadding: 3,
-              overflow: 'linebreak',
-              lineColor: colors.border,
-              lineWidth: 0.1
-            },
-            headStyles: {
-              fillColor: colors.primary,
-              textColor: [255, 255, 255],
-              fontStyle: 'bold',
-              halign: 'left'
-            },
-            bodyStyles: {
-              textColor: colors.text
-            },
-            columnStyles: {
-              0: { cellWidth: 50, fontStyle: 'bold' },
-              1: { cellWidth: 'auto' }
-            },
-            theme: 'grid',
-            tableLineColor: colors.border,
-            tableLineWidth: 0.1
-          });
+          autoTable(doc, {
+  startY: y,
+  head: [["Term", "Meaning"]],
+  body: tableData,
+  margin: { left: margin + 5, right: margin },
+  styles: {
+    fontSize: 8,
+    cellPadding: 3,
+    overflow: 'linebreak',
+    lineColor: colors.border,
+    lineWidth: 0.1
+  },
+  headStyles: {
+    fillColor: colors.primary,
+    textColor: [255, 255, 255],
+    fontStyle: 'bold',
+    halign: 'left'
+  },
+  bodyStyles: {
+    textColor: colors.text
+  },
+  columnStyles: {
+    0: { cellWidth: 50, fontStyle: 'bold' },
+    1: { cellWidth: 'auto' }
+  },
+  theme: 'grid',
+  tableLineColor: colors.border,
+  tableLineWidth: 0.1
+});
 
-          y = doc.lastAutoTable.finalY + 8;
+y = (doc as any).lastAutoTable.finalY + 8;
+
+       
         }
 
         // ▶️ EJERCICIOS (resumen compacto)
-        if (lesson.ejercicios?.length > 0) {
-          checkPageBreak(20);
-          addSection(`Exercises (${lesson.ejercicios.length})`, 10, 5);
+       // ▶️ EJERCICIOS (contenido completo)
+if (lesson.ejercicios?.length > 0) {
+  checkPageBreak(20);
+  addSection(`Exercises (${lesson.ejercicios.length})`, 10, 5);
 
-          lesson.ejercicios.slice(0, 12).forEach((ex, exIdx) => {
-            const exType = (ex.type || "interactive")
-              .replace(/_/g, " ")
-              .split(" ")
-              .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-              .join(" ");
-            
-            addBulletPoint(`Exercise ${exIdx + 1}: ${exType}`, 5);
-          });
+  lesson.ejercicios.forEach((ex, exIdx) => {
+    checkPageBreak(15);
 
-          if (lesson.ejercicios.length > 12) {
-            doc.setFontSize(7);
-            doc.setFont("helvetica", "italic");
-            doc.setTextColor(...colors.textLight);
-            doc.text(`... and ${lesson.ejercicios.length - 12} more exercises`, margin + 10, y);
-            y += 4;
+    // Título del ejercicio
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...colors.accent);
+    doc.text(sanitizeForPDF(`Exercise ${exIdx + 1}: ${ex.title || ex.type || ""}`), margin + 5, y);
+    y += 5;
+
+    // Instrucciones
+    if (ex.instructions) {
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "italic");
+      doc.setTextColor(...colors.textLight);
+      const instrLines = doc.splitTextToSize(sanitizeForPDF(ex.instructions), contentWidth - 10);
+      instrLines.forEach(line => { checkPageBreak(4); doc.text(line, margin + 5, y); y += 4; });
+      y += 2;
+    }
+
+    // MULTIPLE CHOICE
+    if (ex.type === "multiple_choice" && ex.question) {
+      addText(sanitizeForPDF(ex.question), 8, "normal");
+      (ex.options || []).forEach((opt, i) => {
+        addBulletPoint(`${String.fromCharCode(65 + i)}) ${opt}`, 8);
+      });
+    }
+
+    // FILL IN THE BLANK
+    if (ex.type === "fill_blank" && ex.sentence) {
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...colors.text);
+      const sentenceLines = doc.splitTextToSize(
+        sanitizeForPDF(ex.sentence.replace(/\*\*\*/g, "_____")),
+        contentWidth - 10
+      );
+      sentenceLines.forEach(line => { checkPageBreak(4); doc.text(line, margin + 8, y); y += 4; });
+      if (ex.hintWords) {
+        doc.setFont("helvetica", "italic");
+        doc.setTextColor(...colors.textLight);
+        doc.text(sanitizeForPDF(`Hint: ${ex.hintWords}`), margin + 8, y);
+        y += 4;
+      }
+    }
+
+    // READING
+    if (ex.type === "reading" && ex.text) {
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...colors.text);
+      const textLines = doc.splitTextToSize(sanitizeForPDF(ex.text), contentWidth - 10);
+      textLines.forEach(line => { checkPageBreak(4); doc.text(line, margin + 8, y); y += 4; });
+      y += 3;
+      if (ex.questions?.length > 0) {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.setTextColor(...colors.accent);
+        doc.text("Questions:", margin + 8, y);
+        y += 4;
+        ex.questions.forEach((q, qi) => {
+          addBulletPoint(`${qi + 1}. ${sanitizeForPDF(q.prompt)}`, 8);
+          if (q.kind === "mc" && q.options) {
+            q.options.forEach((opt, oi) => {
+              addBulletPoint(`${String.fromCharCode(65 + oi)}) ${opt}`, 12);
+            });
           }
+        });
+      }
+    }
 
-          y += 5;
-        }
+    // LISTENING
+    if (ex.type === "listening") {
+      if (ex.transcript) {
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "italic");
+        doc.setTextColor(...colors.textLight);
+        doc.text("Transcript:", margin + 8, y);
+        y += 4;
+        doc.setFont("helvetica", "normal");
+        const transLines = doc.splitTextToSize(sanitizeForPDF(ex.transcript), contentWidth - 15);
+        transLines.forEach(line => { checkPageBreak(4); doc.text(line, margin + 10, y); y += 4; });
+        y += 2;
+      }
+      if (ex.questions?.length > 0) {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.setTextColor(...colors.accent);
+        doc.text("Questions:", margin + 8, y);
+        y += 4;
+        ex.questions.forEach((q, qi) => {
+          addBulletPoint(`${qi + 1}. ${sanitizeForPDF(q.prompt)}`, 8);
+          if (q.kind === "mc" && q.options) {
+            q.options.forEach((opt, oi) => {
+              addBulletPoint(`${String.fromCharCode(65 + oi)}) ${opt}`, 12);
+            });
+          }
+        });
+      }
+    }
+
+    // SPEAKING
+    if (ex.type === "speaking") {
+      (ex.bullets || []).forEach(b => addBulletPoint(sanitizeForPDF(b), 5));
+      if (ex.notes) {
+        doc.setFontSize(7);
+        doc.setFont("helvetica", "italic");
+        doc.setTextColor(...colors.textLight);
+        doc.text(sanitizeForPDF(`Note: ${ex.notes}`), margin + 8, y);
+        y += 4;
+      }
+    }
+
+    // MATCHING
+    if (ex.type === "matching" && ex.pairs?.length > 0) {
+      const tableData = ex.pairs.map(p => [
+        sanitizeForPDF(p.left || ""),
+        sanitizeForPDF(p.right || "")
+      ]);
+      autoTable(doc, {
+        startY: y,
+        head: [["A", "B"]],
+        body: tableData,
+        margin: { left: margin + 8, right: margin },
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: colors.primary, textColor: [255, 255, 255], fontStyle: "bold" },
+        bodyStyles: { textColor: colors.text },
+        columnStyles: { 0: { cellWidth: 50 }, 1: { cellWidth: "auto" } },
+        theme: "grid"
+      });
+      y = (doc as any).lastAutoTable.finalY + 6;
+    }
+
+    // REFLECTION / OPEN QUESTION
+    if (ex.type === "reflection" || ex.type === "open_question") {
+      if (ex.prompt) {
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(...colors.text);
+        const promptLines = doc.splitTextToSize(sanitizeForPDF(ex.prompt), contentWidth - 10);
+        promptLines.forEach(line => { checkPageBreak(4); doc.text(line, margin + 8, y); y += 4; });
+      }
+      // Líneas para escribir
+      const lineCount = ex.ideasCount || 3;
+      for (let li = 0; li < lineCount; li++) {
+        checkPageBreak(8);
+        y += 6;
+        doc.setDrawColor(...colors.border);
+        doc.setLineWidth(0.2);
+        doc.line(margin + 8, y, pageWidth - margin, y);
+        y += 2;
+      }
+    }
+
+    // VERB TABLE
+    if (ex.type === "verb_table" && ex.rows?.length > 0) {
+      const tableData = ex.rows.map(r => [
+        sanitizeForPDF(r.subject || ""),
+        sanitizeForPDF(r.positive || ""),
+        sanitizeForPDF(r.negative || "")
+      ]);
+      autoTable(doc, {
+        startY: y,
+        head: [["Subject", "Positive", "Negative"]],
+        body: tableData,
+        margin: { left: margin + 8, right: margin },
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: colors.primary, textColor: [255, 255, 255], fontStyle: "bold" },
+        bodyStyles: { textColor: colors.text },
+        theme: "grid"
+      });
+      y = (doc as any).lastAutoTable.finalY + 6;
+    }
+
+    y += 6;
+    // Separador entre ejercicios
+    doc.setDrawColor(...colors.border);
+    doc.setLineWidth(0.1);
+    doc.line(margin + 5, y, pageWidth - margin - 5, y);
+    y += 4;
+  });
+
+  y += 5;
+}
 
         // Separador entre lecciones
         y += 8;
@@ -438,10 +588,7 @@ export default function DownloadBibliographyButton({ unit, courseTitle }) {
           pageHeight - 10
         );
         
-        // Logo pequeño (derecha)
-        doc.setTextColor(...colors.primary);
-        doc.setFont("helvetica", "bold");
-        doc.text("Further", pageWidth - margin - 15, pageHeight - 10);
+
       }
 
       // ==========================================

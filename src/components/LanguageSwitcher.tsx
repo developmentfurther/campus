@@ -1,6 +1,9 @@
 import { useI18n } from "@/contexts/I18nContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useRef, useEffect } from "react";
+import { doc, setDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+
 
 const LANGUAGES: Record<string, { label: string; flag: string }> = {
   en: { label: "English", flag: "🇺🇸" },
@@ -60,7 +63,19 @@ export default function LanguageSwitcher() {
             return (
               <button
                 key={code}
-                onClick={() => { setLang(code); setOpen(false); }}
+                // En el onClick:
+onClick={() => {
+  setLang(code); // actualiza I18nContext + localStorage
+  setOpen(false);
+
+  // Persistir en Firestore
+  if (userProfile?.batchId && userProfile?.userKey) {
+    const batchRef = doc(db, "alumnos", userProfile.batchId);
+    setDoc(batchRef, {
+      [userProfile.userKey]: { ...userProfile, activeLanguage: code }
+    }, { merge: true });
+  }
+}}
                 className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold transition-all hover:bg-orange-50 ${
                   lang === code ? "bg-gradient-to-r from-orange-50 to-red-50 text-[#EE7203]" : "text-[#0C212D]"
                 }`}

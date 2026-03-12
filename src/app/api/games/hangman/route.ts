@@ -1,29 +1,21 @@
-// /app/api/games/hangman/route.ts
+import OpenAI from "openai";
 
 export async function GET(req: Request) {
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.OPENAI_API_KEY;
 
     if (!apiKey) {
-      return Response.json(
-        { error: "Missing GEMINI_API_KEY" },
-        { status: 500 }
-      );
+      return Response.json({ error: "Missing OPENAI_API_KEY" }, { status: 500 });
     }
 
-    // 🔹 Leer idioma desde query (?lang=es|en|pt|fr|it)
     const { searchParams } = new URL(req.url);
     const rawLang = (searchParams.get("lang") || "en").toLowerCase();
 
     const SUPPORTED = ["en", "es", "pt", "fr", "it"] as const;
     type Lang = (typeof SUPPORTED)[number];
+    const lang: Lang = SUPPORTED.includes(rawLang as Lang) ? (rawLang as Lang) : "en";
 
-    const lang: Lang = SUPPORTED.includes(rawLang as Lang)
-      ? (rawLang as Lang)
-      : "en";
-
-    const model = "gemini-2.5-flash";
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    const openai = new OpenAI({ apiKey });
 
     const prompt = `
 You are generating one word for a Hangman game.
@@ -47,28 +39,18 @@ Languages mapping:
 Return ONLY the word. Nothing else.
     `.trim();
 
-    const resp = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-      }),
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 1,
+      max_tokens: 20,
     });
 
-    const data: any = await resp.json();
-    const raw: string =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+    const raw = response.choices[0]?.message?.content?.trim() || "";
 
-    // 1️⃣ Extraer una palabra válida (permitimos letras con acentos)
-    const candidates =
-      raw
-        .toLowerCase()
-        .match(/[a-záéíóúüñàèìòùâêîôûçœæãõ]+/gi) || [];
+    const candidates = raw.toLowerCase().match(/[a-záéíóúüñàèìòùâêîôûçœæãõ]+/gi) || [];
+    let cleaned = candidates.find((w) => w.length >= 5 && w.length <= 12) || "";
 
-    let cleaned =
-      candidates.find((w) => w.length >= 5 && w.length <= 12) || "";
-
-    // 2️⃣ Fallback interno por idioma
     if (!cleaned) {
       const FALLBACK: Record<Lang, string[]> = {
         en: ["academy", "teacher", "learning", "english", "clarity", "practice"],
@@ -77,7 +59,6 @@ Return ONLY the word. Nothing else.
         fr: ["etudier", "langues", "professeur", "cours", "eleves", "oral"],
         it: ["studiare", "lingue", "lezioni", "corso", "alunno", "parlare"],
       };
-
       const pool = FALLBACK[lang] || FALLBACK["en"];
       cleaned = pool[Math.floor(Math.random() * pool.length)];
       console.warn("⚠️ [Hangman] Using fallback word:", { lang, cleaned });

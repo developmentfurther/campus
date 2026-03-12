@@ -135,8 +135,8 @@ export default function CoursePlayerPage() {
   const params = useParams();
   const courseId = params?.id?.toString?.() || "";
   const { user, role, authReady, loading: authLoading, userProfile } = useAuth();
-const { saveCourseProgress, getCourseProgress, hasSeenCoursePlayerTutorial, markCoursePlayerTutorialAsSeen, allDataLoaded } = useAlumno();
-  const { t } = useI18n();
+const { saveCourseProgress, getCourseProgress, hasSeenCoursePlayerTutorial, markCoursePlayerTutorialAsSeen, allDataLoaded } = useAlumno();  
+const { t } = useI18n();
   const dashboardRoute = role === "admin" 
   ? "/admin" 
   : role === "profesor" 
@@ -185,9 +185,9 @@ const { saveCourseProgress, getCourseProgress, hasSeenCoursePlayerTutorial, mark
         const snap = await getDoc(ref);
         if (snap.exists()) {
           const data = snap.data() as Curso;
-          console.log("🔥 Datos crudos desde Firestore:", JSON.stringify(data, null, 2));
+          
           setCurso({ ...data, id: snap.id,  });
-          console.log("📚 Curso cargado:", data);
+        
         } else {
           setCurso(null);
         }
@@ -478,9 +478,8 @@ useEffect(() => {
       setContentReady(true); // 👈 AGREGAR
     }
   }
-
   loadProgress();
-}, [user?.uid, courseId]);
+}, [user?.uid, courseId, userProfile?.batchId]);
 
 // 🔥 Limpiar caché cuando el usuario cambia de curso
 useEffect(() => {
@@ -581,18 +580,7 @@ if (url.startsWith("http")) {
   load();
 }, [activeLesson?.videoUrl]);
 
-useEffect(() => {
-  console.log("🔍 INTRO DEBUG:", {
-    activeLesson: activeLesson?.id,
-    unitId: activeLesson?.unitId,
-    activeU,
-    currentUnitId: units[activeU]?.id,
-    allIntros: units.map((u, idx) => ({
-      unitIndex: idx,
-      lessons: u.lessons.filter(l => l.id === "intro")
-    }))
-  });
-}, [activeLesson, activeU, units]);
+
 
 
 
@@ -694,17 +682,18 @@ const indexOfLesson = useCallback(
 const goNextLesson = useCallback(async () => {
   const currentIdx = indexOfLesson(activeU, activeL);
   const currentLesson = flatLessons[currentIdx];
+  const isIntro = activeLesson?.id === "intro";
 
-  // 1️⃣ NAVEGACIÓN INSTANTÁNEA
   const nextIdx = currentIdx + 1;
   if (nextIdx < flatLessons.length) {
     const next = flatLessons[nextIdx];
-    
+
     setActiveU(next.uIdx);
     setActiveL(next.lIdx);
     setExpandedUnits((p) => ({ ...p, [next.uIdx]: true }));
-    
-    if (currentLesson?.key && activeLesson?.id !== "intro") {
+
+    // ✅ Marcar como visto en el estado local siempre (intro y lecciones normales)
+    if (currentLesson?.key) {
       setProgress((prev) => ({
         ...prev,
         [currentLesson.key]: {
@@ -713,37 +702,32 @@ const goNextLesson = useCallback(async () => {
         },
       }));
     }
-    
+
     toast.success("➡️ Avanzaste a la siguiente lección");
   } else {
     toast.success("🎉 ¡Curso completado!");
     router.push(dashboardRoute);
   }
 
-  // 2️⃣ GUARDADO EN FIREBASE
-  if (
-    currentLesson?.key &&
-    activeLesson?.id !== "intro" &&
-    user?.uid &&
-    saveCourseProgress
-  ) {
+  // 💾 Guardar en Firebase — intro también se guarda como videoEnded: true
+  if (currentLesson?.key && user?.uid && saveCourseProgress) {
     saveCourseProgress(user.uid, courseId, {
       [currentLesson.key]: { videoEnded: true },
     }).catch((err) => {
-      console.error("❌ Error guardando progreso (silent):", err);
+      console.error("Error guardando progreso:", err);
     });
   }
 }, [
-  // Dependencias necesarias para que no se "rompa" la función
-  indexOfLesson, 
-  activeU, 
-  activeL, 
-  flatLessons, 
-  activeLesson, 
-  user?.uid, 
-  courseId, 
-  saveCourseProgress, 
-  router
+  indexOfLesson,
+  activeU,
+  activeL,
+  flatLessons,
+  activeLesson,
+  user?.uid,
+  courseId,
+  saveCourseProgress,
+  router,
+  dashboardRoute,
 ]);
 
 function makeKey(exId: string, qId?: string) {
@@ -859,13 +843,16 @@ function computeStats(byLesson: any, totalLessons: number) {
 function ExerciseRunner({
   ejercicios,
   lessonKey,
-  exerciseId, // 👈 Cambiar de exerciseIndex a exerciseId
+  exerciseId,
   courseId,
   batchId,
   userKey,
   savedData,
   onSubmit,
+  user,
+  saveCourseProgress, 
 }: {
+
   ejercicios: any[];
   lessonKey: string;
   exerciseId: string; // 👈 Ahora es string
@@ -874,6 +861,8 @@ function ExerciseRunner({
   userKey: string;
   savedData?: any;
   onSubmit?: (r: { correct: number; total: number }) => void;
+  user: any;
+  saveCourseProgress: any;
 }) {
   // 🟢 INICIALIZACIÓN DIRECTA
   const [answers, setAnswers] = useState<Record<string, any>>({});
@@ -887,8 +876,7 @@ function ExerciseRunner({
     total?: number;
   } | null>(null);
 
-  const { user } = useAuth();
-const { saveCourseProgress } = useAlumno();
+
 
   // 🔥 KEY GLOBAL ÚNICA
   const currentExerciseKey = useMemo(
@@ -927,10 +915,12 @@ const { saveCourseProgress } = useAlumno();
    🧠 EVALUATE — versión limpia y estable
    ============================================================ */
 const evaluate = async () => {
+  console.log("🔥 evaluate llamado");
   if (submitted) return;
 
   const ex = ejercicios[0];
   if (!ex) return;
+  console.log("📝 ejercicio:", ex);
 
   let correct = 0;
   let totalItems = 1;
@@ -1121,6 +1111,8 @@ const evalTable = (ex: any) => {
 
   const passed = correct === totalItems;
 
+  console.log("✅ resultado:", { correct, totalItems, passed });
+
   // ============================================================
   // 🔵 Actualizar UI antes de guardar
   // ============================================================
@@ -1132,11 +1124,21 @@ const evalTable = (ex: any) => {
     total: totalItems,
   });
 
+  console.log("💾 intentando guardar...");
+  console.log("user?.uid:", user?.uid);
+  console.log("saveCourseProgress:", typeof saveCourseProgress);
+  console.log("courseId:", courseId);
+  console.log("currentExerciseKey:", currentExerciseKey);
+
   // ============================================================
   // 💾 Guardar en Firestore después
   // ============================================================
   try {
-    if (!user?.uid) return;
+    if (!user?.uid) {
+    console.error("❌ No hay user.uid");
+    return;  // ← ¿este return está dentro del try o afuera?
+  }
+
 
     await saveCourseProgress(user.uid, courseId, {
       [currentExerciseKey]: {
@@ -1149,6 +1151,7 @@ const evalTable = (ex: any) => {
         },
       },
     });
+     console.log("✅ guardado exitoso");
   } catch (err) {
     console.error("❌ Error guardando:", err);
     toast.error("No se pudo guardar tu progreso");
@@ -2036,34 +2039,6 @@ function arePropsEqual(prevProps, nextProps) {
   );
 }
 
-// 🔥 Componente auxiliar para las tarjetas de estadísticas
-const StatCard = React.memo(({ icon: Icon, value, label, color }) => {
-  const colors = {
-    purple: "from-purple-50 to-purple-100 border-purple-200 bg-purple-500 text-purple-700 text-purple-900",
-    emerald: "from-emerald-50 to-emerald-100 border-emerald-200 bg-emerald-500 text-emerald-700 text-emerald-900",
-    orange: "from-orange-50 to-orange-100 border-orange-200 bg-[#EE7203] text-orange-700 text-orange-900"
-  };
-
-  const [bgFrom, bgTo, borderColor, iconBg, labelColor, valueColor] = colors[color].split(' ');
-
-  return (
-    <div className={`bg-gradient-to-br ${bgFrom} ${bgTo} border-2 ${borderColor} rounded-xl md:rounded-2xl p-4 md:p-6 flex sm:block items-center justify-between sm:justify-start hover:scale-105 transition-transform`}>
-      <div className="flex items-center gap-3 sm:mb-3">
-        <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl ${iconBg} flex items-center justify-center shadow-lg`}>
-          <Icon className="text-white" size={20} />
-        </div>
-        <p className={`sm:hidden text-sm font-bold ${labelColor}`}>{label}</p>
-      </div>
-      <div className="text-right sm:text-left">
-        <div className={`text-2xl md:text-4xl font-black ${valueColor}`}>{value}</div>
-        <p className={`hidden sm:block text-xs md:text-sm font-bold ${labelColor} mt-1`}>{label}</p>
-      </div>
-    </div>
-  );
-});
-
-
-
 
 
   /* =========================================================
@@ -2666,15 +2641,17 @@ const StatCard = React.memo(({ icon: Icon, value, label, color }) => {
                           transition={{ duration: 0.4, delay: exerciseIndex * 0.07 }}
                         >
                           <ExerciseRunner
-                            ejercicios={[ejercicio]}
-                            lessonKey={activeLesson.key}
-                            exerciseId={ejercicioId}
-                            batchId={userProfile?.batchId}
-                            userKey={userProfile?.userKey}
-                            courseId={courseId}
-                            savedData={savedData}
-                            onSubmit={() => {}}
-                          />
+  ejercicios={[ejercicio]}
+  lessonKey={activeLesson.key}
+  exerciseId={ejercicioId}
+  batchId={userProfile?.batchId}
+  userKey={userProfile?.userKey}
+  courseId={courseId}
+  savedData={savedData}
+  onSubmit={() => {}}
+  user={user}                          // ← agregar
+  saveCourseProgress={saveCourseProgress} // ← agregar
+/>
                         </motion.div>
                       );
                     })}

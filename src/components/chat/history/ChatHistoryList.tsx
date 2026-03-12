@@ -66,7 +66,7 @@ export default function ChatHistoryList() {
     fr: "Vos 3 derniers résumés de conversation sont stockés ici.",
   };
 
-  const rawLang = (userProfile?.learningLanguage || "en").toLowerCase();
+  const rawLang = (userProfile?.activeLanguage || "en").toLowerCase();
   const message = warningMessages[rawLang] ?? warningMessages["en"];
   const tr = tHistory[rawLang] ?? tHistory["en"];
 

@@ -6,7 +6,7 @@ import {
   addDoc,
   serverTimestamp,
   doc,
-  getDoc,
+  getDocs,
   updateDoc,
   arrayUnion,
 } from "firebase/firestore";
@@ -767,65 +767,64 @@ const PAGE_SIZE = 50;
   // ── Submit ────────────────────────────────────────────────────────────────────
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!db) return toast.error("DB no inicializada");
-    if (!material.titulo.trim()) return toast.error("El título es obligatorio");
+  e.preventDefault();
+  if (!db) return toast.error("DB no inicializada");
+  if (!material.titulo.trim()) return toast.error("El título es obligatorio");
 
-    try {
-      setSaving(true);
-      const payload = {
-        ...material,
-        unidades: units.map((u) => ({
-          id: u.id,
-          titulo: u.titulo || "",
-          descripcion: u.descripcion || "",
-          introVideo: u.introVideo || "",
-          lecciones: u.lecciones,
-          textoCierre: u.textoCierre || "",
-          closing: u.closing || {},
-        })),
-        examenFinal: finalExam,
-        capstone,
-        creadoEn: serverTimestamp(),
-        actualizadoEn: serverTimestamp(),
-        cursantes: material.cursantes.map((c) => c.toLowerCase().trim()),
-      };
+  try {
+    setSaving(true);
+    const payload = {
+      ...material,
+      unidades: units.map((u) => ({
+        id: u.id, titulo: u.titulo || "", descripcion: u.descripcion || "",
+        introVideo: u.introVideo || "",
+        lecciones: u.lecciones,
+        textoCierre: u.textoCierre || "", closing: u.closing || {},
+      })),
+      examenFinal, capstone,
+      creadoEn: serverTimestamp(), actualizadoEn: serverTimestamp(),
+      cursantes: material.cursantes.map((c) => c.toLowerCase().trim()),
+    };
 
-      const docRef = await addDoc(collection(db, "cursos"), payload);
+    const docRef = await addDoc(collection(db, "cursos"), payload);
 
-      // Assign to students
-      if (payload.cursantes.length > 0) {
-        for (const email of payload.cursantes) {
-          let found = false;
-          for (let i = 1; i <= 10 && !found; i++) {
-            const batchRef = doc(db, "alumnos", `batch_${i}`);
-            const snap = await getDoc(batchRef);
-            if (!snap.exists()) continue;
-            const data = snap.data();
-            const key = Object.keys(data).find(
-              (k) => k.startsWith("user_") && data[k]?.email === email
-            );
-            if (key) {
-              await updateDoc(batchRef, { [`${key}.cursosAdquiridos`]: arrayUnion(docRef.id) });
-              found = true;
-            }
+    // Enrollar alumnos dinámicamente
+    if (payload.cursantes.length > 0) {
+      const batchSnaps = await getDocs(collection(db, "alumnos"));
+
+      for (const email of payload.cursantes) {
+        let found = false;
+        for (const batchSnap of batchSnaps.docs) {
+          if (found) break;
+          const d = batchSnap.data();
+          const key = Object.keys(d).find(
+            (k) => k.startsWith("user_") && d[k]?.email === email
+          );
+          if (key) {
+            await updateDoc(batchSnap.ref, {
+              [`${key}.cursosAdquiridos`]: arrayUnion(docRef.id)
+            });
+            found = true;
           }
         }
-        await updateDoc(doc(db, "cursos", docRef.id), {
-          cursantes: arrayUnion(...payload.cursantes),
-        });
+        if (!found) console.warn(`⚠️ No se encontró alumno: ${email}`);
       }
 
-      toast.success("Material creado exitosamente 🎉");
-      reloadData?.();
-      onClose?.();
-    } catch (err) {
-      console.error(err);
-      toast.error("Error al crear el material");
-    } finally {
-      setSaving(false);
+      await updateDoc(doc(db, "cursos", docRef.id), {
+        cursantes: arrayUnion(...payload.cursantes),
+      });
     }
-  };
+
+    toast.success("Material creado exitosamente 🎉");
+    reloadData?.();
+    onClose?.();
+  } catch (err) {
+    console.error(err);
+    toast.error("Error al crear el material");
+  } finally {
+    setSaving(false);
+  }
+};
 
   // ── Attempt close ─────────────────────────────────────────────────────────────
 

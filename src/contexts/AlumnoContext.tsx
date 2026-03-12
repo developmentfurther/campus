@@ -1,30 +1,26 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useRef } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
 import { db } from "@/lib/firebase";
 import {
-  doc, getDoc, getDocs, collection, setDoc, deleteDoc,
-  onSnapshot, query, orderBy,
+  doc, getDoc, getDocs, collection, setDoc,
+  onSnapshot,
 } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchUserFromBatchesByUid } from "@/lib/userBatches";
 import { toast } from "sonner";
-import { getCourseProgressStats } from "@/lib/courseUtils"; // 👈 mover esta función a un archivo util
+import { getCourseProgressStats } from "@/lib/courseUtils";
 
 interface AlumnoContextType {
   misCursos: any[];
   loadingCursos: boolean;
   loadMisCursos: (uid: string) => Promise<void>;
-
   podcastEpisodes: any[];
   loadingPodcast: boolean;
-
   chatSessions: any[];
   loadingChatSessions: boolean;
-
   tutorialsSeen: Record<string, boolean>;
   markTutorialAsSeen: (id: string) => Promise<void>;
-
   hasSeenWelcomeVideo: boolean;
   markWelcomeVideoAsSeen: () => Promise<void>;
   hasSeenChatbotVideo: boolean;
@@ -35,16 +31,12 @@ interface AlumnoContextType {
   markChatbotTutorialAsSeen: () => Promise<void>;
   hasSeenCoursePlayerTutorial: boolean;
   markCoursePlayerTutorialAsSeen: () => Promise<void>;
-
   saveCourseProgress: (uid: string, courseId: string, data: any) => Promise<void>;
   getCourseProgress: (uid: string, courseId: string) => Promise<any>;
-
   recentActivity: any[];
   loadingActivity: boolean;
-
   anuncios: any[];
-  loadingAnuncios: boolean; 
-
+  loadingAnuncios: boolean;
   allDataLoaded: boolean;
 }
 
@@ -74,8 +66,9 @@ const AlumnoContext = createContext<AlumnoContextType>({
   loadingActivity: false,
   anuncios: [],
   loadingAnuncios: false,
-  allDataLoaded: true, // 👈 true para que admin/profesor no queden bloqueados
+  allDataLoaded: true,
 });
+
 export const AlumnoProvider = ({ children }: { children: React.ReactNode }) => {
   const { user, userProfile, setUserProfile } = useAuth();
 
@@ -91,14 +84,12 @@ export const AlumnoProvider = ({ children }: { children: React.ReactNode }) => {
   const [hasSeenCoursePlayerVideo, setHasSeenCoursePlayerVideo] = useState(false);
   const [hasSeenChatbotTutorial, setHasSeenChatbotTutorial] = useState(false);
   const [hasSeenCoursePlayerTutorial, setHasSeenCoursePlayerTutorial] = useState(false);
-  const [recentActivity, setRecentActivity] = useState<any[]>([]);
-  const [loadingActivity, setLoadingActivity] = useState(false);
+  const [recentActivity] = useState<any[]>([]);
   const [allDataLoaded, setAllDataLoaded] = useState(false);
   const [anuncios, setAnuncios] = useState<any[]>([]);
-const [loadingAnuncios, setLoadingAnuncios] = useState(false);
+  const [loadingAnuncios, setLoadingAnuncios] = useState(false);
   const chatUnsubscribeRef = useRef<(() => void) | null>(null);
 
-  // Inicializar flags desde el perfil
   useEffect(() => {
     if (!userProfile) return;
     setTutorialsSeen(userProfile.tutorialsSeen || {});
@@ -109,22 +100,21 @@ const [loadingAnuncios, setLoadingAnuncios] = useState(false);
     setHasSeenCoursePlayerTutorial(userProfile.hasSeenCoursePlayerTutorial === true);
   }, [userProfile?.uid]);
 
- useEffect(() => {
-  if (!user) return;
- 
-  Promise.all([
-    loadMisCursos(user.uid),
-    loadPodcastEpisodes(),
-    loadAnuncios(),
-  ]).then(() => setAllDataLoaded(true));
- 
-  // loadChatSessions va separado porque maneja su propio onSnapshot
-  loadChatSessions(user.uid);
- 
-  return () => {
-    chatUnsubscribeRef.current?.(); // cleanup del listener al desmontar
-  };
-}, [user?.uid]);
+  useEffect(() => {
+    if (!user) return;
+
+    Promise.all([
+      loadMisCursos(user.uid),
+      loadPodcastEpisodes(),
+      loadAnuncios(),
+    ]).then(() => setAllDataLoaded(true));
+
+    loadChatSessions(user.uid);
+
+    return () => {
+      chatUnsubscribeRef.current?.();
+    };
+  }, [user?.uid]);
 
   const loadMisCursos = async (uid: string) => {
     setLoadingCursos(true);
@@ -158,7 +148,7 @@ const [loadingAnuncios, setLoadingAnuncios] = useState(false);
 
       setMisCursos(cursosAlumno);
     } catch (err) {
-      console.error("❌ Error cargando cursos:", err);
+      console.error("Error cargando cursos:", err);
       setMisCursos([]);
     } finally {
       setLoadingCursos(false);
@@ -178,64 +168,51 @@ const [loadingAnuncios, setLoadingAnuncios] = useState(false);
     }
   };
 
- 
-const loadChatSessions = async (uid: string) => {
-  setLoadingChatSessions(true);
- 
-  try {
-    const profile = await fetchUserFromBatchesByUid(uid);
-    if (!profile?.batchId || !profile?.userKey) {
-      setChatSessions([]);
-      setLoadingChatSessions(false);
-      return;
-    }
- 
-    const batchRef = doc(db, "chatSessions", profile.batchId);
- 
-    // Cancelar listener anterior si existía
-    chatUnsubscribeRef.current?.();
- 
-    // onSnapshot — se actualiza en tiempo real sin recargar la página
-    chatUnsubscribeRef.current = onSnapshot(batchRef, (snap) => {
-    
-  console.log("📸 onSnapshot disparado");
-  console.log("¿Existe el doc?", snap.exists());
-  console.log("Data completa:", snap.data());
-  console.log("userKey buscado:", profile.userKey);
-  console.log("Sesiones encontradas:", snap.data()?.[profile.userKey]);
-      if (!snap.exists()) {
+  const loadChatSessions = async (uid: string) => {
+    setLoadingChatSessions(true);
+    try {
+      const profile = await fetchUserFromBatchesByUid(uid);
+      if (!profile?.batchId || !profile?.userKey) {
         setChatSessions([]);
         setLoadingChatSessions(false);
         return;
       }
- 
-      // El campo del alumno es un array de sesiones [{date, summary...}, ...]
-      const sessions: any[] = snap.data()?.[profile.userKey] ?? [];
- 
-      // Ordenar por date desc (más reciente primero) por si acaso
-      const sorted = [...sessions].sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-      );
- 
-      setChatSessions(sorted);
-      setLoadingChatSessions(false);
-    });
- 
-  } catch (err) {
-    console.error("❌ Error cargando chat sessions:", err);
-    setChatSessions([]);
-    setLoadingChatSessions(false);
-  }
-};
-  const loadAnuncios = async () => {
-  setLoadingAnuncios(true);
-  try {
-    const snap = await getDocs(collection(db, "anuncios"));
-    setAnuncios(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter((a: any) => a.visible !== false));
-  } catch { setAnuncios([]); } finally { setLoadingAnuncios(false); }
-};
 
-  // Helper genérico para marcar flags en Firestore
+      const batchRef = doc(db, "chatSessions", profile.batchId);
+      chatUnsubscribeRef.current?.();
+
+      chatUnsubscribeRef.current = onSnapshot(batchRef, (snap) => {
+        if (!snap.exists()) {
+          setChatSessions([]);
+          setLoadingChatSessions(false);
+          return;
+        }
+        const sessions: any[] = snap.data()?.[profile.userKey] ?? [];
+        const sorted = [...sessions].sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
+        setChatSessions(sorted);
+        setLoadingChatSessions(false);
+      });
+    } catch (err) {
+      console.error("Error cargando chat sessions:", err);
+      setChatSessions([]);
+      setLoadingChatSessions(false);
+    }
+  };
+
+  const loadAnuncios = async () => {
+    setLoadingAnuncios(true);
+    try {
+      const snap = await getDocs(collection(db, "anuncios"));
+      setAnuncios(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter((a: any) => a.visible !== false));
+    } catch {
+      setAnuncios([]);
+    } finally {
+      setLoadingAnuncios(false);
+    }
+  };
+
   const markFlag = async (field: string, setter: (v: boolean) => void) => {
     if (!user || !userProfile?.batchId || !userProfile?.userKey) return;
     try {
@@ -248,7 +225,7 @@ const loadChatSessions = async (uid: string) => {
       }, { merge: true });
       setter(true);
       setUserProfile({ ...userProfile, [field]: true });
-    } catch (err) {
+    } catch {
       toast.error("Error guardando progreso");
     }
   };
@@ -270,38 +247,59 @@ const loadChatSessions = async (uid: string) => {
     }
   };
 
-  const saveCourseProgress = async (uid: string, courseId: string, data: Record<string, any>) => {
+  const saveCourseProgress = useCallback(async (
+    uid: string,
+    courseId: string,
+    data: Record<string, any>
+  ) => {
+    if (!uid || !courseId) return;
+
+    const batchId = userProfile?.batchId;
+    const userKey = userProfile?.userKey;
+
+    if (!batchId || !userKey) return;
+
     try {
-      const profile = await fetchUserFromBatchesByUid(uid);
-      if (!profile) return;
-      const batchRef = doc(db, "alumnos", profile.batchId);
+      const batchRef = doc(db, "alumnos", batchId);
       const snap = await getDoc(batchRef);
       if (!snap.exists()) return;
+
       const batchData = snap.data();
-      const userKey = Object.keys(batchData).find(k => k.startsWith("user_") && batchData[k]?.uid === uid);
-      if (!userKey) return;
       const userData = batchData[userKey] || {};
-      const prevProgreso = userData.progreso || {};
-      const prevByLesson = prevProgreso[courseId]?.byLesson || {};
+      const prevByLesson = userData?.progreso?.[courseId]?.byLesson || {};
+
       await setDoc(batchRef, {
-        [userKey]: { ...userData, progreso: { ...prevProgreso, [courseId]: { byLesson: { ...prevByLesson, ...data } } } }
+        [userKey]: {
+          ...userData,
+          progreso: {
+            ...(userData.progreso || {}),
+            [courseId]: {
+              byLesson: { ...prevByLesson, ...data }
+            }
+          }
+        }
       }, { merge: true });
     } catch (err) {
-      toast.error("Error guardando progreso del curso");
+      console.error("Error guardando progreso:", err);
+      toast.error("No se pudo guardar el progreso");
     }
-  };
+  }, [userProfile?.batchId, userProfile?.userKey]);
 
-  const getCourseProgress = async (uid: string, courseId: string) => {
+  const getCourseProgress = useCallback(async (uid: string, courseId: string) => {
     try {
-      const profile = await fetchUserFromBatchesByUid(uid);
-      if (!profile) return {};
-      const snap = await getDoc(doc(db, "alumnos", profile.batchId));
+      const batchId = userProfile?.batchId;
+      const userKey = userProfile?.userKey;
+      if (!batchId || !userKey) return {};
+
+      const snap = await getDoc(doc(db, "alumnos", batchId));
       if (!snap.exists()) return {};
+
       const data = snap.data();
-      const userKey = Object.keys(data).find(k => k.startsWith("user_") && data[k]?.uid === uid);
-      return userKey ? data[userKey]?.progreso?.[courseId] || {} : {};
-    } catch { return {}; }
-  };
+      return data[userKey]?.progreso?.[courseId] || {};
+    } catch {
+      return {};
+    }
+  }, [userProfile?.batchId, userProfile?.userKey]);
 
   return (
     <AlumnoContext.Provider value={{
@@ -315,7 +313,7 @@ const loadChatSessions = async (uid: string) => {
       hasSeenChatbotTutorial, markChatbotTutorialAsSeen: () => markFlag("hasSeenChatbotTutorial", setHasSeenChatbotTutorial),
       hasSeenCoursePlayerTutorial, markCoursePlayerTutorialAsSeen: () => markFlag("hasSeenCoursePlayerTutorial", setHasSeenCoursePlayerTutorial),
       saveCourseProgress, getCourseProgress,
-      recentActivity, loadingActivity,
+      recentActivity, loadingActivity: false,
       anuncios, loadingAnuncios,
       allDataLoaded,
     }}>

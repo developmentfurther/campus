@@ -16,7 +16,7 @@ import { useChat } from "@/contexts/ChatContext";
 import TopicSelector, { TOPICS, Topic } from "./TopicSelector";
 import { useAlumno } from "@/contexts/AlumnoContext";
 
-const DAILY_MESSAGE_LIMIT = 6;
+const DAILY_MESSAGE_LIMIT = 20;
 
 function formatMarkdown(text: string) {
   if (!text) return "";
@@ -27,32 +27,60 @@ function formatMarkdown(text: string) {
 
 const getInitialMessage = (language: string, topic: Topic | null): string => {
   if (!topic) return "";
-  const isEs = ["es", "spanish"].includes(language?.toLowerCase());
-  const topicName = isEs ? topic.labelEs : topic.label;
   const map: Record<string, Record<string, string>> = {
-    english: {
-      travel: "Hi! Let's talk about travel! Have you been anywhere exciting lately, or do you have a dream destination in mind? ✈️",
-      work: "Hi! Let's talk about work and careers. Are you currently working or looking for new opportunities? 💼",
-      food: "Hi! Let's talk about food — one of my favorite topics! What's your absolute favorite dish? 🍽️",
-      sports: "Hi! Let's talk sports! Do you play any sports yourself, or are you more of a fan? ⚽",
-      tech: "Hi! Let's dive into tech. What apps or gadgets can you not live without? 💻",
-      culture: "Hi! Let's explore culture and arts. Seen any good movies or listened to great music lately? 🎭",
-      daily: "Hi! Let's chat about everyday life. What does your typical day look like? ☀️",
-      business: "Hi! Let's talk business. Do you work for a company or have you thought about starting your own? 📈",
-    },
-    spanish: {
-      travel: "¡Hola! Hoy vamos a hablar de viajes. ¿Fuiste a algún lugar interesante últimamente o tenés un destino soñado? ✈️",
-      work: "¡Hola! Hoy vamos a hablar de trabajo y carrera. ¿Estás trabajando actualmente o buscando nuevas oportunidades? 💼",
-      food: "¡Hola! Vamos a hablar de comida, uno de mis temas favoritos. ¿Cuál es tu plato favorito de todos los tiempos? 🍽️",
-      sports: "¡Hola! Vamos a hablar de deportes. ¿Practicás algún deporte o sos más de ver los partidos? ⚽",
-      tech: "¡Hola! Vamos a hablar de tecnología. ¿Qué apps o gadgets no podrías dejar de usar? 💻",
-      culture: "¡Hola! Vamos a hablar de cultura y arte. ¿Viste alguna buena peli o escuchaste música que te haya copado últimamente? 🎭",
-      daily: "¡Hola! Vamos a charlar sobre la vida cotidiana. ¿Cómo es tu día típico? ☀️",
-      business: "¡Hola! Vamos a hablar de negocios. ¿Trabajás en una empresa o alguna vez pensaste en tener tu propio emprendimiento? 📈",
-    },
-  };
-  const langKey = ["es", "spanish"].includes(language?.toLowerCase()) ? "spanish" : "english";
-  return map[langKey]?.[topic.id] ?? `Hi! Let's talk about ${topicName}!`;
+  english: {
+    travel: "Hi! Let's talk about travel! Have you been anywhere exciting lately, or do you have a dream destination in mind? ✈️",
+    work: "Hi! Let's talk about work and careers. Are you currently working or looking for new opportunities? 💼",
+    food: "Hi! Let's talk about food — one of my favorite topics! What's your absolute favorite dish? 🍽️",
+    sports: "Hi! Let's talk sports! Do you play any sports yourself, or are you more of a fan? ⚽",
+    tech: "Hi! Let's dive into tech. What apps or gadgets can you not live without? 💻",
+    culture: "Hi! Let's explore culture and arts. Seen any good movies or listened to great music lately? 🎭",
+    daily: "Hi! Let's chat about everyday life. What does your typical day look like? ☀️",
+    business: "Hi! Let's talk business. Do you work for a company or have you thought about starting your own? 📈",
+  },
+  spanish: {
+    travel: "¡Hola! Hoy vamos a hablar de viajes. ¿Fuiste a algún lugar interesante últimamente o tenés un destino soñado? ✈️",
+    work: "¡Hola! Hoy vamos a hablar de trabajo y carrera. ¿Estás trabajando actualmente o buscando nuevas oportunidades? 💼",
+    food: "¡Hola! Vamos a hablar de comida, uno de mis temas favoritos. ¿Cuál es tu plato favorito de todos los tiempos? 🍽️",
+    sports: "¡Hola! Vamos a hablar de deportes. ¿Practicás algún deporte o sos más de ver los partidos? ⚽",
+    tech: "¡Hola! Vamos a hablar de tecnología. ¿Qué apps o gadgets no podrías dejar de usar? 💻",
+    culture: "¡Hola! Vamos a hablar de cultura y arte. ¿Viste alguna buena peli o escuchaste música que te haya copado últimamente? 🎭",
+    daily: "¡Hola! Vamos a charlar sobre la vida cotidiana. ¿Cómo es tu día típico? ☀️",
+    business: "¡Hola! Vamos a hablar de negocios. ¿Trabajás en una empresa o alguna vez pensaste en tener tu propio emprendimiento? 📈",
+  },
+  portuguese: {
+    travel: "Oi! Vamos falar sobre viagens! Você foi a algum lugar interessante ultimamente ou tem um destino dos sonhos? ✈️",
+    work: "Oi! Vamos falar sobre trabalho e carreira. Você está trabalhando atualmente ou buscando novas oportunidades? 💼",
+    food: "Oi! Vamos falar sobre comida — um dos meus temas favoritos! Qual é o seu prato favorito de todos os tempos? 🍽️",
+    sports: "Oi! Vamos falar de esportes! Você pratica algum esporte ou prefere assistir? ⚽",
+    tech: "Oi! Vamos mergulhar no mundo da tecnologia. Quais apps ou gadgets você não consegue viver sem? 💻",
+    culture: "Oi! Vamos explorar cultura e artes. Assistiu algum bom filme ou ouviu uma música incrível ultimamente? 🎭",
+    daily: "Oi! Vamos bater um papo sobre o dia a dia. Como é o seu dia típico? ☀️",
+    business: "Oi! Vamos falar de negócios. Você trabalha em uma empresa ou já pensou em ter o seu próprio negócio? 📈",
+  },
+  italian: {
+    travel: "Ciao! Parliamo di viaggi! Sei stato in qualche posto interessante di recente o hai una destinazione dei sogni? ✈️",
+    work: "Ciao! Parliamo di lavoro e carriera. Stai lavorando attualmente o cerchi nuove opportunità? 💼",
+    food: "Ciao! Parliamo di cibo — uno dei miei argomenti preferiti! Qual è il tuo piatto preferito in assoluto? 🍽️",
+    sports: "Ciao! Parliamo di sport! Pratichi qualche sport o sei più un tifoso? ⚽",
+    tech: "Ciao! Immergiamoci nel mondo della tecnologia. Quali app o gadget non potresti mai fare a meno? 💻",
+    culture: "Ciao! Esploriamo cultura e arte. Hai visto qualche bel film o ascoltato buona musica ultimamente? 🎭",
+    daily: "Ciao! Chiacchieriamo della vita quotidiana. Com'è la tua giornata tipica? ☀️",
+    business: "Ciao! Parliamo di business. Lavori per un'azienda o hai mai pensato di avviare la tua? 📈",
+  },
+  french: {
+    travel: "Bonjour ! Parlons voyage ! Êtes-vous allé quelque part d'intéressant récemment ou avez-vous une destination de rêve ? ✈️",
+    work: "Bonjour ! Parlons travail et carrière. Travaillez-vous actuellement ou cherchez-vous de nouvelles opportunités ? 💼",
+    food: "Bonjour ! Parlons cuisine — l'un de mes sujets préférés ! Quel est votre plat préféré de tous les temps ? 🍽️",
+    sports: "Bonjour ! Parlons sport ! Vous pratiquez un sport ou vous êtes plutôt supporter ? ⚽",
+    tech: "Bonjour ! Plongeons dans la tech. Quelles applis ou quels gadgets ne pourriez-vous pas quitter ? 💻",
+    culture: "Bonjour ! Explorons culture et arts. Vous avez vu un bon film ou écouté de la bonne musique dernièrement ? 🎭",
+    daily: "Bonjour ! Parlons de la vie quotidienne. À quoi ressemble votre journée type ? ☀️",
+    business: "Bonjour ! Parlons business. Vous travaillez pour une entreprise ou avez-vous pensé à créer la vôtre ? 📈",
+  },
+};
+   const langKey = language?.toLowerCase();
+  return map[langKey]?.[topic.id] ?? map["english"]?.[topic.id] ?? `Hi! Let's talk about ${topic.label}!`;
 };
 
 const languageKeyMap: Record<string, string> = {
@@ -119,7 +147,8 @@ const checkDailyUsage = async () => {
     const chatDaily = snap.data()?.[userProfile.userKey]?.chatDaily;
 
     if (!chatDaily || chatDaily.date !== today) {
-      // Día nuevo — resetear
+      
+      setMessages([]);
       await setDoc(batchRef, {
         [userProfile.userKey]: {
           ...snap.data()[userProfile.userKey],
@@ -133,17 +162,45 @@ const checkDailyUsage = async () => {
       if (chatDaily.summaryTaken) {
         setIsLimitReached(true);
         setLimitReason("summary");
+        // ✅ Cargar última sesión guardada para mostrarla
+        await loadLastSession();
       } else if ((chatDaily.count || 0) >= DAILY_MESSAGE_LIMIT) {
         setIsLimitReached(true);
         setLimitReason("count");
+        await loadLastSession();
       }
     }
   } catch (err) {
     console.error("Error checking usage:", err);
   }
 };
+
+const loadLastSession = async () => {
+  if (!userProfile?.batchId || !userProfile?.userKey) return;
+
+  // ✅ Si ya hay mensajes en sessionStorage, no sobreescribir
+  
+
+  // Solo llega acá si sessionStorage está vacío (ej: abrió en otro browser/dispositivo)
+  try {
+    const snap = await getDoc(doc(db, "chatSessions", userProfile.batchId));
+    if (!snap.exists()) return;
+    const sessions: any[] = snap.data()?.[userProfile.userKey] ?? [];
+    if (!sessions.length) return;
+    const last = sessions[0];
+
+    setMessages([
+      {
+        role: "assistant",
+        content: `<h3 class="font-bold text-gray-800">Session Summary</h3><p>${last.feedbackSummary ?? ""}</p><p><strong>See you tomorrow for more practice! 👋</strong></p>`,
+      },
+    ]);
+  } catch (err) {
+    console.error("Error loading last session:", err);
+  }
+};
     checkDailyUsage();
-  }, [user]);
+  }, [user, userProfile?.batchId, userProfile?.userKey]);;
 
   useEffect(() => {
     if (videoFinished && !loadingChatbotTutorialStatus && userProfile && !hasSeenChatbotTutorial) {
@@ -175,9 +232,14 @@ const checkDailyUsage = async () => {
         ...prev,
         {
           role: "assistant",
-          content: isEs
-            ? `¡Genial! Cambiamos de tema. Ahora vamos a hablar de <strong>${topic.labelEs}</strong> ${topic.emoji}`
-            : `Great! Let's switch topics. Now we'll talk about <strong>${topic.label}</strong> ${topic.emoji}`,
+         
+content: ({ 
+  english: `Great! Let's switch topics. Now we'll talk about <strong>${topic.label}</strong> ${topic.emoji}`,
+  spanish: `¡Genial! Cambiamos de tema. Ahora vamos a hablar de <strong>${topic.labelEs}</strong> ${topic.emoji}`,
+  portuguese: `Ótimo! Mudamos de tema. Agora vamos falar sobre <strong>${topic.label}</strong> ${topic.emoji}`,
+  italian: `Ottimo! Cambiamo argomento. Ora parleremo di <strong>${topic.label}</strong> ${topic.emoji}`,
+  french: `Super ! On change de sujet. Maintenant on va parler de <strong>${topic.label}</strong> ${topic.emoji}`,
+}[language] ?? `Great! Let's switch topics. Now we'll talk about <strong>${topic.label}</strong> ${topic.emoji}`)
         },
       ]);
     } else {
@@ -218,6 +280,8 @@ const persistUsage = async (finalCount: number, summaryTaken: boolean) => {
   // Reemplazar la función existente por esta:
 const saveConversationToFirestore = async (summary: any) => {
   if (!user || !userProfile?.batchId || !userProfile?.userKey) return;
+
+  
 
   const sessionData = {
     date: new Date().toISOString(),
@@ -535,7 +599,9 @@ const saveConversationToFirestore = async (summary: any) => {
                   <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                     <span className="px-1.5 py-0.5 bg-[#EE7203] text-white text-[10px] font-bold rounded uppercase">{language}</span>
                     <span className="text-white/50 text-xs hidden sm:inline">•</span>
-                    <span className="text-white/70 text-[10px]">Level {level}</span>
+                   <span className="text-white/70 text-[10px]">
+  {{ english: "Level", spanish: "Nivel", portuguese: "Nível", italian: "Livello", french: "Niveau" }[language] ?? "Level"} {level}
+</span>
                     {selectedTopic && (
                       <>
                         <span className="text-white/50 text-xs hidden sm:inline">•</span>
@@ -556,7 +622,12 @@ const saveConversationToFirestore = async (summary: any) => {
                   className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <FiCompass size={14} />
-                  <span className="hidden sm:inline">{selectedTopic ? (isEs ? "Cambiar tema" : "Change topic") : (isEs ? "Elegir tema" : "Choose topic")}</span>
+                  <span className="hidden sm:inline">
+  {selectedTopic 
+    ? ({ english: "Change topic", spanish: "Cambiar tema", portuguese: "Mudar tema", italian: "Cambia argomento", french: "Changer de sujet" }[language] ?? "Change topic")
+    : ({ english: "Choose topic", spanish: "Elegir tema", portuguese: "Escolher tema", italian: "Scegli argomento", french: "Choisir un sujet" }[language] ?? "Choose topic")
+  }
+</span>
                 </button>
                 <button
                   data-tutorial="end-button"
@@ -630,7 +701,10 @@ const saveConversationToFirestore = async (summary: any) => {
                     <textarea
                       data-tutorial="text-input"
                       className="w-full border-2 border-gray-200 rounded-xl p-2.5 sm:p-3 pr-8 resize-none focus:outline-none focus:border-[#EE7203] focus:ring-2 focus:ring-[#EE7203]/20 min-h-[48px] sm:min-h-[56px] max-h-[100px] transition-colors text-sm sm:text-base"
-                      placeholder={selectedTopic ? t("chat.inputPlaceholder") : (isEs ? "Primero elegí una temática ↑" : "Choose a topic first ↑")}
+                      placeholder={selectedTopic 
+  ? t("chat.inputPlaceholder") 
+  : ({ english: "Choose a topic first ↑", spanish: "Primero elegí una temática ↑", portuguese: "Escolha um tema primeiro ↑", italian: "Scegli prima un argomento ↑", french: "Choisissez d'abord un sujet ↑" }[language] ?? "Choose a topic first ↑")
+}
                       value={input}
                       onKeyDown={handleKey}
                       onChange={(e) => setInput(e.target.value)}
@@ -662,8 +736,16 @@ const saveConversationToFirestore = async (summary: any) => {
               </div>
             </div>
           ) : (
-            <div className="bg-gray-50 p-4 text-center text-gray-400 text-sm border-t border-gray-200 safe-bottom">
-              Chat session closed for today.
+            <div className="flex flex-col items-center gap-3 pt-4 pb-6 px-4 border-t-2 border-[#EE7203]/30 bg-white/95 backdrop-blur-md safe-bottom">
+              <div className="flex items-center gap-2 text-[#EE7203] font-semibold text-sm">
+                <FiLock size={16} />
+                <span>
+                  {{ english: "Come back tomorrow for more practice!", spanish: "¡Volvé mañana para seguir practicando!", portuguese: "Volte amanhã para continuar praticando!", italian: "Torna domani per continuare a praticare!", french: "Revenez demain pour continuer à pratiquer !" }[language] ?? "Come back tomorrow for more practice!"}
+                </span>
+              </div>
+              <p className="text-xs text-gray-400">
+                {{ english: "Resets automatically tomorrow", spanish: "Se reinicia automáticamente mañana", portuguese: "Reinicia automaticamente amanhã", italian: "Si ripristina automaticamente domani", french: "Réinitialisation automatique demain" }[language] ?? "Resets automatically tomorrow"}
+              </p>
             </div>
           )}
         </div>

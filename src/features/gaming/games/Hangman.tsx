@@ -172,38 +172,49 @@ export default function Hangman() {
   /* ============================================================
      📡 Obtener palabra IA
   ============================================================ */
-  const fetchWord = async () => {
-    if (!userProfile?.language) return;
+ const fetchWord = async () => {
+console.log("🔍 activeLanguage:", userProfile?.activeLanguage);
+  console.log("🔍 language:", userProfile?.language);
 
-    try {
-      setLoadingWord(true);
-      setError("");
-      setGuessedLetters([]);
-      setWrongGuesses(0);
-      setStatus("playing");
+  if (!userProfile?.activeLanguage) return;
 
-      const lang = userProfile.language.toLowerCase();
-      const res = await fetch(`/api/games/hangman?lang=${lang}`);
-      const data = await res.json();
+  try {
+    setLoadingWord(true);
+    setError("");
+    setGuessedLetters([]);
+    setWrongGuesses(0);
+    setStatus("playing");
 
-      if (data.word) {
-        setWord(data.word.toLowerCase());
-      } else {
-        throw new Error("No word received");
-      }
-    } catch (err) {
-      console.error("❌ Error fetching word:", err);
-      setError(t("gaming.games.hangman.errorFetching") || "Error al cargar palabra");
-    } finally {
-      setLoadingWord(false);
+    const langMap: Record<string, string> = {
+      en: "en",
+      es: "es",
+      pt: "pt",
+      fr: "fr",
+      it: "it",
+    };
+
+    const lang = langMap[userProfile.activeLanguage.toLowerCase()] ?? "en";
+    const res = await fetch(`/api/games/hangman?lang=${lang}`);
+    const data = await res.json();
+
+    if (data.word) {
+      setWord(data.word.toLowerCase());
+    } else {
+      throw new Error("No word received");
     }
-  };
+  } catch (err) {
+    console.error("❌ Error fetching word:", err);
+    setError(t("gaming.games.hangman.errorFetching") || "Error al cargar palabra");
+  } finally {
+    setLoadingWord(false);
+  }
+};
 
   useEffect(() => {
-    if (!checkingAttempt && !blocked && userProfile?.language) {
-      void fetchWord();
-    }
-  }, [checkingAttempt, blocked, userProfile?.language]);
+  if (!checkingAttempt && !blocked && userProfile) { // ← solo verificar que userProfile exista
+    void fetchWord();
+  }
+}, [checkingAttempt, blocked, userProfile]);
 
   /* ============================================================
      🧠 Win / Lose Detection
@@ -247,7 +258,7 @@ export default function Hangman() {
   /* ============================================================
      RENDERS CONDICIONALES
   ============================================================ */
-  if (checkingAttempt || !userProfile?.language || showLoader) {
+  if (checkingAttempt || !userProfile || showLoader) {
     return <LoaderGame />;
   }
 
