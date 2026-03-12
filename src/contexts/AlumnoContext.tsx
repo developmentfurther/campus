@@ -109,20 +109,22 @@ const [loadingAnuncios, setLoadingAnuncios] = useState(false);
     setHasSeenCoursePlayerTutorial(userProfile.hasSeenCoursePlayerTutorial === true);
   }, [userProfile?.uid]);
 
-  // Cargar datos al montar
-  useEffect(() => {
-    if (!user) return;
-    Promise.all([
-      loadMisCursos(user.uid),
-      loadPodcastEpisodes(),
-      loadAnuncios(),
-    ]).then(() => setAllDataLoaded(true));
-    loadChatSessions(user.uid);
-
-    return () => {
-      chatUnsubscribeRef.current?.();
-    };
-  }, [user?.uid]);
+ useEffect(() => {
+  if (!user) return;
+ 
+  Promise.all([
+    loadMisCursos(user.uid),
+    loadPodcastEpisodes(),
+    loadAnuncios(),
+  ]).then(() => setAllDataLoaded(true));
+ 
+  // loadChatSessions va separado porque maneja su propio onSnapshot
+  loadChatSessions(user.uid);
+ 
+  return () => {
+    chatUnsubscribeRef.current?.(); // cleanup del listener al desmontar
+  };
+}, [user?.uid]);
 
   const loadMisCursos = async (uid: string) => {
     setLoadingCursos(true);
@@ -176,27 +178,55 @@ const [loadingAnuncios, setLoadingAnuncios] = useState(false);
     }
   };
 
-  const loadChatSessions = (uid: string) => {
+ 
+const loadChatSessions = async (uid: string) => {
+  setLoadingChatSessions(true);
+ 
+  try {
+    const profile = await fetchUserFromBatchesByUid(uid);
+    if (!profile?.batchId || !profile?.userKey) {
+      setChatSessions([]);
+      setLoadingChatSessions(false);
+      return;
+    }
+ 
+    const batchRef = doc(db, "chatSessions", profile.batchId);
+ 
+    // Cancelar listener anterior si existía
     chatUnsubscribeRef.current?.();
-    setLoadingChatSessions(true);
-    const q = query(collection(db, "conversaciones", uid, "sessions"), orderBy("endedAt", "desc"));
-    chatUnsubscribeRef.current = onSnapshot(q, (snap) => {
-      const now = Date.now();
-      const sevenDays = 7 * 24 * 60 * 60 * 1000;
-      const list: any[] = [];
-      snap.docs.forEach(d => {
-        const endedAt = d.data().endedAt?.toDate?.() ?? null;
-        if (endedAt && now - endedAt.getTime() > sevenDays) {
-          deleteDoc(doc(db, "conversaciones", uid, "sessions", d.id));
-          return;
-        }
-        list.push({ id: d.id, ...d.data() });
-      });
-      setChatSessions(list);
+ 
+    // onSnapshot — se actualiza en tiempo real sin recargar la página
+    chatUnsubscribeRef.current = onSnapshot(batchRef, (snap) => {
+    
+  console.log("📸 onSnapshot disparado");
+  console.log("¿Existe el doc?", snap.exists());
+  console.log("Data completa:", snap.data());
+  console.log("userKey buscado:", profile.userKey);
+  console.log("Sesiones encontradas:", snap.data()?.[profile.userKey]);
+      if (!snap.exists()) {
+        setChatSessions([]);
+        setLoadingChatSessions(false);
+        return;
+      }
+ 
+      // El campo del alumno es un array de sesiones [{date, summary...}, ...]
+      const sessions: any[] = snap.data()?.[profile.userKey] ?? [];
+ 
+      // Ordenar por date desc (más reciente primero) por si acaso
+      const sorted = [...sessions].sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+ 
+      setChatSessions(sorted);
       setLoadingChatSessions(false);
     });
-  };
-
+ 
+  } catch (err) {
+    console.error("❌ Error cargando chat sessions:", err);
+    setChatSessions([]);
+    setLoadingChatSessions(false);
+  }
+};
   const loadAnuncios = async () => {
   setLoadingAnuncios(true);
   try {

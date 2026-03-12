@@ -102,6 +102,7 @@ export const AdminProvider = ({ children }: { children: React.ReactNode }) => {
   activeLanguage: u.activeLanguage || "en",            // ✅ idioma activo
   learningLevel: (u.learningLevel || "").toUpperCase().trim(),
   active: u.active ?? true,
+  curso: u.curso || "",
   firstName: u.firstName || "",
   lastName: u.lastName || "",
   estadoAlumno: u.active ? "Active" : "Inactive",

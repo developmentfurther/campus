@@ -575,6 +575,7 @@ const [filterNombre, setFilterNombre] = useState("");
 const [filterCursoId, setFilterCursoId] = useState("");
 const [filterIdioma, setFilterIdioma] = useState("");
 const [filterNivel, setFilterNivel] = useState("");
+const [filterEmpresa, setFilterEmpresa] = useState("");
 const [alumnosPage, setAlumnosPage] = useState(0);
 const PAGE_SIZE = 50;
 
@@ -912,6 +913,7 @@ const filteredAlumnos = useMemo(() => {
       (filterIdioma ? lang.toLowerCase() === filterIdioma.toLowerCase() : true) &&
       (filterNivel ? lvl.toLowerCase() === filterNivel.toLowerCase() : true) &&
       (filterNombre ? nombre.includes(filterNombre.toLowerCase()) : true) &&
+      (filterEmpresa ? a.curso?.toLowerCase().trim() === filterEmpresa : true) &&
       tieneCurso
     );
   });
@@ -924,7 +926,7 @@ const filteredAlumnos = useMemo(() => {
     seen.add(email);
     return true;
   });
-}, [alumnos, alumnosRaw, filterIdioma, filterNivel, filterNombre, filterCursoId]);
+}, [alumnos, alumnosRaw, filterIdioma, filterNivel, filterNombre, filterCursoId, filterEmpresa]);
 
 // Helper para agregar todos los filtrados
 const addAllFiltered = (emails: string[]) => {
@@ -1242,6 +1244,23 @@ const selectSuggestion = (alumno: any) => {
               className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-slate-900 transition"
             />
           </div>
+          <div>
+  <Label>Empresa</Label>
+  <select
+    value={filterEmpresa}
+    onChange={(e) => { setFilterEmpresa(e.target.value); setAlumnosPage(0); }}
+    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 transition bg-white"
+  >
+    <option value="">Todas</option>
+    {Array.from(new Set(
+      (Array.isArray(alumnos) ? alumnos : [])
+        .map(a => a.curso?.toLowerCase().trim())
+        .filter(Boolean)
+    )).sort().map(e => (
+      <option key={e} value={e}>{e.charAt(0).toUpperCase() + e.slice(1)}</option>
+    ))}
+  </select>
+</div>
 
           {/* Idioma + Nivel */}
           <div className="grid grid-cols-2 gap-3">
@@ -1276,7 +1295,8 @@ const selectSuggestion = (alumno: any) => {
           </div>
 
           {/* Limpiar filtros */}
-          {(filterNombre || filterCursoId || filterIdioma || filterNivel) && (
+          {(filterNombre || filterCursoId || filterIdioma || filterNivel || filterEmpresa) && (
+
             <button
               type="button"
               onClick={() => {
@@ -1284,6 +1304,7 @@ const selectSuggestion = (alumno: any) => {
                 setFilterCursoId("");
                 setFilterIdioma("");
                 setFilterNivel("");
+                setFilterEmpresa("");
                 setAlumnosPage(0); // 👈 agregar esto
               }}
               className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-slate-600 text-sm hover:bg-slate-100 transition"

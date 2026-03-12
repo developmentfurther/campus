@@ -106,28 +106,42 @@ export default function ChatBox() {
 
   // ✅ TODOS los useEffect antes de cualquier return
   useEffect(() => {
-    const checkDailyUsage = async () => {
-      if (!user) return;
-      const today = new Date().toISOString().split("T")[0];
-      const usageRef = doc(db, "users", user.uid, "usage", "chat_daily");
-      try {
-        const snap = await getDoc(usageRef);
-        if (snap.exists()) {
-          const data = snap.data();
-          if (data.date !== today) {
-            await setDoc(usageRef, { date: today, count: 0, summaryTaken: false });
-            setMessageCount(0);
-            setIsLimitReached(false);
-          } else {
-            setMessageCount(data.count || 0);
-            if (data.summaryTaken) { setIsLimitReached(true); setLimitReason("summary"); }
-            else if ((data.count || 0) >= DAILY_MESSAGE_LIMIT) { setIsLimitReached(true); setLimitReason("count"); }
-          }
-        } else {
-          await setDoc(usageRef, { date: today, count: 0, summaryTaken: false });
+    // REEMPLAZAR checkDailyUsage
+const checkDailyUsage = async () => {
+  if (!user || !userProfile?.batchId || !userProfile?.userKey) return;
+  const today = new Date().toISOString().split("T")[0];
+  
+  try {
+    const batchRef = doc(db, "alumnos", userProfile.batchId);
+    const snap = await getDoc(batchRef);
+    if (!snap.exists()) return;
+
+    const chatDaily = snap.data()?.[userProfile.userKey]?.chatDaily;
+
+    if (!chatDaily || chatDaily.date !== today) {
+      // Día nuevo — resetear
+      await setDoc(batchRef, {
+        [userProfile.userKey]: {
+          ...snap.data()[userProfile.userKey],
+          chatDaily: { date: today, count: 0, summaryTaken: false }
         }
-      } catch (err) { console.error("Error checking usage:", err); }
-    };
+      }, { merge: true });
+      setMessageCount(0);
+      setIsLimitReached(false);
+    } else {
+      setMessageCount(chatDaily.count || 0);
+      if (chatDaily.summaryTaken) {
+        setIsLimitReached(true);
+        setLimitReason("summary");
+      } else if ((chatDaily.count || 0) >= DAILY_MESSAGE_LIMIT) {
+        setIsLimitReached(true);
+        setLimitReason("count");
+      }
+    }
+  } catch (err) {
+    console.error("Error checking usage:", err);
+  }
+};
     checkDailyUsage();
   }, [user]);
 
@@ -177,29 +191,64 @@ export default function ChatBox() {
     return newCount >= DAILY_MESSAGE_LIMIT;
   };
 
-  const persistUsage = async (finalCount: number, summaryTaken: boolean) => {
-    if (!user) return;
-    const today = new Date().toISOString().split("T")[0];
-    const usageRef = doc(db, "users", user.uid, "usage", "chat_daily");
-    await setDoc(usageRef, { date: today, count: finalCount, summaryTaken }, { merge: true });
-  };
+  // REEMPLAZAR persistUsage
+const persistUsage = async (finalCount: number, summaryTaken: boolean) => {
+  if (!user || !userProfile?.batchId || !userProfile?.userKey) return;
+  const today = new Date().toISOString().split("T")[0];
+
+  const batchRef = doc(db, "alumnos", userProfile.batchId);
+  const snap = await getDoc(batchRef);
+  if (!snap.exists()) return;
+
+  await setDoc(batchRef, {
+    [userProfile.userKey]: {
+      ...snap.data()[userProfile.userKey],
+      chatDaily: { date: today, count: finalCount, summaryTaken }
+    }
+  }, { merge: true });
+};
 
   const markSummaryAsTaken = async () => {
-    if (!user) return;
-    setIsLimitReached(true);
-    setLimitReason("summary");
-    await persistUsage(messageCount, true);
+  if (!user) return;
+  setIsLimitReached(true);
+  setLimitReason("summary");
+  await persistUsage(messageCount, true);
+};
+
+  // Reemplazar la función existente por esta:
+const saveConversationToFirestore = async (summary: any) => {
+  if (!user || !userProfile?.batchId || !userProfile?.userKey) return;
+
+  const sessionData = {
+    date: new Date().toISOString(),
+    language,
+    level,
+    topic: selectedTopic?.id ?? null,
+    messagesCount: messages.filter((m) => m.role === "user").length,
+    feedbackSummary: summary.feedbackSummary ?? "",
+    strengths: summary.strengths ?? [],
+    weakPoints: summary.weakPoints ?? [],
+    commonMistakes: summary.commonMistakes ?? [],
+    improvementPlan: summary.improvementPlan ?? "",
+    suggestedExercises: summary.suggestedExercises ?? [],
   };
 
-  const saveConversationToFirestore = async (summary: any) => {
-    if (!user) return;
-    const sessionId = Date.now().toString();
-    await setDoc(
-      doc(db, "conversaciones", user.uid, "sessions", sessionId),
-      { userId: user.uid, language, level, topic: selectedTopic?.id ?? null, summary, startedAt: serverTimestamp(), endedAt: serverTimestamp() },
-      { merge: true }
-    );
-  };
+  const batchRef = doc(db, "chatSessions", userProfile.batchId);
+  const snap = await getDoc(batchRef);
+
+  const existing: any[] = snap.exists()
+    ? snap.data()?.[userProfile.userKey] ?? []
+    : [];
+
+  // Mantener solo las últimas 3, agregar la nueva al principio
+  const updated = [sessionData, ...existing].slice(0, 3);
+
+  await setDoc(
+    batchRef,
+    { [userProfile.userKey]: updated },
+    { merge: true }
+  );
+};
 
   const analyzeMessage = async (messageText: string) => {
     try {
@@ -251,16 +300,59 @@ export default function ChatBox() {
     } catch (err) {
       console.error("🔥 Streaming error:", err);
     } finally {
-      setIsTyping(false);
-      if (shouldLock) {
-        setTimeout(() => {
-          setMessages((prev) => [...prev, { role: "assistant", content: "¡Has alcanzado tu límite diario! Has hecho un gran trabajo. Descansa y vuelve mañana. 👋" }]);
+    setIsTyping(false);
+    if (shouldLock) {
+      // ✅ Cuando se acaba el límite por count, disparar el summary automáticamente
+      setTimeout(async () => {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: "⏳ Generando tu resumen de sesión...",
+          },
+        ]);
+ 
+        try {
+          const res = await fetch("/api/chat/summary", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ messages, level, language }),
+          });
+          const summary = await res.json();
+ 
+          console.log("📋 Summary automático (limit reached):", summary);
+ 
+          // Guardar siempre, incompleto o no
+          await saveConversationToFirestore(summary);
+          await markSummaryAsTaken();
+ 
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content: summary.incomplete
+                ? "¡Has alcanzado tu límite diario! Has hecho un gran trabajo. Descansa y vuelve mañana. 👋"
+                : `<h3 class="font-bold text-gray-800">Daily limit reached!</h3><p>${summary.feedbackSummary ?? ""}</p><p><strong>See you tomorrow for more practice! 👋</strong></p>`,
+            },
+          ]);
+        } catch (err) {
+          console.error("🔥 Error guardando summary automático:", err);
+          // Si falla el summary, igual bloquear y persistir usage
+          await persistUsage(messageCount + 1, false);
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content: "¡Has alcanzado tu límite diario! Has hecho un gran trabajo. Descansa y vuelve mañana. 👋",
+            },
+          ]);
+        } finally {
           setLimitReason("count");
           setIsLimitReached(true);
-          persistUsage(messageCount + 1, false);
-        }, 1000);
-      }
+        }
+      }, 1000);
     }
+  }
   };
 
   const startRecording = async () => {
@@ -333,37 +425,84 @@ export default function ChatBox() {
 
   const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 
-  const finishConversation = async () => {
-    setIsTyping(true);
-    const studentMessages = messages.filter((m) => m.role === "user");
-    const totalUserText = studentMessages.map((m) => m.content).join(" ");
-    if (studentMessages.length < 2 || totalUserText.trim().length < 20) {
-      setMessages((p) => [...p, { role: "assistant", content: `<div style="color:#b91c1c;background:#fee2e2;padding:12px;border-radius:8px;border:1px solid #fecaca"><strong>${t("chat.errors.shortConversationTitle")}</strong><br/>${t("chat.errors.shortConversationBody")}</div>` }]);
-      setIsTyping(false); return;
+ const finishConversation = async () => {
+  setIsTyping(true);
+ 
+  const studentMessages = messages.filter((m) => m.role === "user");
+  const totalUserText = studentMessages.map((m) => m.content).join(" ");
+ 
+  if (studentMessages.length < 2 || totalUserText.trim().length < 20) {
+    setMessages((p) => [
+      ...p,
+      {
+        role: "assistant",
+        content: `<div style="color:#b91c1c;background:#fee2e2;padding:12px;border-radius:8px;border:1px solid #fecaca"><strong>${t("chat.errors.shortConversationTitle")}</strong><br/>${t("chat.errors.shortConversationBody")}</div>`,
+      },
+    ]);
+    setIsTyping(false);
+    return;
+  }
+ 
+  try {
+    const res = await fetch("/api/chat/summary", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages, level, language }),
+    });
+ 
+    const summary = await res.json();
+ 
+    // ⚠️ Log para debuggear qué está llegando del summary
+    console.log("📋 Summary recibido:", summary);
+ 
+    if (summary.error === "conversation-too-short") {
+      setMessages((p) => [
+        ...p,
+        {
+          role: "assistant",
+          content: `<div style="color:#b91c1c;background:#fee2e2;padding:12px;border-radius:8px;border:1px solid #fecaca"><strong>${t("chat.errors.shortTitle")}</strong><br/>${t("chat.errors.shortBody2")}</div>`,
+        },
+      ]);
+      setIsTyping(false);
+      return;
     }
-    try {
-      const res = await fetch("/api/chat/summary", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages, level, language }),
-      });
-      const summary = await res.json();
-      if (summary.error === "conversation-too-short") {
-        setMessages((p) => [...p, { role: "assistant", content: `<div style="color:#b91c1c;background:#fee2e2;padding:12px;border-radius:8px;border:1px solid #fecaca"><strong>${t("chat.errors.shortTitle")}</strong><br/>${t("chat.errors.shortBody2")}</div>` }]);
-        setIsTyping(false); return;
-      }
-      if (summary.incomplete) {
-        setMessages((p) => [...p, { role: "assistant", content: `<div style="color:#92400e;background:#fef3c7;padding:12px;border-radius:8px;border:1px solid #fde68a"><strong>${t("chat.errors.partialTitle")}</strong><br/>${t("chat.errors.partialBody")}</div>` }]);
-        setIsTyping(false); return;
-      }
-      setMessages((p) => [...p, { role: "assistant", content: `<h3 class="font-bold text-gray-800">Final Feedback</h3><p>${summary.feedbackSummary ?? ""}</p><p><strong>See you tomorrow for more practice! 👋</strong></p>` }]);
-      await saveConversationToFirestore(summary);
-      await markSummaryAsTaken();
-    } catch (err) {
-      console.error(err);
-      setMessages((p) => [...p, { role: "assistant", content: `<div style="color:#b91c1c;background:#fee2e2;padding:12px;border-radius:8px;border:1px solid #fecaca"><strong>⚠️ Error</strong><br/>Something went wrong. Please try again.</div>` }]);
-    } finally { setIsTyping(false); }
-  };
+ 
+    // ✅ SIEMPRE guardar, incluso si el summary está incompleto
+    // Un summary parcial es mejor que nada
+    await saveConversationToFirestore(summary);
+    await markSummaryAsTaken();
+ 
+    if (summary.incomplete) {
+      // Guardamos igual pero mostramos aviso suave (sin return prematuro)
+      setMessages((p) => [
+        ...p,
+        {
+          role: "assistant",
+          content: `<div style="color:#92400e;background:#fef3c7;padding:12px;border-radius:8px;border:1px solid #fde68a"><strong>${t("chat.errors.partialTitle")}</strong><br/>${t("chat.errors.partialBody")}</div>`,
+        },
+      ]);
+    } else {
+      setMessages((p) => [
+        ...p,
+        {
+          role: "assistant",
+          content: `<h3 class="font-bold text-gray-800">Final Feedback</h3><p>${summary.feedbackSummary ?? ""}</p><p><strong>See you tomorrow for more practice! 👋</strong></p>`,
+        },
+      ]);
+    }
+  } catch (err) {
+    console.error("🔥 Error en finishConversation:", err);
+    setMessages((p) => [
+      ...p,
+      {
+        role: "assistant",
+        content: `<div style="color:#b91c1c;background:#fee2e2;padding:12px;border-radius:8px;border:1px solid #fecaca"><strong>⚠️ Error</strong><br/>Something went wrong. Please try again.</div>`,
+      },
+    ]);
+  } finally {
+    setIsTyping(false);
+  }
+}
 
   return (
     <>
@@ -468,22 +607,7 @@ export default function ChatBox() {
               <TopicSelector language={rawLang} onSelect={handleTopicSelect} currentTopic={selectedTopic} mode="change" onClose={() => setShowTopicSelector(false)} />
             )}
 
-            {isLimitReached && (
-              <div className="absolute bottom-0 left-0 w-full bg-white/95 backdrop-blur-md border-t-2 border-[#EE7203] p-6 z-20 flex flex-col items-center text-center animate-in slide-in-from-bottom-10 fade-in duration-500">
-                <div className="w-24 h-24 relative mb-4">
-                  <Image src="/images/goodbye.png" alt="Sleepy Robot" width={96} height={96} className="object-contain" />
-                  <div className="absolute -top-2 -right-2 bg-[#EE7203] text-white rounded-full p-1.5 shadow-md"><FiLock size={16} /></div>
-                </div>
-                <h3 className="text-xl font-bold text-[#0C212D] mb-2">
-                  {limitReason === "count" ? "Daily limit reached!" : "Session completed!"}
-                </h3>
-                <p className="text-gray-600 max-w-sm text-sm mb-4 leading-relaxed">
-                  {limitReason === "count" ? "You've been practicing hard today! Come back tomorrow for more." : "You've finished your daily session. Review your feedback and come back tomorrow!"}
-                </p>
-                <div className="w-full bg-gray-100 rounded-full h-2 mb-2 max-w-xs"><div className="bg-[#EE7203] h-full w-full rounded-full"></div></div>
-                <p className="text-xs text-gray-400 font-medium">Resets automatically tomorrow</p>
-              </div>
-            )}
+            
           </div>
 
           {/* INPUT AREA */}

@@ -18,10 +18,12 @@ export default function MaterialAcademico() {
   const [fullCourseData, setFullCourseData] = useState<any | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+ const [sortOrder, setSortOrder] = useState<"asc" | "desc" | "">("asc");
+  const NIVEL_ORDER = ["A1","A2","B1","B2","B2.5","C1","C2"];
 
   const localCourses = useMemo(() => {
     if (!Array.isArray(allCursos)) return [];
-    return allCursos.map((c: any) => ({
+     const mapped = allCursos.map((c: any) => ({
       id: c.id,
       title: c.titulo || "Untitled",
       description: c.descripcion || "",
@@ -34,7 +36,14 @@ export default function MaterialAcademico() {
         : "N/A",
       visible: c.publico ?? true,
     }));
-  }, [allCursos]);
+ if (sortOrder === "asc") {
+    mapped.sort((a, b) => NIVEL_ORDER.indexOf(a.level) - NIVEL_ORDER.indexOf(b.level));
+  } else if (sortOrder === "desc") {
+    mapped.sort((a, b) => NIVEL_ORDER.indexOf(b.level) - NIVEL_ORDER.indexOf(a.level));
+  }
+
+  return mapped;
+}, [allCursos, sortOrder]);
 
   const handleEdit = (course: any) => {
     const full = allCursos.find((c) => c.id === course.id);
@@ -83,13 +92,27 @@ export default function MaterialAcademico() {
             </div>
           </div>
 
-          <Button
+<div className="flex items-center gap-3">
+  <select
+    value={sortOrder}
+    onChange={(e) => setSortOrder(e.target.value as "asc" | "desc" | "")}
+    className="px-4 py-2.5 border-2 border-gray-200 rounded-xl text-sm font-semibold text-[#0C212D] bg-white focus:border-[#EE7203] outline-none transition-all cursor-pointer"
+  >
+    <option value="">Sin orden</option>
+    <option value="asc">Nivel: A1 → C2</option>
+    <option value="desc">Nivel: C2 → A1</option>
+  </select>
+
+
+<Button
             onClick={() => setIsCreateOpen(true)}
             className="group bg-gradient-to-r from-[#EE7203] to-[#FF3816] hover:shadow-2xl hover:shadow-[#EE7203]/40 text-white rounded-xl px-8 py-6 text-base font-bold transition-all duration-300 hover:scale-105 flex items-center gap-3"
           >
             <FiPlus size={22} className="group-hover:rotate-90 transition-transform duration-300" />
             Nuevo Material
           </Button>
+  </div>
+          
         </header>
 
         {/* List */}

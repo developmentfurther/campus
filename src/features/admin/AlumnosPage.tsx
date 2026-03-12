@@ -14,6 +14,7 @@ import {
   FiAward,
   FiEdit2,
   FiCheck,
+  FiBriefcase,
 } from "react-icons/fi";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -131,6 +132,8 @@ export default function StudentsPage() {
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
+  const [empresaFilter, setEmpresaFilter] = useState("");
+
   const debouncedSearch = useDebounce(search, 300);
   const PAGE_SIZE = 25;
 
@@ -142,6 +145,10 @@ export default function StudentsPage() {
         return a?.email?.toLowerCase().includes(debouncedSearch.toLowerCase());
       })
       .filter((a) => {
+  if (!empresaFilter) return true;
+  return a.curso?.toLowerCase().trim() === empresaFilter.toLowerCase().trim();
+})
+      .filter((a) => {
         if (!languageFilter) return true;
         return a.learningLanguages?.includes(languageFilter);
       })
@@ -149,7 +156,14 @@ export default function StudentsPage() {
         if (!levelFilter) return true;
         return a.learningLevel === levelFilter.toUpperCase();
       });
-  }, [alumnos, debouncedSearch, languageFilter, levelFilter]);
+  }, [alumnos, debouncedSearch, languageFilter, levelFilter, empresaFilter]);
+
+  const empresasUnicas = useMemo(() => {
+  if (!Array.isArray(alumnos)) return [];
+  const set = new Set<string>();
+ alumnos.forEach(a => { if (a.curso) set.add(a.curso.toLowerCase().trim()); });
+  return Array.from(set).sort();
+}, [alumnos]);
 
   const totalPages = Math.ceil(filteredAlumnos.length / PAGE_SIZE) || 1;
 
@@ -377,6 +391,19 @@ export default function StudentsPage() {
                 {["A1","A2","B1","B2","B2.5","C1","C2"].map(l => <option key={l} value={l}>{l}</option>)}
               </select>
             </div>
+            <div className="relative group">
+  <FiBriefcase size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#EE7203] transition-colors" />
+  <select
+    value={empresaFilter}
+    onChange={(e) => { setPage(1); setEmpresaFilter(e.target.value); }}
+    className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 rounded-xl text-sm appearance-none focus:border-[#EE7203] focus:ring-4 focus:ring-orange-100 outline-none transition-all cursor-pointer"
+  >
+    <option value="">All Companies</option>
+    {empresasUnicas.map(e => (
+      <option key={e} value={e}>{e.charAt(0).toUpperCase() + e.slice(1)}</option>
+    ))}
+  </select>
+</div>
           </div>
         </div>
       </div>

@@ -198,6 +198,7 @@ const [filterNivel, setFilterNivel] = useState("");
 const [filterNombre, setFilterNombre] = useState("");
 const [filterCursoId, setFilterCursoId] = useState("");
 const [emailInput, setEmailInput] = useState("");
+const [filterEmpresa, setFilterEmpresa] = useState("");
 const [alumnosPage, setAlumnosPage] = useState(0);
 const PAGE_SIZE = 50;
 
@@ -522,12 +523,12 @@ const PAGE_SIZE = 50;
       const nombre = (a.displayName || a.nombre || "").toLowerCase();
       let tieneCurso = true;
       if (filterCursoId) { const raw = alumnosRaw?.find((r: any) => r.email?.toLowerCase() === a.email?.toLowerCase()); tieneCurso = raw && Array.isArray(raw.cursosAsignados) ? raw.cursosAsignados.some((c: any) => (c.curso || "").toLowerCase().includes(filterCursoId.toLowerCase())) : false; }
-      return (!filterIdioma || lang.toLowerCase() === filterIdioma.toLowerCase()) && (!filterNivel || lvl.toLowerCase() === filterNivel.toLowerCase()) && (!filterNombre || nombre.includes(filterNombre.toLowerCase())) && tieneCurso;
+      return (!filterIdioma || lang.toLowerCase() === filterIdioma.toLowerCase()) && (!filterNivel || lvl.toLowerCase() === filterNivel.toLowerCase()) && (!filterNombre || nombre.includes(filterNombre.toLowerCase())) && (filterEmpresa ? a.curso?.toLowerCase().trim() === filterEmpresa : true) && tieneCurso;
     });
     const seen = new Set<string>(); const out: any[] = [];
     matches.forEach(a => { const e = a.email?.toLowerCase().trim(); if (e && !seen.has(e)) { seen.add(e); out.push(a); } });
     return out;
-  }, [alumnos, alumnosRaw, filterIdioma, filterNivel, filterNombre, filterCursoId]);
+  }, [alumnos, alumnosRaw, filterIdioma, filterNivel, filterNombre, filterCursoId, filterEmpresa]);
 
   const toggleCursante = (email: string) => setCurso(p => { if (!p) return p; const s = new Set(p.cursantes || []); s.has(email) ? s.delete(email) : s.add(email); return { ...p, cursantes: Array.from(s) }; });
   const addEmailManual = () => { const email = emailInput.trim().toLowerCase(); if (!email) return; if (curso?.cursantes.includes(email)) { toast.error("Ya está en la lista"); return; } setCurso(p => p ? { ...p, cursantes: [...(p.cursantes || []), email] } : p); setEmailInput(""); };
@@ -664,12 +665,26 @@ const PAGE_SIZE = 50;
                     <div className="space-y-2">
                       <div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><Icon.Search /></span><input type="text" value={filterNombre} onChange={e => { setFilterNombre(e.target.value); setAlumnosPage(0); }} placeholder="Buscar por nombre..." className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 transition" /></div>
                       <div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><Icon.Tag /></span><input type="text" value={filterCursoId} onChange={e => { setFilterCursoId(e.target.value); setAlumnosPage(0); }} placeholder="Filtrar por ID de curso..." className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-slate-900 transition" /></div>
+                      <select
+  value={filterEmpresa}
+  onChange={e => { setFilterEmpresa(e.target.value); setAlumnosPage(0); }}
+  className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 transition bg-white"
+>
+  <option value="">Todas las empresas</option>
+  {Array.from(new Set(
+    (Array.isArray(alumnos) ? alumnos : [])
+      .map(a => a.curso?.toLowerCase().trim())
+      .filter(Boolean)
+  )).sort().map(e => (
+    <option key={e} value={e}>{e.charAt(0).toUpperCase() + e.slice(1)}</option>
+  ))}
+</select>
                       <div className="grid grid-cols-2 gap-2">
                         <Select value={filterIdioma} onChange={v => { setFilterIdioma(v); setAlumnosPage(0); }}><option value="">Todos los idiomas</option>{idiomas.map(i => <option key={i.v} value={i.v}>{i.l}</option>)}</Select>
                         <Select value={filterNivel} onChange={v => { setFilterNivel(v); setAlumnosPage(0); }}><option value="">Todos los niveles</option>{niveles.map(n => <option key={n} value={n}>{n}</option>)}</Select>
                       </div>
-                      {(filterNombre || filterCursoId || filterIdioma || filterNivel) && (
-                        <button type="button" onClick={() => { setFilterNombre(""); setFilterCursoId(""); setFilterIdioma(""); setFilterNivel("");setAlumnosPage(0); }} className="w-full flex items-center justify-center gap-2 py-2 text-xs text-slate-500 border border-slate-200 rounded-xl hover:bg-slate-50 transition"><Icon.X /> Limpiar filtros</button>
+                      {(filterNombre || filterCursoId || filterIdioma || filterEmpresa || filterNivel) && (
+                        <button type="button" onClick={() => { setFilterNombre(""); setFilterCursoId(""); setFilterIdioma(""); setFilterNivel(""); setFilterEmpresa(""); setAlumnosPage(0); }} className="w-full flex items-center justify-center gap-2 py-2 text-xs text-slate-500 border border-slate-200 rounded-xl hover:bg-slate-50 transition"><Icon.X /> Limpiar filtros</button>
                       )}
                     </div>
                     <div className="space-y-1">

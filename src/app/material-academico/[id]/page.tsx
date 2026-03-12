@@ -1689,14 +1689,15 @@ const renderSpeaking = (ex: any) => {
           </div>
         )}
 
-        {getExercisePrompt(ex) && (
-          <div className="px-4 py-3 mt-2"
-            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-            <p className="text-base font-semibold text-white/80 whitespace-pre-wrap">
-              {getExercisePrompt(ex)}
-            </p>
-          </div>
-        )}
+        {getExercisePrompt(ex) && 
+  !["reading", "listening", "reorder", "matching", "speaking", "reflection"].includes(ex.type) && (
+  <div className="px-4 py-3 mt-2"
+    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+    <p className="text-base font-semibold text-white/80 whitespace-pre-wrap">
+      {getExercisePrompt(ex)}
+    </p>
+  </div>
+)}
 
         {/* Tipo badge */}
         <div>
