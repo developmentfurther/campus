@@ -185,15 +185,8 @@ console.log("🔍 activeLanguage:", userProfile?.activeLanguage);
     setWrongGuesses(0);
     setStatus("playing");
 
-    const langMap: Record<string, string> = {
-      en: "en",
-      es: "es",
-      pt: "pt",
-      fr: "fr",
-      it: "it",
-    };
-
-    const lang = langMap[userProfile.activeLanguage.toLowerCase()] ?? "en";
+   
+    const lang = userProfile?.activeLanguage?.toLowerCase() || "en";
     const res = await fetch(`/api/games/hangman?lang=${lang}`);
     const data = await res.json();
 
@@ -255,6 +248,22 @@ console.log("🔍 activeLanguage:", userProfile?.activeLanguage);
     }
   };
 
+  const lang = userProfile?.activeLanguage?.toLowerCase() || "en";
+  const wonLabel: Record<string, string> = {
+  es: "¡GANASTE!",
+  en: "YOU WON!",
+  pt: "VOCÊ GANHOU!",
+  fr: "VOUS AVEZ GAGNÉ !",
+  it: "HAI VINTO!",
+};
+
+const lostLabel: Record<string, string> = {
+  es: "¡PERDISTE!",
+  en: "YOU LOST!",
+  pt: "VOCÊ PERDEU!",
+  fr: "VOUS AVEZ PERDU !",
+  it: "HAI PERSO!",
+};
   /* ============================================================
      RENDERS CONDICIONALES
   ============================================================ */
@@ -385,7 +394,7 @@ console.log("🔍 activeLanguage:", userProfile?.activeLanguage);
             >
               <div className="inline-flex items-center gap-3 bg-gradient-to-r from-emerald-500 to-green-500 px-8 py-4 rounded-2xl shadow-2xl">
                 <span className="text-4xl">🎉</span>
-                <span className="text-white text-xl font-black">¡GANASTE!</span>
+               <span className="text-white text-xl font-black">{wonLabel[lang] ?? wonLabel["en"]}</span>
               </div>
 
               <p className="text-emerald-600 text-xl md:text-2xl font-bold">
@@ -403,7 +412,7 @@ console.log("🔍 activeLanguage:", userProfile?.activeLanguage);
             >
               <div className="inline-flex items-center gap-3 bg-gradient-to-r from-red-500 to-red-600 px-8 py-4 rounded-2xl shadow-2xl">
                 <span className="text-4xl">💀</span>
-                <span className="text-white text-xl font-black">¡PERDISTE!</span>
+                <span className="text-white text-xl font-black">{lostLabel[lang] ?? lostLabel["en"]}</span>
               </div>
 
               <p className="text-red-600 text-xl md:text-2xl font-bold">

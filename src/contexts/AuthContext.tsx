@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 import { fetchUserFromBatchesByUid } from "@/lib/userBatches";
 import { toast } from "sonner";
+import { fetchProfesorByUid } from "@/lib/profesorBatches";
 
 interface AuthContextType {
   user: User | null;
@@ -65,19 +66,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setUser(firebaseUser);
 
           try {
-            let p = await fetchUserFromBatchesByUid(firebaseUser.uid);
+            // DESPUÉS:
+let p = await fetchUserFromBatchesByUid(firebaseUser.uid);
 
-            // if (!p) {
-            //   await addUserToBatch(firebaseUser, "alumno");
-            //   p = await fetchUserFromBatchesByUid(firebaseUser.uid);
-            // }
+if (p?.batchId) {
+  const snap = await getDoc(doc(db, "alumnos", p.batchId));
+  if (snap.exists()) {
+    p = { ...p, ...(snap.data()[p.userKey] || {}) };
+  }
+} else {
+  // No está en alumnos, buscar en profesores
+  const profesor = await fetchProfesorByUid(firebaseUser.uid);
 
-            if (p?.batchId) {
-              const snap = await getDoc(doc(db, "alumnos", p.batchId));
-              if (snap.exists()) {
-                p = { ...p, ...(snap.data()[p.userKey] || {}) };
-              }
-            }
+  if (profesor?.batchId) {
+    const snap = await getDoc(doc(db, "profesores", profesor.batchId));
+    if (snap.exists()) {
+      p = { ...profesor, ...(snap.data()[profesor.userKey] || {}) };
+    } else {
+      p = profesor;
+    }
+  }
+}
 
             const resolvedRole = p?.role || "alumno";
             const normalizedProfile = {

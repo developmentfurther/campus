@@ -1,74 +1,74 @@
 "use client";
 
 import { useDashboardUI } from "@/stores/useDashboardUI";
-import { useAuth } from "@/contexts/AuthContext";
-import { useAlumno } from "@/contexts/AlumnoContext"; // ← CORREGIDO
+import { useAlumno } from "@/contexts/AlumnoContext";
 import { FiClock, FiChevronRight, FiMessageSquare, FiAlertTriangle } from "react-icons/fi";
+import { useI18n } from "@/contexts/I18nContext";
+
+const tHistory = {
+  en: {
+    loading: "Loading your conversations…",
+    empty: "You don't have any conversation summaries yet.",
+    title: "Conversation History",
+    conversation: "Conversation",
+    level: "Level",
+    unknownDate: "Unknown date",
+    emptyMessage: "Start a conversation to see your summaries here.",
+  },
+  es: {
+    loading: "Cargando tus conversaciones…",
+    empty: "Aún no tenés resúmenes de conversación.",
+    title: "Historial de conversaciones",
+    conversation: "Conversación",
+    level: "Nivel",
+    unknownDate: "Fecha desconocida",
+    emptyMessage: "Empezá una conversación para ver tus resúmenes acá.",
+  },
+  pt: {
+    loading: "Carregando suas conversas…",
+    empty: "Você ainda não tem resumos de conversa.",
+    title: "Histórico de conversas",
+    conversation: "Conversa",
+    level: "Nível",
+    unknownDate: "Data desconhecida",
+    emptyMessage: "Inicie uma conversa para ver seus resumos aqui.",
+  },
+  it: {
+    loading: "Caricamento delle tue conversazioni…",
+    empty: "Non hai ancora alcun riepilogo di conversazione.",
+    title: "Cronologia conversazioni",
+    conversation: "Conversazione",
+    level: "Livello",
+    unknownDate: "Data sconosciuta",
+    emptyMessage: "Avvia una conversazione per vedere i tuoi riassunti qui.",
+  },
+  fr: {
+    loading: "Chargement de vos conversations…",
+    empty: "Vous n'avez pas encore de résumés de conversation.",
+    title: "Historique des conversations",
+    conversation: "Conversation",
+    level: "Niveau",
+    unknownDate: "Date inconnue",
+    emptyMessage: "Démarrez une conversation pour voir vos résumés ici.",
+  },
+};
+
+const warningMessages = {
+  en: "Your last 3 conversation summaries are stored here.",
+  es: "Acá se guardan tus últimos 3 resúmenes de conversación.",
+  pt: "Aqui estão armazenados seus últimos 3 resumos de conversa.",
+  it: "Qui vengono salvati gli ultimi 3 riepiloghi delle tue conversazioni.",
+  fr: "Vos 3 derniers résumés de conversation sont stockés ici.",
+};
 
 export default function ChatHistoryList() {
-  const { userProfile } = useAuth();
-  const { chatSessions, loadingChatSessions } = useAlumno(); // ← CORREGIDO
-  const { setSection, setSessionIndex } = useDashboardUI(); // ← index en vez de id
+  const { chatSessions, loadingChatSessions } = useAlumno();
+  const { setSection, setSessionIndex } = useDashboardUI();
+  const { lang } = useI18n();
 
-  const tHistory = {
-    en: {
-      loading: "Loading your conversations…",
-      empty: "You don't have any conversation summaries yet.",
-      title: "Conversation History",
-      conversation: "Conversation",
-      level: "Level",
-      unknownDate: "Unknown date",
-      emptyMessage: "Start a conversation to see your summaries here.",
-    },
-    es: {
-      loading: "Cargando tus conversaciones…",
-      empty: "Aún no tenés resúmenes de conversación.",
-      title: "Historial de conversaciones",
-      conversation: "Conversación",
-      level: "Nivel",
-      unknownDate: "Fecha desconocida",
-      emptyMessage: "Empezá una conversación para ver tus resúmenes acá.",
-    },
-    pt: {
-      loading: "Carregando suas conversas…",
-      empty: "Você ainda não tem resumos de conversa.",
-      title: "Histórico de conversas",
-      conversation: "Conversa",
-      level: "Nível",
-      unknownDate: "Data desconhecida",
-      emptyMessage: "Inicie uma conversa para ver seus resumos aqui.",
-    },
-    it: {
-      loading: "Caricamento delle tue conversazioni…",
-      empty: "Non hai ancora alcun riepilogo di conversazione.",
-      title: "Cronologia conversazioni",
-      conversation: "Conversazione",
-      level: "Livello",
-      unknownDate: "Data sconosciuta",
-      emptyMessage: "Avvia una conversazione per vedere i tuoi riassunti qui.",
-    },
-    fr: {
-      loading: "Chargement de vos conversations…",
-      empty: "Vous n'avez pas encore de résumés de conversation.",
-      title: "Historique des conversations",
-      conversation: "Conversation",
-      level: "Niveau",
-      unknownDate: "Date inconnue",
-      emptyMessage: "Démarrez une conversation pour voir vos résumés ici.",
-    },
-  };
-
-  const warningMessages = {
-    en: "Your last 3 conversation summaries are stored here.",
-    es: "Acá se guardan tus últimos 3 resúmenes de conversación.",
-    pt: "Aqui estão armazenados seus últimos 3 resumos de conversa.",
-    it: "Qui vengono salvati gli ultimi 3 riepiloghi delle tue conversazioni.",
-    fr: "Vos 3 derniers résumés de conversation sont stockés ici.",
-  };
-
-  const rawLang = (userProfile?.activeLanguage || "en").toLowerCase();
-  const message = warningMessages[rawLang] ?? warningMessages["en"];
+  const rawLang = (lang || "en") as keyof typeof tHistory;
   const tr = tHistory[rawLang] ?? tHistory["en"];
+  const message = warningMessages[rawLang] ?? warningMessages["en"];
 
   if (loadingChatSessions)
     return (
@@ -120,7 +120,6 @@ export default function ChatHistoryList() {
         {/* LISTA */}
         <div className="grid gap-5">
           {chatSessions.map((session, index) => {
-            // Formatear la fecha desde el ISO string
             const dateStr = session.date
               ? new Date(session.date).toLocaleString()
               : tr.unknownDate;
@@ -129,7 +128,7 @@ export default function ChatHistoryList() {
               <button
                 key={session.date ?? index}
                 onClick={() => {
-                  setSessionIndex(index); // ← guardamos el índice del array
+                  setSessionIndex(index);
                   setSection("chat-session");
                 }}
                 className="group relative bg-white rounded-2xl shadow-sm hover:shadow-2xl transition-all duration-300 overflow-hidden border-2 border-gray-100 hover:border-[#EE7203]/30"

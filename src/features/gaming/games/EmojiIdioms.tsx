@@ -29,7 +29,7 @@ export default function EmojiIdioms() {
   const { user, role, userProfile } = useAuth();
   const { t } = useI18n();
 
-  const lang = userProfile?.learningLanguage?.toLowerCase() || "en";
+  const lang = userProfile?.activeLanguage?.toLowerCase() || "en";
   const BANK = getIdiomsBank(lang);
 
   const [item, setItem] = useState<IdiomItem | null>(null);

@@ -18,18 +18,13 @@ export async function validateUserStatus(email: string) {
 
   for (const batch of alumnosSnap.docs) {
     const data = batch.data();
-
     for (const key in data) {
       if (!key.startsWith("user_")) continue;
-
       const u = data[key];
       if ((u.email || "").toLowerCase().trim() !== emailLower) continue;
-
-      const isActive = u.active === true; // 👈 estado real del campus
-
       return {
         exists: true,
-        isActive,
+        isActive: u.active === true,
         source: "alumnos",
         userData: { ...u, batchId: batch.id, userKey: key },
       };
@@ -43,25 +38,39 @@ export async function validateUserStatus(email: string) {
 
   for (const batch of rawSnap.docs) {
     const data = batch.data();
-
     for (const key in data) {
       if (!key.startsWith("user_")) continue;
-
       const u = data[key];
       if ((u.email || "").toLowerCase().trim() !== emailLower) continue;
-
       const estado = (u.estadoAlumno || "").toLowerCase().trim();
-      const isActive = estado === "activo"; 
-
       return {
         exists: true,
-        isActive,
+        isActive: estado === "activo",
         source: "alumnos_raw",
         userData: { ...u, batchId: batch.id, userKey: key },
       };
     }
   }
 
-  // No encontrado
+  /* ========================================
+     3️⃣ Buscar en profesores (active: boolean)
+     ======================================== */
+  const profesoresSnap = await getDocs(collection(db, "profesores"));
+
+  for (const batch of profesoresSnap.docs) {
+    const data = batch.data();
+    for (const key in data) {
+      if (!key.startsWith("user_")) continue;
+      const u = data[key];
+      if ((u.email || "").toLowerCase().trim() !== emailLower) continue;
+      return {
+        exists: true,
+        isActive: u.active === true,
+        source: "profesores",
+        userData: { ...u, batchId: batch.id, userKey: key },
+      };
+    }
+  }
+
   return result;
 }

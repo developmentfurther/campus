@@ -170,7 +170,13 @@ if (!userProfile || !allDataLoaded || loadingCursos || loadingActivity || loadin
           <div className="relative z-10 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-8">
 
             {/* Left – Saludo + Stats */}
-            <div className="flex-1">
+            <div className="flex-1"
+  style={{
+    animation: "fadeInLeft 0.6s ease-out forwards",
+    animationDelay: "0s",
+    opacity: 0,
+  }}
+>
 
               <div className="flex items-center gap-3 mb-4 md:mb-6">
                 <div className="flex gap-1.5">
@@ -215,7 +221,13 @@ if (!userProfile || !allDataLoaded || loadingCursos || loadingActivity || loadin
             </div>
 
             {/* Right – Idioma / Nivel */}
-            <div className="flex flex-row lg:flex-col gap-4 w-full lg:w-auto lg:min-w-[240px]">
+            <div className="flex flex-row lg:flex-col gap-4 w-full lg:w-auto lg:min-w-[240px]"
+  style={{
+    animation: "fadeInRight 0.6s ease-out forwards",
+    animationDelay: "0.1s",
+    opacity: 0,
+  }}
+>
               <ProfileInfoCard
   title={t("dashboard.language")}
   value={
@@ -237,7 +249,13 @@ if (!userProfile || !allDataLoaded || loadingCursos || loadingActivity || loadin
 
         {/* ---------------- ACCESOS RÁPIDOS ---------------- */}
         <section>
-          <div className="flex items-center gap-3 mb-6 md:mb-8">
+          <div className="flex items-center gap-3 mb-6 md:mb-8"
+  style={{
+    animation: "fadeInDown 0.6s ease-out forwards",
+    animationDelay: "0.2s",
+    opacity: 0,
+  }}
+>
             <div className="w-1.5 h-8 md:h-12 bg-gradient-to-b from-[#EE7203] to-[#FF3816] rounded-full"></div>
             <h2 className="text-2xl md:text-3xl font-black text-[#0C212D]">
               {t("dashboard.quickTitle")}
@@ -247,12 +265,16 @@ if (!userProfile || !allDataLoaded || loadingCursos || loadingActivity || loadin
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
   {quickLinks.map((link, index) => (
-    <QuickAccessCard 
-      key={link.id} 
-      link={link} 
-      onClick={() => setSection(link.id)}
-      data-tutorial={index === 0 ? "quick-access-card" : undefined}
-    />
+    <QuickAccessCard
+  key={link.id}
+  link={link}
+  onClick={() => setSection(link.id)}
+  style={{
+    animation: "fadeInUp 0.6s ease-out forwards",
+    animationDelay: `${0.3 + index * 0.1}s`,
+    opacity: 0,
+  }}
+/>
   ))}
 </div>
         </section>
@@ -262,17 +284,30 @@ if (!userProfile || !allDataLoaded || loadingCursos || loadingActivity || loadin
 
           
             <AnnouncementsSection
-              anunciosFiltrados={anunciosFiltrados}
-              locale={locale}
-              t={t}
-              data-tutorial="announcements"
-            />
+  anunciosFiltrados={anunciosFiltrados}
+  locale={locale}
+  t={t}
+  data-tutorial="announcements"
+  style={{
+    animation: "fadeInUp 0.6s ease-out forwards",
+    animationDelay: "0.9s",
+    opacity: 0,
+  }}
+/>
         
 
           {/* ACTIVIDAD - 👇 Agrega data-tutorial="activity" */}
-            <ActivitySection recentActivity={recentActivity} timeAgo={timeAgo}
-            t={t}
-            data-tutorial="activity" />
+            <ActivitySection
+  recentActivity={recentActivity}
+  timeAgo={timeAgo}
+  t={t}
+  data-tutorial="activity"
+  style={{
+    animation: "fadeInUp 0.6s ease-out forwards",
+    animationDelay: "1.0s",
+    opacity: 0,
+  }}
+/>
             
 
         </section>
@@ -288,6 +323,25 @@ if (!userProfile || !allDataLoaded || loadingCursos || loadingActivity || loadin
         </footer>
 
       </div>
+
+      <style jsx>{`
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeInLeft {
+    from { opacity: 0; transform: translateX(-20px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes fadeInRight {
+    from { opacity: 0; transform: translateX(20px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+`}</style>
     </div>
   );
 }
@@ -341,9 +395,9 @@ function renderLanguage(code?: string) {
   return flags[code ?? ""] || "🌍";
 }
 
-function QuickAccessCard({ link, onClick, ...props }) {
+function QuickAccessCard({ link, onClick, style, ...props }) {
   return (
-    <button
+    <button  style={style}
     {...props}
       onClick={onClick}
       className="group relative bg-white rounded-xl md:rounded-2xl p-5 md:p-7 shadow-sm hover:shadow-2xl transition-all duration-500 border border-gray-100 overflow-hidden cursor-pointer text-left hover:-translate-y-1 w-full"
@@ -379,9 +433,9 @@ function QuickAccessCard({ link, onClick, ...props }) {
   );
 }
 
-function AnnouncementsSection({ anunciosFiltrados, locale, t, ...props }) {
+function AnnouncementsSection({ anunciosFiltrados, style,locale, t, ...props }) {
   return (
-    <div
+    <div style={style}
     {...props} className="lg:col-span-2 bg-white rounded-xl md:rounded-2xl p-5 md:p-7 shadow-sm border border-gray-100 hover:shadow-lg transition-shadow duration-300">
       <div className="flex items-center justify-between mb-6 md:mb-8">
         <div className="flex items-center gap-3">
@@ -431,9 +485,9 @@ function AnnouncementsSection({ anunciosFiltrados, locale, t, ...props }) {
   );
 }
 
-function ActivitySection({ recentActivity, timeAgo, t, ...props }) {
+function ActivitySection({ recentActivity, style,timeAgo, t, ...props }) {
   return (
-    <div
+    <div style={style}
     {...props}
      className="bg-white rounded-xl md:rounded-2xl p-5 md:p-7 shadow-sm border border-gray-100 hover:shadow-lg transition-shadow duration-300">
       <div className="flex items-center gap-3 mb-6 md:mb-8">

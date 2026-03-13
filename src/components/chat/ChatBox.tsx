@@ -15,6 +15,7 @@ import ChatboxTutorial from "./ChatboxTutorial";
 import { useChat } from "@/contexts/ChatContext";
 import TopicSelector, { TOPICS, Topic } from "./TopicSelector";
 import { useAlumno } from "@/contexts/AlumnoContext";
+import { motion, AnimatePresence } from "framer-motion";
 
 const DAILY_MESSAGE_LIMIT = 20;
 
@@ -192,7 +193,7 @@ const loadLastSession = async () => {
     setMessages([
       {
         role: "assistant",
-        content: `<h3 class="font-bold text-gray-800">Session Summary</h3><p>${last.feedbackSummary ?? ""}</p><p><strong>See you tomorrow for more practice! 👋</strong></p>`,
+        content: `<h3 class="font-bold text-gray-800">${{ english: "Session Summary", spanish: "Resumen de Sesión", portuguese: "Resumo da Sessão", italian: "Riepilogo della Sessione", french: "Résumé de Session" }[language] ?? "Session Summary"}</h3><p>${last.feedbackSummary ?? ""}</p><p><strong>${{ english: "See you tomorrow for more practice! 👋", spanish: "¡Hasta mañana para seguir practicando! 👋", portuguese: "Até amanhã para mais prática! 👋", italian: "A domani per altra pratica! 👋", french: "À demain pour plus de pratique ! 👋" }[language] ?? "See you tomorrow for more practice! 👋"}</strong></p>`,
       },
     ]);
   } catch (err) {
@@ -372,7 +373,7 @@ const saveConversationToFirestore = async (summary: any) => {
           ...prev,
           {
             role: "assistant",
-            content: "⏳ Generando tu resumen de sesión...",
+            content: ({ english: "⏳ Generating your session summary...", spanish: "⏳ Generando tu resumen de sesión...", portuguese: "⏳ Gerando seu resumo de sessão...", italian: "⏳ Generazione del riepilogo della sessione...", french: "⏳ Génération de votre résumé de session..." }[language] ?? "⏳ Generating your session summary...")
           },
         ]);
  
@@ -395,8 +396,8 @@ const saveConversationToFirestore = async (summary: any) => {
             {
               role: "assistant",
               content: summary.incomplete
-                ? "¡Has alcanzado tu límite diario! Has hecho un gran trabajo. Descansa y vuelve mañana. 👋"
-                : `<h3 class="font-bold text-gray-800">Daily limit reached!</h3><p>${summary.feedbackSummary ?? ""}</p><p><strong>See you tomorrow for more practice! 👋</strong></p>`,
+  ? ({ english: "You've reached your daily limit! Great work. Rest and come back tomorrow. 👋", spanish: "¡Has alcanzado tu límite diario! Has hecho un gran trabajo. Descansa y vuelve mañana. 👋", portuguese: "Você atingiu seu limite diário! Ótimo trabalho. Descanse e volte amanhã. 👋", italian: "Hai raggiunto il limite giornaliero! Ottimo lavoro. Riposati e torna domani. 👋", french: "Vous avez atteint votre limite quotidienne ! Bon travail. Reposez-vous et revenez demain. 👋" }[language] ?? "You've reached your daily limit! Great work. Rest and come back tomorrow. 👋")
+  : `<h3 class="font-bold text-gray-800">${{ english: "Daily limit reached!", spanish: "¡Límite diario alcanzado!", portuguese: "Limite diário atingido!", italian: "Limite giornaliero raggiunto!", french: "Limite quotidienne atteinte !" }[language] ?? "Daily limit reached!"}</h3><p>${summary.feedbackSummary ?? ""}</p><p><strong>${{ english: "See you tomorrow for more practice! 👋", spanish: "¡Hasta mañana para seguir practicando! 👋", portuguese: "Até amanhã para mais prática! 👋", italian: "A domani per altra pratica! 👋", french: "À demain pour plus de pratique ! 👋" }[language] ?? "See you tomorrow for more practice! 👋"}</strong></p>`
             },
           ]);
         } catch (err) {
@@ -407,7 +408,7 @@ const saveConversationToFirestore = async (summary: any) => {
             ...prev,
             {
               role: "assistant",
-              content: "¡Has alcanzado tu límite diario! Has hecho un gran trabajo. Descansa y vuelve mañana. 👋",
+              content: ({ english: "You've reached your daily limit! Great work. Rest and come back tomorrow. 👋", spanish: "¡Has alcanzado tu límite diario! Has hecho un gran trabajo. Descansa y vuelve mañana. 👋", portuguese: "Você atingiu seu limite diário! Ótimo trabalho. Descanse e volte amanhã. 👋", italian: "Hai raggiunto il limite giornaliero! Ottimo lavoro. Riposati e torna domani. 👋", french: "Vous avez atteint votre limite quotidienne ! Bon travail. Reposez-vous et revenez demain. 👋" }[language] ?? "You've reached your daily limit! Great work. Rest and come back tomorrow. 👋")
             },
           ]);
         } finally {
@@ -435,7 +436,7 @@ const saveConversationToFirestore = async (summary: any) => {
       setIsRecording(true);
       setRecordingTime(0);
       recordingTimerRef.current = setInterval(() => setRecordingTime((p) => p + 1), 1000);
-    } catch (e) { console.error(e); alert("Could not access microphone."); }
+    } catch (e) { console.error(e); alert({ english: "Could not access microphone.", spanish: "No se pudo acceder al micrófono.", portuguese: "Não foi possível acessar o microfone.", italian: "Impossibile accedere al microfono.", french: "Impossible d'accéder au microphone." }[language] ?? "Could not access microphone.") }
   };
 
   const stopRecording = () => {
@@ -479,7 +480,7 @@ const saveConversationToFirestore = async (summary: any) => {
       }
     } catch (e) {
       console.error(e);
-      setMessages((p) => [...p, { role: "assistant", content: "Sorry, I couldn't process your audio. Please try again." }]);
+      setMessages((p) => [...p, { role: "assistant", content: ({ english: "Sorry, I couldn't process your audio. Please try again.", spanish: "Lo siento, no pude procesar tu audio. Por favor intentá de nuevo.", portuguese: "Desculpe, não consegui processar seu áudio. Por favor tente novamente.", italian: "Scusa, non sono riuscito a elaborare il tuo audio. Per favore riprova.", french: "Désolé, je n'ai pas pu traiter votre audio. Veuillez réessayer." }[language] ?? "Sorry, I couldn't process your audio. Please try again.") }]);
     } finally { setIsProcessingAudio(false); setIsTyping(false); }
   };
 
@@ -550,7 +551,7 @@ const saveConversationToFirestore = async (summary: any) => {
         ...p,
         {
           role: "assistant",
-          content: `<h3 class="font-bold text-gray-800">Final Feedback</h3><p>${summary.feedbackSummary ?? ""}</p><p><strong>See you tomorrow for more practice! 👋</strong></p>`,
+          content: `<h3 class="font-bold text-gray-800">${{ english: "Final Feedback", spanish: "Feedback Final", portuguese: "Feedback Final", italian: "Feedback Finale", french: "Feedback Final" }[language] ?? "Final Feedback"}</h3><p>${summary.feedbackSummary ?? ""}</p><p><strong>${{ english: "See you tomorrow for more practice! 👋", spanish: "¡Hasta mañana para seguir practicando! 👋", portuguese: "Até amanhã para mais prática! 👋", italian: "A domani per altra pratica! 👋", french: "À demain pour plus de pratique ! 👋" }[language] ?? "See you tomorrow for more practice! 👋"}</strong></p>`,
         },
       ]);
     }
@@ -560,7 +561,7 @@ const saveConversationToFirestore = async (summary: any) => {
       ...p,
       {
         role: "assistant",
-        content: `<div style="color:#b91c1c;background:#fee2e2;padding:12px;border-radius:8px;border:1px solid #fecaca"><strong>⚠️ Error</strong><br/>Something went wrong. Please try again.</div>`,
+       content: `<div style="color:#b91c1c;background:#fee2e2;padding:12px;border-radius:8px;border:1px solid #fecaca"><strong>⚠️ Error</strong><br/>${{ english: "Something went wrong. Please try again.", spanish: "Algo salió mal. Por favor intentá de nuevo.", portuguese: "Algo deu errado. Por favor tente novamente.", italian: "Qualcosa è andato storto. Per favore riprova.", french: "Quelque chose s'est mal passé. Veuillez réessayer." }[language] ?? "Something went wrong. Please try again."}</div>`
       },
     ]);
   } finally {
@@ -580,11 +581,18 @@ const saveConversationToFirestore = async (summary: any) => {
         <ChatboxTutorial onComplete={() => setShowTutorial(false)} onSkip={() => setShowTutorial(false)} />
       )}
 
-      <div className="w-full h-[calc(100dvh-80px)] sm:h-[85vh] sm:max-w-4xl sm:mx-auto flex flex-col px-1 py-1 sm:p-0">
-        <div className="flex flex-col h-full rounded-xl sm:rounded-3xl overflow-hidden shadow-2xl border border-[#EE7203]/30 sm:border-2 sm:border-[#EE7203] relative bg-white">
-
+     <div className="w-full h-[calc(100dvh-80px)] sm:h-[85vh] sm:max-w-4xl sm:mx-auto flex flex-col px-1 py-1 sm:p-0">
+  <div
+  className="flex flex-col h-full rounded-xl sm:rounded-3xl overflow-hidden shadow-2xl border border-[#EE7203]/30 sm:border-2 sm:border-[#EE7203] relative bg-white"
+  style={{
+    animation: "fadeInUp 0.6s ease-out forwards",
+    opacity: 0,
+  }}
+>
           {/* HEADER */}
-          <div className="px-4 sm:px-8 py-3 sm:py-5 bg-gradient-to-r from-[#0C212D] to-[#112C3E] border-b border-[#EE7203]/30 flex-shrink-0">
+          <div 
+  className="px-4 sm:px-8 py-3 sm:py-5 bg-gradient-to-r from-[#0C212D] to-[#112C3E] border-b border-[#EE7203]/30 flex-shrink-0"
+>
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-2 sm:gap-4">
                 <div className="relative">
@@ -595,7 +603,7 @@ const saveConversationToFirestore = async (summary: any) => {
                   <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-1.5 sm:gap-2">
                     Mr Further <FiZap className="text-[#EE7203]" size={14} />
                   </h2>
-                  <div className="text-[10px] text-white/60">Daily: {messageCount}/{DAILY_MESSAGE_LIMIT}</div>
+                  <div className="text-[10px] text-white/60">{{ english: "Daily", spanish: "Diario", portuguese: "Diário", italian: "Giornaliero", french: "Quotidien" }[language] ?? "Daily"}: {messageCount}/{DAILY_MESSAGE_LIMIT}</div>
                   <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                     <span className="px-1.5 py-0.5 bg-[#EE7203] text-white text-[10px] font-bold rounded uppercase">{language}</span>
                     <span className="text-white/50 text-xs hidden sm:inline">•</span>
@@ -637,24 +645,27 @@ const saveConversationToFirestore = async (summary: any) => {
                 >
                   <FiStopCircle size={14} className="sm:w-4 sm:h-4" />
                   <span className="hidden sm:inline">{t("chat.endConversation")}</span>
-                  <span className="sm:hidden">End</span>
+                  <span className="sm:hidden">{{ english: "End", spanish: "Fin", portuguese: "Fim", italian: "Fine", french: "Fin" }[language] ?? "End"}</span>
                 </button>
               </div>
             </div>
           </div>
 
           {/* CHAT AREA */}
-          <div data-tutorial="chat-area" className="flex-1 overflow-y-auto bg-gray-50 overscroll-contain min-h-0 relative">
+         <div
+  data-tutorial="chat-area"
+  className="flex-1 overflow-y-auto bg-gray-50 overscroll-contain min-h-0 relative"
+>
             <div className="p-3 sm:p-6 space-y-3 sm:space-y-4 pb-4 min-h-full">
               {messages.map((msg, idx) => (
-                <MessageBubble
-                  key={idx}
-                  role={msg.role}
-                  content={msg.role === "assistant" ? formatMarkdown(msg.content) : msg.content}
-                  corrections={msg.corrections}
-                  pronunciation={msg.pronunciation}
-                />
-              ))}
+  <MessageBubble
+    key={idx}
+    role={msg.role}
+    content={msg.role === "assistant" ? formatMarkdown(msg.content) : msg.content}
+    corrections={msg.corrections}
+    pronunciation={msg.pronunciation}
+  />
+))}
               {isTyping && <TypingIndicator />}
               {isAnalyzing && (
                 <div className="flex items-center gap-2 text-xs text-[#EE7203] font-medium px-2 sm:px-0">
@@ -665,7 +676,7 @@ const saveConversationToFirestore = async (summary: any) => {
               {isProcessingAudio && (
                 <div className="flex items-center gap-2 text-xs text-[#EE7203] font-medium px-2 sm:px-0">
                   <div className="w-1.5 h-1.5 rounded-full bg-[#EE7203] animate-pulse"></div>
-                  Processing audio...
+                  {{ english: "Processing audio...", spanish: "Procesando audio...", portuguese: "Processando áudio...", italian: "Elaborazione audio...", french: "Traitement audio..." }[language] ?? "Processing audio..."}
                 </div>
               )}
               <div ref={chatEndRef}></div>
@@ -683,13 +694,16 @@ const saveConversationToFirestore = async (summary: any) => {
 
           {/* INPUT AREA */}
           {!isLimitReached ? (
-            <div ref={inputContainerRef} className="bg-white border-t border-gray-200 flex-shrink-0 safe-bottom">
+            <div
+  ref={inputContainerRef}
+  className="bg-white border-t border-gray-200 flex-shrink-0 safe-bottom"
+>
               {isRecording && (
                 <div className="px-3 sm:px-6 pt-2 pb-1 bg-red-50 border-b border-red-100">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-xs text-red-600 font-medium">
                       <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
-                      <span>Recording...</span>
+                      <span>{{ english: "Recording...", spanish: "Grabando...", portuguese: "Gravando...", italian: "Registrazione...", french: "Enregistrement..." }[language] ?? "Recording..."}</span>
                     </div>
                     <span className="text-sm font-mono text-red-600">{formatTime(recordingTime)}</span>
                   </div>
@@ -748,13 +762,18 @@ const saveConversationToFirestore = async (summary: any) => {
               </p>
             </div>
           )}
-        </div>
-      </div>
+        
+          </div> 
+  </div>   
 
       <style jsx global>{`
-        .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
-        .overscroll-contain { overscroll-behavior: contain; }
-      `}</style>
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+  .overscroll-contain { overscroll-behavior: contain; }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+`}</style>
     </>
   );
 }

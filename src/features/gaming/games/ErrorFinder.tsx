@@ -22,7 +22,7 @@ export default function ErrorFinder() {
   const { userProfile, user, role } = useAuth();
   const { t } = useI18n();
 
-  const lang = userProfile?.learningLanguage?.toLowerCase() || "en";
+  const lang = userProfile?.activeLanguage?.toLowerCase() || "en";
 
   const [data, setData] = useState<ErrorData | null>(null);
   const [loading, setLoading] = useState(true);

@@ -6,6 +6,7 @@ import { I18nProvider } from "@/contexts/I18nContext";
 import { GlobalPodcast } from '@/components/podcast/GlobalPodcast'; 
 import { ChatProvider } from '@/contexts/ChatContext';
 import { AlumnoProvider } from '@/contexts/AlumnoContext'; // 👈 AGREGAR
+import { ProfesorProvider } from '@/contexts/ProfesorContext'; // 👈 AGREGAR
 
 export const metadata: Metadata = {
   title: 'Further Campus – Tu espacio para aprender',
@@ -19,12 +20,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <I18nProvider>
           <AuthProvider>
             <AlumnoProvider> {/* 👈 AGREGAR — debe ir DENTRO de AuthProvider */}
+              <ProfesorProvider>
               <ChatProvider>
                 <main className="min-h-screen bg-gray-50">
                   {children}
                 </main>
                 <GlobalPodcast />
               </ChatProvider>
+              </ProfesorProvider>
             </AlumnoProvider> {/* 👈 CERRAR */}
           </AuthProvider>
         </I18nProvider>

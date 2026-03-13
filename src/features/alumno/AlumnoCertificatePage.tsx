@@ -5,8 +5,18 @@ import { useI18n } from "@/contexts/I18nContext";
 import { useDashboardUI } from "@/stores/useDashboardUI";
 
 export default function AlumnoCertificatesPage() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { setSection } = useDashboardUI();
+  const languageKeyMap: Record<string, string> = {
+    en: "english",
+    es: "spanish",
+    pt: "portuguese",
+    it: "italian",
+    fr: "french",
+  };
+  const rawLang = lang || "en";
+  const language = languageKeyMap[rawLang] ?? "english";
+
 
   return (
     // AJUSTE 1: Padding reducido en mobile (p-4)
@@ -14,7 +24,9 @@ export default function AlumnoCertificatesPage() {
       <div className="max-w-5xl mx-auto">
         
         {/* HEADER */}
-        <div className="mb-6 md:mb-10">
+        <div className="mb-6 md:mb-10"
+  style={{ animation: "fadeInDown 0.6s ease-out forwards", opacity: 0 }}
+>
           <div className="flex items-center gap-3 mb-3 md:mb-6">
             <div className="w-1.5 h-8 md:h-10 bg-gradient-to-b from-[#EE7203] to-[#FF3816] rounded-full"></div>
             {/* AJUSTE 2: Texto más pequeño en mobile */}
@@ -29,8 +41,9 @@ export default function AlumnoCertificatesPage() {
         </div>
 
         {/* MAIN CONTENT */}
-        <div className="relative overflow-hidden bg-white rounded-2xl md:rounded-3xl border-2 border-gray-100 shadow-2xl">
-          
+        <div className="relative overflow-hidden bg-white rounded-2xl md:rounded-3xl border-2 border-gray-100 shadow-2xl"
+  style={{ animation: "fadeInUp 0.6s ease-out forwards", animationDelay: "0.1s", opacity: 0 }}
+>
           {/* Decorative header bar */}
           <div className="absolute top-0 left-0 right-0 h-1.5 md:h-2 bg-gradient-to-r from-[#EE7203] via-[#FF3816] to-[#EE7203]"></div>
 
@@ -119,36 +132,60 @@ export default function AlumnoCertificatesPage() {
         </div>
 
         {/* Info cards - Stack en mobile */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mt-6 md:mt-8">
-          
-          <InfoCard
-            title="Complete Courses"
-            description="Finish your learning path to unlock certificates"
-            gradient="from-[#0C212D] to-[#112C3E]"
-          />
-          
-          <InfoCard
-            title="Track Progress"
-            description="Monitor your achievements in the dashboard"
-            gradient="from-[#EE7203] to-[#FF3816]"
-          />
-          
-          <InfoCard
-            title="Download & Share"
-            description="Get your certificates in PDF format"
-            gradient="from-[#112C3E] to-[#0C212D]"
-          />
-
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mt-6 md:mt-8">
+  {[
+  {
+    title: ({ english: "Complete Academic Material", spanish: "Completá el Material Académico", portuguese: "Complete o Material Acadêmico", italian: "Completa il Materiale Accademico", french: "Complétez le Matériel Académique" }[language] ?? "Complete Academic Material"),
+    description: ({ english: "Finish your learning path to unlock certificates", spanish: "Terminá tu camino de aprendizaje para desbloquear certificados", portuguese: "Conclua seu caminho de aprendizado para desbloquear certificados", italian: "Completa il tuo percorso di apprendimento per sbloccare i certificati", french: "Terminez votre parcours d'apprentissage pour débloquer des certificats" }[language] ?? "Finish your learning path to unlock certificates"),
+    gradient: "from-[#0C212D] to-[#112C3E]",
+  },
+  {
+    title: ({ english: "Track Progress", spanish: "Seguí tu Progreso", portuguese: "Acompanhe seu Progresso", italian: "Monitora i Progressi", french: "Suivez vos Progrès" }[language] ?? "Track Progress"),
+    description: ({ english: "Monitor your achievements in the dashboard", spanish: "Monitoreá tus logros en el panel principal", portuguese: "Monitore suas conquistas no painel principal", italian: "Monitora i tuoi progressi nella dashboard", french: "Surveillez vos réalisations dans le tableau de bord" }[language] ?? "Monitor your achievements in the dashboard"),
+    gradient: "from-[#EE7203] to-[#FF3816]",
+  },
+  {
+    title: ({ english: "Download & Share", spanish: "Descargá y Compartí", portuguese: "Baixe e Compartilhe", italian: "Scarica e Condividi", french: "Téléchargez et Partagez" }[language] ?? "Download & Share"),
+    description: ({ english: "Get your certificates in PDF format", spanish: "Obtené tus certificados en formato PDF", portuguese: "Obtenha seus certificados em formato PDF", italian: "Ottieni i tuoi certificati in formato PDF", french: "Obtenez vos certificats au format PDF" }[language] ?? "Get your certificates in PDF format"),
+    gradient: "from-[#112C3E] to-[#0C212D]",
+  },
+].map((card, index) => (
+  <InfoCard
+    key={index}
+    title={card.title}
+    description={card.description}
+    gradient={card.gradient}
+    style={{
+      animation: "fadeInUp 0.6s ease-out forwards",
+      animationDelay: `${0.2 + index * 0.1}s`,
+      opacity: 0,
+    }}
+  />
+))}
+</div>
 
       </div>
+
+      <style jsx>{`
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+`}</style>
     </div>
   );
 }
 
-function InfoCard({ title, description, gradient }) {
+function InfoCard({ title, description, gradient, style }) {
   return (
-    <div className="group relative bg-white rounded-xl md:rounded-2xl border-2 border-gray-100 p-5 md:p-6 hover:border-[#EE7203]/30 hover:shadow-xl transition-all duration-300">
+    <div
+      style={style}
+      className="group relative bg-white rounded-xl md:rounded-2xl border-2 border-gray-100 p-5 md:p-6 hover:border-[#EE7203]/30 hover:shadow-xl transition-all duration-300"
+    >
       <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${gradient} rounded-t-xl`}></div>
       
       <div className="pt-2">

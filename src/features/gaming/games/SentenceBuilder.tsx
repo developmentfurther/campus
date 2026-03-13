@@ -26,7 +26,7 @@ export default function SentenceBuilder() {
   const { t } = useI18n();
   const { user, role, userProfile } = useAuth();
 
-  const lang = userProfile?.learningLanguage?.toLowerCase() || "en";
+  const lang = userProfile?.activeLanguage?.toLowerCase() || "en";
 
   const [original, setOriginal] = useState<string[]>([]);
   const [pool, setPool] = useState<DragItem[]>([]);
@@ -224,6 +224,14 @@ export default function SentenceBuilder() {
   return <LoaderGame />;
 }
 
+const badgeLabel: Record<string, string> = {
+  es: "Construye la Oración",
+  en: "Build Challenge",
+  pt: "Monte a Frase",
+  fr: "Construis la Phrase",
+  it: "Costruisci la Frase",
+};
+
   // ======================================================
   // UI PRINCIPAL
   // ======================================================
@@ -256,8 +264,8 @@ export default function SentenceBuilder() {
           >
             <FiZap className="text-white" size={20} />
             <span className="text-white font-bold text-sm uppercase tracking-wider">
-              Build Challenge
-            </span>
+  {badgeLabel[lang] ?? badgeLabel["en"]}
+</span>
           </motion.div>
 
           <h1 className="text-4xl md:text-5xl font-black text-[#0C212D] mb-3">

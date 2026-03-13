@@ -81,7 +81,7 @@ export default function WordScramble() {
       setStatus("playing");
       setWrongCount(0);
 
-      const lang = userProfile?.learningLanguage || "en";
+      const lang = userProfile?.activeLanguage?.toLowerCase() || "en";
       const res = await fetch(`/api/games/scramble?lang=${lang}`);
       const data = await res.json();
 

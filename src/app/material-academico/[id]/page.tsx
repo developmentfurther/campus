@@ -45,7 +45,8 @@ import DownloadBibliographyButton from "@/hooks/DownloadBibliographyButton";
 import React from "react";
 import { EnhancedCourseIntro } from "@/components/cursos/EnhancedCourseIntro";
 import { useAlumno } from "@/contexts/AlumnoContext";
-
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useProfesor } from "@/contexts/ProfesorContext";
 
 
 /* =========================================================
@@ -135,12 +136,31 @@ export default function CoursePlayerPage() {
   const params = useParams();
   const courseId = params?.id?.toString?.() || "";
   const { user, role, authReady, loading: authLoading, userProfile } = useAuth();
-const { saveCourseProgress, getCourseProgress, hasSeenCoursePlayerTutorial, markCoursePlayerTutorialAsSeen, allDataLoaded } = useAlumno();  
-const { t } = useI18n();
+const alumnoCtx = useAlumno();
+const profesorCtx = useProfesor();
+
+const saveCourseProgress = role === "profesor"
+  ? (_uid: string, courseId: string, data: any) => profesorCtx.saveCourseProgress(courseId, data)
+  : alumnoCtx.saveCourseProgress;
+
+const getCourseProgress = role === "profesor"
+  ? (_uid: string, courseId: string) => profesorCtx.getCourseProgress(courseId)
+  : alumnoCtx.getCourseProgress;
+
+const { hasSeenCoursePlayerTutorial, markCoursePlayerTutorialAsSeen } = alumnoCtx;
+const allDataLoaded = role === "profesor" ? profesorCtx.allDataLoaded : alumnoCtx.allDataLoaded;
+  
+
+const { t, lang  } = useI18n();
+
+const languageKeyMap: Record<string, string> = {
+  en: "english", es: "spanish", pt: "portuguese", it: "italian", fr: "french",
+};
+const language = languageKeyMap[lang] ?? "english";
   const dashboardRoute = role === "admin" 
   ? "/admin" 
   : role === "profesor" 
-  ? "/profesor" 
+  ? "/profesores" 
   : "/dashboard";
 
 
@@ -1490,7 +1510,9 @@ const renderMatching = (ex: any) => {
             <select disabled={submitted} value={val} onChange={(e) => handleAnswer(key, e.target.value)}
               className="px-3 py-2 text-sm outline-none"
               style={{ background: "#112C3E", border: "1px solid rgba(238,114,3,0.3)", color: val ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.3)" }}>
-              <option value="">Select…</option>
+              <option value="">
+  {({ english: "Select…", spanish: "Seleccionar…", portuguese: "Selecionar…", italian: "Seleziona…", french: "Sélectionner…" }[language] ?? "Select…")}
+</option>
               {ex.pairs.map((p: any, j: number) => <option key={j} value={p.right}>{p.right}</option>)}
             </select>
             {submitted && !isCorrect && (
@@ -1843,14 +1865,16 @@ const renderSpeaking = (ex: any) => {
           : { background: "linear-gradient(135deg, #EE7203, #FF3816)", color: "white" }
         }
       >
-        {submitted ? "Attempt recorded" : "Check answers"}
+        {submitted
+  ? ({ english: "Attempt recorded", spanish: "Intento registrado", portuguese: "Tentativa registrada", italian: "Tentativo registrato", french: "Tentative enregistrée" }[language] ?? "Attempt recorded")
+  : ({ english: "Check answers", spanish: "Verificar respuestas", portuguese: "Verificar respostas", italian: "Verifica risposte", french: "Vérifier les réponses" }[language] ?? "Check answers")}
       </motion.button>
 
       {/* Score feedback */}
       {submitted && feedback && typeof feedback.correct === "number" && (
         <p className="text-sm font-bold"
           style={{ color: feedback.ok ? "#86efac" : "rgba(255,255,255,0.5)" }}>
-          {feedback.correct}/{feedback.total} correct
+          {feedback.correct}/{feedback.total} {({ english: "correct", spanish: "correctas", portuguese: "corretas", italian: "corrette", french: "correctes" }[language] ?? "correct")}
         </p>
       )}
     </motion.div>
@@ -1967,7 +1991,7 @@ if (!authReady || authLoading || loading || !dataReady) {
             transition={{ delay: 0.6 }}
             className="text-xs text-white/50 text-center mt-6"
           >
-            Si crees que esto es un error, contacta con soporte
+            {({ english: "If you think this is an error, please contact support", spanish: "Si creés que esto es un error, contactá con soporte", portuguese: "Se acha que isso é um erro, entre em contato com o suporte", italian: "Se pensi che sia un errore, contatta il supporto", french: "Si vous pensez que c'est une erreur, contactez le support" }[language] ?? "If you think this is an error, please contact support")}
           </motion.p>
         </div>
 
@@ -2551,7 +2575,11 @@ function arePropsEqual(prevProps, nextProps) {
                       <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
                         <thead>
                           <tr style={{ borderBottom: "2px solid rgba(238,114,3,0.4)" }}>
-                            {["Term", "Meaning", "Example"].map((h) => (
+                            {[
+  ({ english: "Term", spanish: "Término", portuguese: "Termo", italian: "Termine", french: "Terme" }[language] ?? "Term"),
+  ({ english: "Meaning", spanish: "Significado", portuguese: "Significado", italian: "Significato", french: "Signification" }[language] ?? "Meaning"),
+  ({ english: "Example", spanish: "Ejemplo", portuguese: "Exemplo", italian: "Esempio", french: "Exemple" }[language] ?? "Example"),
+].map((h) => (
                               <th key={h} className="text-left px-4 py-3 text-xs font-black uppercase tracking-widest"
                                 style={{ color: "#EE7203" }}>
                                 {h}
@@ -2621,8 +2649,8 @@ function arePropsEqual(prevProps, nextProps) {
                         {activeLesson.ejercicios.length}
                       </span>
                       <span className="text-xs font-black uppercase tracking-widest text-white/40">
-                        Exercises
-                      </span>
+  {({ english: "Exercises", spanish: "Ejercicios", portuguese: "Exercícios", italian: "Esercizi", french: "Exercices" }[language] ?? "Exercises")}
+</span>
                     </div>
                   </div>
 
@@ -2806,6 +2834,18 @@ function arePropsEqual(prevProps, nextProps) {
       </div>
     </div>
   </div>
+
+  {/* Language Switcher */}
+<div data-tutorial="language-switcher" className="p-6"
+  style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+  <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-3 px-4" 
+    style={{ color: "#EE7203" }}>
+    {({ english: "Language", spanish: "Idioma", portuguese: "Idioma", italian: "Lingua", french: "Langue" }[language] ?? "Language")}
+  </p>
+  <LanguageSwitcher dark />
+</div>
+
+
 
   {/* Bibliography download */}
   <div data-tutorial="bibliography-download" className="p-6"

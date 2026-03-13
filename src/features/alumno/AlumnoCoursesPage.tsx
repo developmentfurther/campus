@@ -144,10 +144,15 @@ function CourseCard({ course, index, router, t }) {
   const isFirst = index === 0;
 
   return (
-    <div 
-      data-tutorial={isFirst ? "first-course-card" : undefined} // 👈 TARGET 3 (Condicional)
-      className="group relative rounded-3xl overflow-hidden transition-all duration-500 hover:scale-[1.02]"
-    >
+    <div
+  data-tutorial={isFirst ? "first-course-card" : undefined}
+  className="group relative rounded-3xl overflow-hidden transition-all duration-500 hover:scale-[1.02]"
+  style={{
+    animation: "fadeInUp 0.6s ease-out forwards",
+    animationDelay: `${index * 0.1}s`,
+    opacity: 0,
+  }}
+>
       
       {/* Gradient background */}
       <div 
@@ -235,6 +240,14 @@ function CourseCard({ course, index, router, t }) {
           <FiArrowRight size={18} className="relative z-10 group-hover:text-white transition-all duration-300 transform group-hover:translate-x-1" />
         </button>
       </div>
+
+
+      <style jsx>{`
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+`}</style>
     </div>
   );
 }

@@ -2,12 +2,13 @@
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useMemo } from "react";
-import { FiBookOpen, FiClock, FiAward, FiArrowRight } from "react-icons/fi";
 import { useRouter } from "next/navigation";
 import { useProfesor } from "@/contexts/ProfesorContext";
 
-// MAPEO INVERSO: idiomaCurso (código corto) → idioma legible
-const idiomaDisplayMap: Record<string, string> = {
+// Poppins via Google Fonts
+const poppinsStyle = `@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap');`;
+
+const IDIOMA_LABEL: Record<string, string> = {
   en: "English",
   es: "Spanish",
   pt: "Portuguese",
@@ -15,324 +16,378 @@ const idiomaDisplayMap: Record<string, string> = {
   it: "Italian",
 };
 
+const NIVEL_COLOR: Record<string, string> = {
+  A1: "#4ADE80",
+  A2: "#86EFAC",
+  B1: "#60A5FA",
+  B2: "#3B82F6",
+  "B2.5": "#6366F1",
+  C1: "#EE7203",
+  C2: "#DC2626",
+};
+
+const NIVELES = ["A1", "A2", "B1", "B2", "B2.5", "C1", "C2"];
+const IDIOMAS = ["en", "es", "pt", "fr", "it"];
+
 export default function ProfesorCoursesPage() {
   const { allCursos, loadingAllCursos } = useProfesor();
-  const {userProfile} = useAuth();
+  const { userProfile } = useAuth();
   const router = useRouter();
 
   const [filterIdioma, setFilterIdioma] = useState("");
   const [filterNivel, setFilterNivel] = useState("");
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
-  // Obtener idiomas del profesor (puede tener varios)
-  const idiomasProfesor = Array.isArray(userProfile?.idiomasProfesor)
-    ? userProfile.idiomasProfesor
-    : [];
+  const NIVEL_ORDER = ["A1", "A2", "B1", "B2", "B2.5", "C1", "C2"];
+const [sortOrder, setSortOrder] = useState<"asc" | "desc" | "">("asc");
+  // ✅ FIX 1: campo correcto idiomasQueEnseña
+  // ✅ FIX 2: dependencia correcta en useMemo
+  const idiomasProfesorSet = useMemo(() => {
+    const raw: any[] = Array.isArray((userProfile as any)?.idiomasQueEnseña)
+      ? (userProfile as any).idiomasQueEnseña
+      : [];
+    return new Set(
+      raw.map((p) =>
+        (typeof p === "string" ? p : p.idioma || "").toLowerCase().trim()
+      )
+    );
+  }, [(userProfile as any)?.idiomasQueEnseña]);
 
-  console.log("👨‍🏫 Datos del profesor:", {
-    idiomasProfesor,
-    totalCursos: allCursos?.length || 0,
+  const cursosPermitidos = useMemo(() => {
+    if (!Array.isArray(allCursos) || idiomasProfesorSet.size === 0) return [];
+    return allCursos.filter((c) =>
+      idiomasProfesorSet.has((c.idioma || "").toLowerCase().trim())
+    );
+  }, [allCursos, idiomasProfesorSet]);
+
+ const cursosFiltrados = useMemo(() => {
+  const filtered = cursosPermitidos.filter((c) => {
+    const okIdioma = filterIdioma
+      ? (c.idioma || "").toLowerCase().trim() === filterIdioma
+      : true;
+    const okNivel = filterNivel
+      ? (c.nivel || "").toUpperCase().trim() === filterNivel
+      : true;
+    return okIdioma && okNivel;
   });
 
-  /* ----------------------------------------------------------
-    1️⃣ NORMALIZAR idiomas del profesor a códigos cortos (en, es, etc)
-  ----------------------------------------------------------- */
-  const idiomasProfesorNormalizados = useMemo(() => {
-    return idiomasProfesor.map((p) => {
-      // El idioma puede venir como "english", "ingles", "English", "en", etc.
-      const idiomaRaw = (p.idioma || "").toLowerCase().trim();
-      
-      // Si ya es un código corto (en, es, pt, fr, it), úsalo tal cual
-      if (["en", "es", "pt", "fr", "it"].includes(idiomaRaw)) {
-        return {
-          codigo: idiomaRaw,
-          nivel: (p.nivel || "").toUpperCase().trim(),
-        };
-      }
-      
-      // Mapeo COMPLETO: inglés + español + portugués
-      const codigoMap: Record<string, string> = {
-        // Inglés
-        english: "en",
-        ingles: "en",
-        inglés: "en",
-        
-        // Español
-        spanish: "es",
-        espanol: "es",
-        español: "es",
-        
-        // Portugués
-        portuguese: "pt",
-        portugues: "pt",
-        português: "pt",
-        
-        // Francés
-        french: "fr",
-        frances: "fr",
-        francés: "fr",
-        
-        // Italiano
-        italian: "it",
-        italiano: "it",
-      };
-      
-      const codigoFinal = codigoMap[idiomaRaw] || idiomaRaw;
-      
-      console.log(`🔄 Normalizando: "${p.idioma}" → "${codigoFinal}"`);
-      
-      return {
-        codigo: codigoFinal,
-        nivel: (p.nivel || "").toUpperCase().trim(),
-      };
-    });
-  }, [idiomasProfesor]);
+  if (sortOrder === "asc") {
+    filtered.sort((a, b) => NIVEL_ORDER.indexOf(a.nivel?.toUpperCase()) - NIVEL_ORDER.indexOf(b.nivel?.toUpperCase()));
+  } else if (sortOrder === "desc") {
+    filtered.sort((a, b) => NIVEL_ORDER.indexOf(b.nivel?.toUpperCase()) - NIVEL_ORDER.indexOf(a.nivel?.toUpperCase()));
+  }
 
-  console.log("🔄 Idiomas normalizados:", idiomasProfesorNormalizados);
+  return filtered;
+}, [cursosPermitidos, filterIdioma, filterNivel, sortOrder]);
 
-  /* ----------------------------------------------------------
-    2️⃣ FILTRAR cursos que coincidan con idiomas del profesor
-    Un profesor puede enseñar TODOS los niveles del idioma que domina
-  ----------------------------------------------------------- */
-  const cursosPermitidos = useMemo(() => {
-    if (!Array.isArray(allCursos) || idiomasProfesorNormalizados.length === 0) {
-      console.warn("⚠️ No hay cursos o idiomas del profesor");
-      return [];
-    }
+  
+  const idiomasDisponibles = IDIOMAS.filter((code) =>
+    cursosPermitidos.some((c) => (c.idioma || "").toLowerCase().trim() === code)
+  );
 
-    console.log("🔍 Analizando cursos...");
-    console.log("Total cursos disponibles:", allCursos.length);
-    
-    // Obtener solo los IDIOMAS (sin considerar nivel)
-    const idiomasProfesorSet = new Set(
-      idiomasProfesorNormalizados.map((p) => p.codigo)
+  const nivelesDisponibles = NIVELES.filter((n) =>
+    cursosPermitidos.some((c) => (c.nivel || "").toUpperCase().trim() === n)
+  );
+
+  const totalLecciones = (curso: any) =>
+    (curso.unidades || []).reduce(
+      (acc: number, u: any) => acc + (u.lecciones?.length || 0),
+      0
     );
-    
-    console.log("🗣️ Idiomas que el profesor puede enseñar:", Array.from(idiomasProfesorSet));
-    
-    // Mostrar primeros 3 cursos como muestra
-    allCursos.slice(0, 3).forEach((curso, i) => {
-      console.log(`📖 Curso ${i + 1}:`, {
-        titulo: curso.titulo,
-        idioma: curso.idioma,
-        nivel: curso.nivel,
-        idiomaLower: (curso.idioma || "").toLowerCase().trim(),
-        nivelUpper: (curso.nivel || "").toUpperCase().trim(),
-      });
-    });
 
-    const permitidos = allCursos.filter((curso) => {
-      const cursoIdioma = (curso.idioma || "").toLowerCase().trim();
-
-      // ✅ SOLO verificar que el idioma coincida (ignorar nivel)
-      const match = idiomasProfesorSet.has(cursoIdioma);
-
-      if (match) {
-        console.log("✅ Curso permitido:", {
-          titulo: curso.titulo,
-          idioma: cursoIdioma,
-          nivel: curso.nivel || "N/A",
-        });
-      } else {
-        console.log("❌ Curso no permitido (idioma diferente):", {
-          titulo: curso.titulo,
-          idioma: cursoIdioma,
-          idiomasProfesor: Array.from(idiomasProfesorSet),
-        });
-      }
-
-      return match;
-    });
-
-    console.log(`📚 Cursos permitidos para profesor: ${permitidos.length}`);
-    return permitidos;
-  }, [allCursos, idiomasProfesorNormalizados]);
-
-  /* ----------------------------------------------------------
-    3️⃣ FILTRADO MANUAL por idioma y nivel seleccionado
-  ----------------------------------------------------------- */
-  const cursosFiltrados = useMemo(() => {
-    return cursosPermitidos.filter((curso) => {
-      const cursoIdioma = (curso.idioma || "").toLowerCase().trim();
-      const cursoNivel = (curso.nivel || "").toUpperCase().trim();
-
-      const okIdioma = filterIdioma ? cursoIdioma === filterIdioma : true;
-      const okNivel = filterNivel ? cursoNivel === filterNivel : true;
-
-      return okIdioma && okNivel;
-    });
-  }, [cursosPermitidos, filterIdioma, filterNivel]);
-
-  /* ----------------------------------------------------------
-    4️⃣ LISTAS COMPLETAS de idiomas y niveles disponibles
-  ----------------------------------------------------------- */
-  const idiomasDisponibles = [
-    { codigo: "en", nombre: "English" },
-    { codigo: "es", nombre: "Spanish" },
-    { codigo: "pt", nombre: "Portuguese" },
-    { codigo: "fr", nombre: "French" },
-    { codigo: "it", nombre: "Italian" },
-  ];
-
-  const nivelesDisponibles = [
-    "A1",
-    "A2",
-    "B1",
-    "B2",
-    "B2.5",
-    "C1",
-    "C2",
-  ];
+  const totalMinutos = (curso: any) =>
+    (curso.unidades || []).reduce(
+      (acc: number, u: any) => acc + (u.duracion || 0),
+      0
+    );
 
   if (loadingAllCursos) {
     return (
-      <div className="p-8 text-slate-500 bg-white min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#EE7203] mx-auto mb-4"></div>
-          <p>Loading courses...</p>
+      <>
+        <style>{poppinsStyle}</style>
+        <div
+          className="min-h-screen flex items-center justify-center"
+          style={{ backgroundColor: "#F8F7F4", fontFamily: "'Poppins', sans-serif" }}
+        >
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative w-14 h-14">
+              <div
+                className="absolute inset-0 rounded-full border-4 border-transparent animate-spin"
+                style={{ borderTopColor: "#EE7203" }}
+              />
+            </div>
+            <p
+              className="text-sm font-semibold tracking-widest uppercase"
+              style={{ color: "#112C3E", opacity: 0.5 }}
+            >
+              Loading material…
+            </p>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white text-gray-800 p-8 space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold" style={{ color: "#112C3E" }}>
-          Available Material
-        </h1>
-        <p className="text-gray-500 mt-1">
-          Material based on your teaching languages: {" "}
-          <span className="font-semibold text-[#EE7203]">
-            {idiomasProfesorNormalizados
-              .map((p) => `${idiomaDisplayMap[p.codigo] || p.codigo} (${p.nivel})`)
-              .join(", ")}
-          </span>
-        </p>
-      </div>
-
-      {/* FILTROS */}
-      <div className="flex gap-4">
-        {/* Filtro por Idioma */}
-        <select
-          className="border border-gray-300 p-3 rounded-lg bg-white text-gray-700 font-medium focus:ring-2 focus:ring-[#EE7203] focus:border-transparent"
-          value={filterIdioma}
-          onChange={(e) => setFilterIdioma(e.target.value)}
+    <>
+      <style>{poppinsStyle}</style>
+      <div
+        className="min-h-screen"
+        style={{ backgroundColor: "#F8F7F4", fontFamily: "'Poppins', sans-serif" }}
+      >
+        {/* HEADER */}
+        <div
+          className="px-8 pt-10 pb-8"
+          style={{ borderBottom: "1px solid rgba(17,44,62,0.08)" }}
         >
-          <option value="">All Languages</option>
-          {idiomasDisponibles.map((idioma) => (
-            <option key={idioma.codigo} value={idioma.codigo}>
-              {idioma.nombre}
-            </option>
-          ))}
-        </select>
+          <div className="max-w-6xl mx-auto">
+            <div className="flex items-center gap-2 mb-4">
+              <span
+                className="text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full"
+                style={{ backgroundColor: "#EE7203", color: "#fff" }}
+              >
+                Academic Material
+              </span>
+              <span
+                className="text-xs font-medium"
+                style={{ color: "#112C3E", opacity: 0.4 }}
+              >
+                {cursosFiltrados.length} material{cursosFiltrados.length !== 1 ? "s" : ""}
+              </span>
+            </div>
 
-        {/* Filtro por Nivel */}
-        <select
-          className="border border-gray-300 p-3 rounded-lg bg-white text-gray-700 font-medium focus:ring-2 focus:ring-[#EE7203] focus:border-transparent"
-          value={filterNivel}
-          onChange={(e) => setFilterNivel(e.target.value)}
-        >
-          <option value="">All Levels</option>
-          {nivelesDisponibles.map((nivel) => (
-            <option key={nivel} value={nivel}>
-              {nivel}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* ESTADO VACÍO */}
-      {cursosFiltrados.length === 0 ? (
-        <div className="border-2 border-dashed border-gray-300 p-12 text-center rounded-2xl">
-          <FiBookOpen size={48} className="text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600 font-medium text-lg mb-2">
-            No courses match your teaching profile
-          </p>
-          <p className="text-gray-500 text-sm">
-            {cursosPermitidos.length === 0
-              ? "There are no courses available for your languages and levels."
-              : "Try adjusting the filters above."}
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {cursosFiltrados.map((c) => (
-            <div
-              key={c.id}
-              className="group border-2 border-gray-200 rounded-2xl overflow-hidden hover:border-[#EE7203] hover:shadow-lg transition-all"
-            >
-              <div className="p-6">
-                <div className="flex items-start justify-between gap-4 mb-4">
-                  <div className="flex-1">
-                    <span
-                      className="text-xs font-bold uppercase tracking-wide px-2.5 py-1 rounded-md"
-                      style={{ backgroundColor: "#112C3E", color: "#FFFFFF" }}
-                    >
-                      {idiomaDisplayMap[c.idioma?.toLowerCase()] || c.idioma?.toUpperCase()} • {c.nivel}
-                    </span>
-
-                    <h2
-                      className="text-xl font-bold mt-2"
-                      style={{ color: "#112C3E" }}
-                    >
-                      {c.titulo}
-                    </h2>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 mb-5 pb-5 border-b border-gray-200">
-                  <StatItem
-                    icon={<FiBookOpen size={16} />}
-                    label="Units"
-                    value={c.unidades?.length || 0}
-                  />
-                  <StatItem
-                    icon={<FiClock size={16} />}
-                    label="Duration"
-                    value={`${c.unidades?.reduce(
-                      (acc, u) => acc + (u.duracion || 0),
-                      0
-                    )} min`}
-                  />
-                  <StatItem
-                    icon={<FiAward size={16} />}
-                    label="Level"
-                    value={c.nivel}
-                    fullWidth
-                  />
-                </div>
-
-                <button
-                  onClick={() => router.push(`/material-academico/${c.id}`)}
-                  className="w-full py-3 px-4 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all group-hover:gap-3"
-                  style={{ backgroundColor: "#EE7203", color: "#FFFFFF" }}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+              <div>
+                <h1
+                  className="text-4xl font-black leading-tight"
+                  style={{ color: "#112C3E", letterSpacing: "-0.02em" }}
                 >
-                  View details
-                  <FiArrowRight size={16} />
-                </button>
+                  Your Material Library
+                </h1>
+                <p className="mt-1 text-sm" style={{ color: "#112C3E", opacity: 0.45 }}>
+                  Showing content for:{" "}
+                  <span style={{ color: "#EE7203", fontWeight: 700 }}>
+                    {Array.from(idiomasProfesorSet)
+                      .map((c) => IDIOMA_LABEL[c as string] || (c as string).toUpperCase())
+                      .join(", ") || "—"}
+                  </span>
+                </p>
+              </div>
+
+              {/* FILTROS */}
+              <div className="flex gap-3">
+                <div className="relative">
+                  <select
+                    value={filterIdioma}
+                    onChange={(e) => setFilterIdioma(e.target.value)}
+                    className="appearance-none pl-4 pr-8 py-2.5 rounded-xl text-sm font-semibold cursor-pointer focus:outline-none transition-all"
+                    style={{
+                      fontFamily: "'Poppins', sans-serif",
+                      backgroundColor: filterIdioma ? "#112C3E" : "#fff",
+                      color: filterIdioma ? "#fff" : "#112C3E",
+                      border: "1.5px solid",
+                      borderColor: filterIdioma ? "#112C3E" : "rgba(17,44,62,0.15)",
+                    }}
+                  >
+                    <option value="">All Languages</option>
+                    {idiomasDisponibles.map((code) => (
+                      <option key={code} value={code}>
+                        {IDIOMA_LABEL[code] || code.toUpperCase()}
+                      </option>
+                    ))}
+                  </select>
+                  <span
+                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs"
+                    style={{ color: filterIdioma ? "#fff" : "#112C3E", opacity: 0.5 }}
+                  >▾</span>
+                </div>
+
+                <div className="relative">
+                  <select
+                    value={filterNivel}
+                    onChange={(e) => setFilterNivel(e.target.value)}
+                    className="appearance-none pl-4 pr-8 py-2.5 rounded-xl text-sm font-semibold cursor-pointer focus:outline-none transition-all"
+                    style={{
+                      fontFamily: "'Poppins', sans-serif",
+                      backgroundColor: filterNivel ? "#EE7203" : "#fff",
+                      color: filterNivel ? "#fff" : "#112C3E",
+                      border: "1.5px solid",
+                      borderColor: filterNivel ? "#EE7203" : "rgba(17,44,62,0.15)",
+                    }}
+                  >
+                    <option value="">All Levels</option>
+                    {nivelesDisponibles.map((n) => (
+                      <option key={n} value={n}>{n}</option>
+                    ))}
+                  </select>
+                  <span
+                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs"
+                    style={{ color: filterNivel ? "#fff" : "#112C3E", opacity: 0.5 }}
+                  >▾</span>
+                </div>
+
+                <div className="relative">
+  <select
+    value={sortOrder}
+    onChange={(e) => setSortOrder(e.target.value as "asc" | "desc" | "")}
+    className="appearance-none pl-4 pr-8 py-2.5 rounded-xl text-sm font-semibold cursor-pointer focus:outline-none transition-all"
+    style={{
+      fontFamily: "'Poppins', sans-serif",
+      backgroundColor: sortOrder ? "#112C3E" : "#fff",
+      color: sortOrder ? "#fff" : "#112C3E",
+      border: "1.5px solid",
+      borderColor: sortOrder ? "#112C3E" : "rgba(17,44,62,0.15)",
+    }}
+  >
+    <option value="">No order</option>
+    <option value="asc">Level: A1 → C2</option>
+    <option value="desc">Level: C2 → A1</option>
+  </select>
+  <span
+    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs"
+    style={{ color: sortOrder ? "#fff" : "#112C3E", opacity: 0.5 }}
+  >▾</span>
+</div>
               </div>
             </div>
-          ))}
+          </div>
         </div>
-      )}
-    </div>
+
+        {/* CONTENT */}
+        <div className="max-w-6xl mx-auto px-8 py-8">
+          {cursosFiltrados.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 text-center">
+              <div
+                className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6 text-3xl"
+                style={{ backgroundColor: "rgba(17,44,62,0.06)" }}
+              >
+                📚
+              </div>
+              <h3 className="text-xl font-bold mb-2" style={{ color: "#112C3E" }}>
+                No materials found
+              </h3>
+              <p className="text-sm max-w-xs" style={{ color: "#112C3E", opacity: 0.45 }}>
+                {cursosPermitidos.length === 0
+                  ? "There are no materials available for your teaching languages yet."
+                  : "Try adjusting the filters above."}
+              </p>
+              {(filterIdioma || filterNivel) && (
+                <button
+                  onClick={() => { setFilterIdioma(""); setFilterNivel(""); }}
+                  className="mt-5 px-5 py-2 rounded-xl text-sm font-semibold"
+                  style={{ fontFamily: "'Poppins', sans-serif", backgroundColor: "#EE7203", color: "#fff" }}
+                >
+                  Clear filters
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+              {cursosFiltrados.map((c) => {
+                const nivelColor = NIVEL_COLOR[(c.nivel || "").toUpperCase()] || "#EE7203";
+                const isHovered = hoveredId === c.id;
+                const mins = totalMinutos(c);
+                const horas = Math.floor(mins / 60);
+                const restMin = mins % 60;
+                const durLabel = horas > 0 ? `${horas}h ${restMin}m` : `${mins}m`;
+
+                return (
+                  <div
+                    key={c.id}
+                    onMouseEnter={() => setHoveredId(c.id)}
+                    onMouseLeave={() => setHoveredId(null)}
+                    onClick={() => window.open(`/material-academico/${c.id}`, "_blank")}
+                    className="cursor-pointer rounded-2xl overflow-hidden flex flex-col transition-all duration-200"
+                    style={{
+                      backgroundColor: "#fff",
+                      border: "1.5px solid",
+                      borderColor: isHovered ? "#EE7203" : "rgba(17,44,62,0.10)",
+                      transform: isHovered ? "translateY(-3px)" : "translateY(0)",
+                      boxShadow: isHovered
+                        ? "0 12px 32px rgba(238,114,3,0.12)"
+                        : "0 2px 8px rgba(17,44,62,0.04)",
+                    }}
+                  >
+                    <div className="h-1.5 w-full" style={{ backgroundColor: nivelColor }} />
+
+                    <div className="p-6 flex flex-col flex-1">
+                      <div className="flex items-center gap-2 mb-4">
+                        <span
+                          className="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg"
+                          style={{ backgroundColor: nivelColor + "18", color: nivelColor }}
+                        >
+                          {c.nivel || "—"}
+                        </span>
+                        <span
+                          className="text-xs font-semibold uppercase tracking-wider px-2.5 py-1 rounded-lg"
+                          style={{ backgroundColor: "rgba(17,44,62,0.06)", color: "#112C3E" }}
+                        >
+                          {IDIOMA_LABEL[(c.idioma || "").toLowerCase()] || c.idioma?.toUpperCase()}
+                        </span>
+                      </div>
+
+                      <h2
+                        className="text-lg font-extrabold leading-snug mb-3 flex-1"
+                        style={{ color: "#112C3E", letterSpacing: "-0.01em" }}
+                      >
+                        {c.titulo}
+                      </h2>
+
+                      {c.descripcion && (
+                        <p
+                          className="text-xs leading-relaxed mb-4 line-clamp-2"
+                          style={{ color: "#112C3E", opacity: 0.45 }}
+                        >
+                          {c.descripcion}
+                        </p>
+                      )}
+
+                      <div
+                        className="flex items-center gap-4 pt-4 mt-auto"
+                        style={{ borderTop: "1px solid rgba(17,44,62,0.07)" }}
+                      >
+                        <Stat label="Units" value={c.unidades?.length || 0} />
+                        <Stat label="Lessons" value={totalLecciones(c)} />
+                        <Stat label="Duration" value={durLabel} />
+                      </div>
+
+                      <button
+                        className="mt-4 w-full py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all duration-200"
+                        style={{
+                          fontFamily: "'Poppins', sans-serif",
+                          backgroundColor: isHovered ? "#EE7203" : "rgba(17,44,62,0.05)",
+                          color: isHovered ? "#fff" : "#112C3E",
+                        }}
+                      >
+                        View material
+                        <span style={{ transform: isHovered ? "translateX(3px)" : "translateX(0)", transition: "transform 0.2s", display: "inline-block" }}>
+                          →
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </>
   );
 }
 
-function StatItem({ icon, label, value, fullWidth = false }) {
+function Stat({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className={`flex items-center gap-3 ${fullWidth ? "col-span-2" : ""}`}>
-      <div className="p-2 rounded-lg bg-gray-100">
-        <div style={{ color: "#112C3E" }}>{icon}</div>
-      </div>
-      <div className="flex-1">
-        <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
-          {label}
-        </p>
-        <p className="font-semibold" style={{ color: "#112C3E" }}>
-          {value}
-        </p>
-      </div>
+    <div className="flex flex-col">
+      <span
+        className="text-xs uppercase tracking-widest font-semibold"
+        style={{ color: "#112C3E", opacity: 0.35 }}
+      >
+        {label}
+      </span>
+      <span className="text-sm font-black" style={{ color: "#112C3E" }}>
+        {value}
+      </span>
     </div>
   );
 }

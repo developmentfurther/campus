@@ -3,6 +3,7 @@ import { FiDownload, FiLoader, FiChevronRight } from "react-icons/fi";
 import { toast } from "sonner";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import { useI18n } from "@/contexts/I18nContext";
 
 /**
  * 🔧 SANITIZACIÓN ULTRA-ROBUSTA
@@ -97,11 +98,20 @@ const smartTruncate = (text, maxLength = 2000) => {
   return truncated.trim() + '...';
 };
 
+const btnT = {
+  en: { title: "Academic Material", download: "Download PDF", generating: "Generating PDF..." },
+  es: { title: "Material Académico", download: "Descargar PDF", generating: "Generando PDF..." },
+  pt: { title: "Material Acadêmico", download: "Baixar PDF", generating: "Gerando PDF..." },
+  it: { title: "Materiale Accademico", download: "Scarica PDF", generating: "Generazione PDF..." },
+  fr: { title: "Matériel Académique", download: "Télécharger PDF", generating: "Génération PDF..." },
+};
 /**
  * 🎨 GENERADOR DE PDF PROFESIONAL
  */
 export default function DownloadBibliographyButton({ unit, courseTitle }) {
   const [loading, setLoading] = useState(false);
+  const { lang } = useI18n();
+  const btn = btnT[lang] ?? btnT["en"];
 
   const generatePDF = async () => {
     console.log("🔍 UNIT recibida:", JSON.stringify(unit, null, 2));
@@ -648,10 +658,8 @@ if (lesson.ejercicios?.length > 0) {
           </div>
 
           <div className="text-left">
-            <p className="text-sm font-black text-[#0C212D]">Academic Material</p>
-            <p className="text-xs text-slate-500">
-              {loading ? "Generating PDF..." : "Download PDF"}
-            </p>
+            <p className="text-sm font-black text-[#0C212D]">{btn.title}</p>
+            <p className="text-xs text-slate-500">{loading ? btn.generating : btn.download}</p>
           </div>
         </div>
 
